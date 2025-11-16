@@ -36,6 +36,19 @@ VITE_NEON_DATABASE_URL=your_neon_connection_string_here
 
 You can find your connection string in the Neon dashboard under your project settings.
 
+### Database Setup
+
+Before running the app, you need to create the database tables. Run the SQL schema file in your Neon database:
+
+1. Go to your Neon dashboard
+2. Open the SQL Editor
+3. Copy and paste the contents of `database/schema.sql`
+4. Execute the SQL to create the `users` and `sessions` tables
+
+The schema includes:
+- `users` table: Stores user accounts with hashed passwords
+- `sessions` table: Manages user sessions with expiration
+
 ### Development
 
 Start the development server:
@@ -57,17 +70,36 @@ The built files will be in the `dist` directory.
 
 ```
 KITEMANAGER/
+├── database/
+│   └── schema.sql          # Database schema for users and sessions
 ├── src/
 │   ├── lib/
-│   │   └── neon.js          # Neon database connection
-│   ├── App.jsx              # Main app component
-│   ├── main.jsx             # React entry point
-│   └── index.css            # Tailwind CSS imports
+│   │   ├── neon.js        # Neon database connection
+│   │   ├── auth.js        # Authentication functions
+│   │   └── password.js    # Password hashing utilities
+│   ├── components/
+│   │   └── Sidebar.jsx   # Sidebar navigation component
+│   ├── pages/
+│   │   ├── Dashboard.jsx  # Dashboard page
+│   │   ├── Login.jsx      # Login page
+│   │   └── Signup.jsx     # Signup page
+│   ├── App.jsx            # Main app component
+│   ├── main.jsx           # React entry point
+│   └── index.css          # Tailwind CSS imports
 ├── index.html
 ├── vite.config.js
 ├── tailwind.config.js
 └── package.json
 ```
+
+## Authentication
+
+The app uses database-backed authentication with sessions:
+
+- **User Registration**: Users can create accounts with email and password
+- **Password Security**: Passwords are hashed using PBKDF2 with SHA-256
+- **Sessions**: User sessions are stored in the database with 30-day expiration
+- **Protected Routes**: Users must be authenticated to access the app
 
 ## Using the Neon Database
 
@@ -119,6 +151,8 @@ Since Vite only exposes environment variables with the `VITE_` prefix to the cli
 
 After deployment, your app will be available at your Vercel URL. The Neon database connection will work automatically using the integrated connection string.
 
+**Important**: Make sure to run the database schema (`database/schema.sql`) in your Neon database before deploying, or the authentication will not work.
+
 ## Security Note
 
 ⚠️ **Important**: In production, never expose your database connection string in client-side code. Consider using a backend API to handle database operations. However, Neon's serverless driver is designed to work securely from the client side.
@@ -126,4 +160,3 @@ After deployment, your app will be available at your Vercel URL. The Neon databa
 ## License
 
 MIT
-
