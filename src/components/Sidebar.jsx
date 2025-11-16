@@ -3,7 +3,45 @@ function Sidebar({ currentPage, onNavigate, onLogout, user }) {
     <div className="w-64 bg-gray-900 text-white min-h-screen flex flex-col">
       {/* App Title */}
       <div className="p-6 border-b border-gray-800">
-        <h1 className="text-2xl font-bold">Kite Manager</h1>
+        <div className="flex items-center gap-3">
+          <svg 
+            className="w-8 h-8 text-indigo-400" 
+            fill="none" 
+            stroke="currentColor" 
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            {/* Graduation cap */}
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M6 8l6-3 6 3M6 8v6l6 3 6-3V8M6 8l6 3 6-3"
+            />
+            {/* Tassel */}
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M12 11v2"
+            />
+            <circle cx="12" cy="13" r="1" fill="currentColor"/>
+            {/* Waves */}
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M3 18c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1 2-1 4-1"
+            />
+            <path 
+              strokeLinecap="round" 
+              strokeLinejoin="round" 
+              strokeWidth={2} 
+              d="M3 21c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1 2-1 4-1"
+            />
+          </svg>
+          <h1 className="text-2xl font-bold">KSMANAGER</h1>
+        </div>
       </div>
 
       {/* User Info */}

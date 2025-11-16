@@ -1,4 +1,4 @@
-# Kite Manager
+# KSMANAGER
 
 A modern web application built with Vite, React, Tailwind CSS, and Neon Database.
 
