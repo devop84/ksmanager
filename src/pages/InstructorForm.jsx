@@ -5,79 +5,35 @@ const initialFormState = {
   fullname: '',
   phone: '',
   email: '',
-  doctype: '',
-  doc: '',
-  country: '',
-  birthdate: '',
-  note: '',
-  hotel_id: '',
-  agency_id: ''
+  bankdetail: '',
+  hourlyrate: '',
+  commission: '',
+  monthlyfix: '',
+  note: ''
 }
 
-function CustomerForm({ customer, onCancel, onSaved }) {
-  const isEditing = Boolean(customer?.id)
+function InstructorForm({ instructor, onCancel, onSaved }) {
+  const isEditing = Boolean(instructor?.id)
   const [formData, setFormData] = useState(initialFormState)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
-  const [hotels, setHotels] = useState([])
-  const [agencies, setAgencies] = useState([])
 
   useEffect(() => {
-    if (customer) {
-      const formattedBirthdate = customer.birthdate
-        ? new Date(customer.birthdate).toISOString().split('T')[0]
-        : ''
-
+    if (instructor) {
       setFormData({
-        fullname: customer.fullname || '',
-        phone: customer.phone || '',
-        email: customer.email || '',
-        doctype: customer.doctype || '',
-        doc: customer.doc || '',
-        country: customer.country || '',
-        birthdate: formattedBirthdate,
-        note: customer.note || '',
-        hotel_id: customer.hotel_id ?? '',
-        agency_id: customer.agency_id ?? ''
+        fullname: instructor.fullname || '',
+        phone: instructor.phone || '',
+        email: instructor.email || '',
+        bankdetail: instructor.bankdetail || '',
+        hourlyrate: instructor.hourlyrate ?? '',
+        commission: instructor.commission ?? '',
+        monthlyfix: instructor.monthlyfix ?? '',
+        note: instructor.note || ''
       })
     } else {
       setFormData(initialFormState)
     }
-  }, [customer])
-
-  useEffect(() => {
-    const fetchHotels = async () => {
-      try {
-        const result = await sql`
-          SELECT id, name
-          FROM hotels
-          ORDER BY name ASC
-        `
-        setHotels(result || [])
-      } catch (err) {
-        console.error('Failed to load hotels:', err)
-      }
-    }
-
-    fetchHotels()
-  }, [])
-
-  useEffect(() => {
-    const fetchAgencies = async () => {
-      try {
-        const result = await sql`
-          SELECT id, name
-          FROM agencies
-          ORDER BY name ASC
-        `
-        setAgencies(result || [])
-      } catch (err) {
-        console.error('Failed to load agencies:', err)
-      }
-    }
-
-    fetchAgencies()
-  }, [])
+  }, [instructor])
 
   const handleChange = (event) => {
     const { name, value } = event.target
@@ -89,64 +45,64 @@ function CustomerForm({ customer, onCancel, onSaved }) {
     setSaving(true)
     setError(null)
 
-    try {
-      const payload = {
-        ...formData,
-        hotel_id: formData.hotel_id ? Number(formData.hotel_id) : null,
-        agency_id: formData.agency_id ? Number(formData.agency_id) : null
-      }
+    const payload = {
+      ...formData,
+      hourlyrate: formData.hourlyrate !== '' ? Number(formData.hourlyrate) : null,
+      commission: formData.commission !== '' ? Number(formData.commission) : null,
+      monthlyfix: formData.monthlyfix !== '' ? Number(formData.monthlyfix) : null,
+      note: formData.note
+    }
 
+    try {
       if (isEditing) {
         await sql`
-          UPDATE customers
+          UPDATE instructors
           SET fullname = ${payload.fullname},
               phone = ${payload.phone},
               email = ${payload.email},
-              doctype = ${payload.doctype},
-              doc = ${payload.doc},
-              country = ${payload.country},
-              birthdate = ${payload.birthdate || null},
+              bankdetail = ${payload.bankdetail},
+              hourlyrate = ${payload.hourlyrate},
+              commission = ${payload.commission},
+              monthlyfix = ${payload.monthlyfix},
               note = ${payload.note},
-              hotel_id = ${payload.hotel_id},
-              agency_id = ${payload.agency_id},
               updated_at = NOW()
-          WHERE id = ${customer.id}
+          WHERE id = ${instructor.id}
         `
       } else {
         await sql`
-          INSERT INTO customers (fullname, phone, email, doctype, doc, country, birthdate, note, hotel_id, agency_id)
+          INSERT INTO instructors (fullname, phone, email, bankdetail, hourlyrate, commission, monthlyfix, note)
           VALUES (
             ${payload.fullname},
             ${payload.phone},
             ${payload.email},
-            ${payload.doctype},
-            ${payload.doc},
-            ${payload.country},
-            ${payload.birthdate || null},
-            ${payload.note},
-            ${payload.hotel_id},
-            ${payload.agency_id}
+            ${payload.bankdetail},
+            ${payload.hourlyrate},
+            ${payload.commission},
+            ${payload.monthlyfix},
+            ${payload.note}
           )
         `
       }
 
       onSaved?.()
     } catch (err) {
-      console.error('Failed to save customer:', err)
-      setError('Unable to save customer. Please check the data and try again.')
+      console.error('Failed to save instructor:', err)
+      setError('Unable to save instructor. Please check the details and try again.')
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="p-8">
-      <div className="mx-auto max-w-4xl rounded-xl bg-white p-6 shadow-sm">
+    <div className="px-4 py-6 sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-3xl rounded-xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{isEditing ? 'Edit Customer' : 'Add Customer'}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{isEditing ? 'Edit Instructor' : 'Add Instructor'}</h1>
             <p className="text-gray-500 text-sm">
-              {isEditing ? 'Update customer details and save changes.' : 'Fill in the details to create a new customer.'}
+              {isEditing
+                ? 'Update the instructor information and pay details.'
+                : 'Fill out the form to add a new instructor.'}
             </p>
           </div>
           <button
@@ -160,7 +116,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
         <form onSubmit={handleSubmit} className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="fullname">
-              Full Name *
+              Full name *
             </label>
             <input
               id="fullname"
@@ -201,57 +157,63 @@ function CustomerForm({ customer, onCancel, onSaved }) {
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="doctype">
-              Document Type
+          <div className="md:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="bankdetail">
+              Bank detail
             </label>
-            <input
-              id="doctype"
-              name="doctype"
-              type="text"
-              value={formData.doctype}
+            <textarea
+              id="bankdetail"
+              name="bankdetail"
+              rows="3"
+              value={formData.bankdetail}
               onChange={handleChange}
               className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="doc">
-              Document Number
+            <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="hourlyrate">
+              Hourly rate (USD)
             </label>
             <input
-              id="doc"
-              name="doc"
-              type="text"
-              value={formData.doc}
+              id="hourlyrate"
+              name="hourlyrate"
+              type="number"
+              min="0"
+              step="0.5"
+              value={formData.hourlyrate}
               onChange={handleChange}
               className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="country">
-              Country
+            <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="commission">
+              Commission (%)
             </label>
             <input
-              id="country"
-              name="country"
-              type="text"
-              value={formData.country}
+              id="commission"
+              name="commission"
+              type="number"
+              min="0"
+              step="0.1"
+              value={formData.commission}
               onChange={handleChange}
               className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             />
           </div>
 
           <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="birthdate">
-              Birthdate
+            <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="monthlyfix">
+              Monthly fix (USD)
             </label>
             <input
-              id="birthdate"
-              name="birthdate"
-              type="date"
-              value={formData.birthdate}
+              id="monthlyfix"
+              name="monthlyfix"
+              type="number"
+              min="0"
+              step="1"
+              value={formData.monthlyfix}
               onChange={handleChange}
               className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             />
@@ -271,53 +233,13 @@ function CustomerForm({ customer, onCancel, onSaved }) {
             />
           </div>
 
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="hotel_id">
-              Hotel
-            </label>
-            <select
-              id="hotel_id"
-              name="hotel_id"
-              value={formData.hotel_id}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-            >
-              <option value="">Select a hotel</option>
-              {hotels.map((hotel) => (
-                <option key={hotel.id} value={hotel.id}>
-                  {hotel.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="agency_id">
-              Agency
-            </label>
-            <select
-              id="agency_id"
-              name="agency_id"
-              value={formData.agency_id}
-              onChange={handleChange}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-            >
-              <option value="">Select an agency</option>
-              {agencies.map((agency) => (
-                <option key={agency.id} value={agency.id}>
-                  {agency.name}
-                </option>
-              ))}
-            </select>
-          </div>
-
           {error && (
             <div className="md:col-span-2 rounded-lg border border-red-200 bg-red-50 px-4 py-2 text-sm text-red-700">
               {error}
             </div>
           )}
 
-          <div className="md:col-span-2 flex justify-end gap-3 pt-4">
+          <div className="md:col-span-2 flex justify-end gap-3 pt-2">
             <button
               type="button"
               onClick={onCancel}
@@ -330,7 +252,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
               disabled={saving}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving...' : isEditing ? 'Save changes' : 'Create customer'}
+              {saving ? 'Saving...' : isEditing ? 'Save changes' : 'Create instructor'}
             </button>
           </div>
         </form>
@@ -339,5 +261,5 @@ function CustomerForm({ customer, onCancel, onSaved }) {
   )
 }
 
-export default CustomerForm
+export default InstructorForm
 

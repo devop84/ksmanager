@@ -10,6 +10,8 @@ const columns = [
   { key: 'doc', label: 'Document' },
   { key: 'country', label: 'Country' },
   { key: 'birthdate', label: 'Birthdate' },
+  { key: 'hotel_name', label: 'Hotel' },
+  { key: 'agency_name', label: 'Agency' },
   { key: 'note', label: 'Note' }
 ]
 
@@ -28,8 +30,23 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, refres
         setLoading(true)
         setError(null)
         const result = await sql`
-          SELECT id, fullname, phone, email, doctype, doc, country, birthdate, note, hotel_id, agency_id
-          FROM customers
+          SELECT 
+            c.id,
+            c.fullname,
+            c.phone,
+            c.email,
+            c.doctype,
+            c.doc,
+            c.country,
+            c.birthdate,
+            c.note,
+            c.hotel_id,
+            c.agency_id,
+            h.name AS hotel_name,
+            a.name AS agency_name
+          FROM customers c
+          LEFT JOIN hotels h ON c.hotel_id = h.id
+          LEFT JOIN agencies a ON c.agency_id = a.id
           ORDER BY fullname ASC
         `
         setCustomers(result || [])
@@ -55,7 +72,9 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, refres
         customer.doctype,
         customer.doc,
         customer.country,
-        customer.note
+        customer.note,
+        customer.hotel_name,
+        customer.agency_name
       ]
         .filter((value) => value !== null && value !== undefined)
         .some((value) => value.toString().toLowerCase().includes(query))
@@ -241,6 +260,10 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, refres
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.doc || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.country || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{formatDate(customer.birthdate)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{customer.hotel_name || '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">
+                            {customer.agency_name || '—'}
+                          </td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.note || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">
                             <div className="flex items-center gap-3">
@@ -367,6 +390,14 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, refres
                         <div>
                           <dt className="text-gray-400 text-xs uppercase">Birthdate</dt>
                           <dd>{formatDate(customer.birthdate)}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-400 text-xs uppercase">Hotel</dt>
+                          <dd>{customer.hotel_name || '—'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-400 text-xs uppercase">Agency</dt>
+                          <dd>{customer.agency_name || '—'}</dd>
                         </div>
                         <div className="md:col-span-2">
                           <dt className="text-gray-400 text-xs uppercase">Note</dt>

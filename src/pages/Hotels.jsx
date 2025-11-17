@@ -4,68 +4,55 @@ import sql from '../lib/neon'
 const PAGE_SIZE = 25
 
 const columns = [
-  { key: 'fullname', label: 'Full Name' },
+  { key: 'name', label: 'Name' },
   { key: 'phone', label: 'Phone' },
-  { key: 'email', label: 'Email' },
-  { key: 'bankdetail', label: 'Bank Detail' },
-  { key: 'hourlyrate', label: 'Hourly Rate' },
-  { key: 'commission', label: 'Commission' },
-  { key: 'monthlyfix', label: 'Monthly Fix' },
+  { key: 'address', label: 'Address' },
   { key: 'note', label: 'Note' }
 ]
 
-function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, refreshKey = 0 }) {
-  const [instructors, setInstructors] = useState([])
+function Hotels({ onAddHotel = () => {}, onEditHotel = () => {}, refreshKey = 0 }) {
+  const [hotels, setHotels] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
-  const [sortConfig, setSortConfig] = useState({ key: 'fullname', direction: 'asc' })
+  const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' })
   const [currentPage, setCurrentPage] = useState(1)
   const [deletingId, setDeletingId] = useState(null)
 
   useEffect(() => {
-    const fetchInstructors = async () => {
+    const fetchHotels = async () => {
       try {
         setLoading(true)
         setError(null)
         const result = await sql`
-          SELECT id, fullname, phone, email, bankdetail, hourlyrate, commission, monthlyfix, note
-          FROM instructors
-          ORDER BY fullname ASC
+          SELECT id, name, phone, address, note
+          FROM hotels
+          ORDER BY name ASC
         `
-        setInstructors(result || [])
+        setHotels(result || [])
       } catch (err) {
-        console.error('Failed to load instructors:', err)
-        setError('Unable to load instructors. Please try again later.')
+        console.error('Failed to load hotels:', err)
+        setError('Unable to load hotels. Please try again later.')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchInstructors()
+    fetchHotels()
   }, [refreshKey])
 
-  const filteredInstructors = useMemo(() => {
-    if (!searchTerm.trim()) return instructors
+  const filteredHotels = useMemo(() => {
+    if (!searchTerm.trim()) return hotels
     const query = searchTerm.toLowerCase()
-    return instructors.filter((instructor) =>
-      [
-        instructor.fullname,
-        instructor.phone,
-        instructor.email,
-        instructor.bankdetail,
-        instructor.hourlyrate,
-        instructor.commission,
-        instructor.monthlyfix,
-        instructor.note
-      ]
+    return hotels.filter((hotel) =>
+      [hotel.name, hotel.phone, hotel.address, hotel.note]
         .filter((value) => value !== null && value !== undefined)
         .some((value) => value.toString().toLowerCase().includes(query))
     )
-  }, [instructors, searchTerm])
+  }, [hotels, searchTerm])
 
-  const sortedInstructors = useMemo(() => {
-    const sorted = [...filteredInstructors]
+  const sortedHotels = useMemo(() => {
+    const sorted = [...filteredHotels]
     sorted.sort((a, b) => {
       const aValue = a[sortConfig.key] ?? ''
       const bValue = b[sortConfig.key] ?? ''
@@ -75,13 +62,13 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
       return 0
     })
     return sorted
-  }, [filteredInstructors, sortConfig])
+  }, [filteredHotels, sortConfig])
 
-  const totalPages = Math.max(1, Math.ceil(sortedInstructors.length / PAGE_SIZE))
-  const paginatedInstructors = useMemo(() => {
+  const totalPages = Math.max(1, Math.ceil(sortedHotels.length / PAGE_SIZE))
+  const paginatedHotels = useMemo(() => {
     const start = (currentPage - 1) * PAGE_SIZE
-    return sortedInstructors.slice(start, start + PAGE_SIZE)
-  }, [sortedInstructors, currentPage])
+    return sortedHotels.slice(start, start + PAGE_SIZE)
+  }, [sortedHotels, currentPage])
 
   useEffect(() => {
     setCurrentPage(1)
@@ -104,15 +91,15 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
     setCurrentPage((prev) => Math.min(Math.max(newPage, 1), totalPages))
   }
 
-  const handleDelete = async (instructorId) => {
-    if (!window.confirm('Are you sure you want to delete this instructor?')) return
+  const handleDelete = async (hotelId) => {
+    if (!window.confirm('Are you sure you want to delete this hotel?')) return
     try {
-      setDeletingId(instructorId)
-      await sql`DELETE FROM instructors WHERE id = ${instructorId}`
-      setInstructors((prev) => prev.filter((instructor) => instructor.id !== instructorId))
+      setDeletingId(hotelId)
+      await sql`DELETE FROM hotels WHERE id = ${hotelId}`
+      setHotels((prev) => prev.filter((hotel) => hotel.id !== hotelId))
     } catch (err) {
-      console.error('Failed to delete instructor:', err)
-      alert('Unable to delete instructor. Please try again.')
+      console.error('Failed to delete hotel:', err)
+      alert('Unable to delete hotel. Please try again.')
     } finally {
       setDeletingId(null)
     }
@@ -121,8 +108,7 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
   const renderPagination = () => (
     <div className="flex items-center justify-between text-sm text-gray-600">
       <span>
-        Page {currentPage} of {totalPages} • Showing {paginatedInstructors.length} of {sortedInstructors.length}{' '}
-        instructors
+        Page {currentPage} of {totalPages} • Showing {paginatedHotels.length} of {sortedHotels.length} hotels
       </span>
       <div className="space-x-2">
         <button
@@ -143,26 +129,16 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
     </div>
   )
 
-  const formatCurrency = (value) => {
-    if (value === null || value === undefined) return '—'
-    return `$${Number(value).toFixed(2)}`
-  }
-
-  const formatPercent = (value) => {
-    if (value === null || value === undefined) return '—'
-    return `${Number(value).toFixed(1)}%`
-  }
-
   return (
     <div className="px-4 py-6 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Instructors</h1>
-            <p className="text-gray-500 text-sm">Manage instructor roster, pay rates, and contact details.</p>
+            <h1 className="text-3xl font-bold text-gray-900">Hotels</h1>
+            <p className="text-gray-500 text-sm">Manage hotel partners, contacts, and logistics.</p>
           </div>
           <button
-            onClick={onAddInstructor}
+            onClick={onAddHotel}
             className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors"
           >
             <svg
@@ -174,7 +150,7 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add instructor
+            Add hotel
           </button>
         </div>
 
@@ -184,12 +160,12 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search instructors by name, contact, or rate..."
+              placeholder="Search hotels by name, phone, or address..."
               className="w-full md:w-1/2 rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-shadow"
             />
           </div>
 
-          {loading && <div className="text-gray-600 text-sm">Loading instructors...</div>}
+          {loading && <div className="text-gray-600 text-sm">Loading hotels...</div>}
           {error && <div className="text-red-600 text-sm">{error}</div>}
           {!loading && !error && (
             <div className="flex flex-col gap-4">
@@ -224,32 +200,28 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
-                    {paginatedInstructors.length === 0 ? (
+                    {paginatedHotels.length === 0 ? (
                       <tr>
                         <td
                           colSpan={columns.length + 1}
                           className="px-6 py-10 text-center text-sm text-gray-500"
                         >
-                          No instructors found. Try adjusting your search or filters.
+                          No hotels found. Try adjusting your search or filters.
                         </td>
                       </tr>
                     ) : (
-                      paginatedInstructors.map((instructor) => (
-                        <tr key={instructor.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">{instructor.fullname || '—'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{instructor.phone || '—'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{instructor.email || '—'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{instructor.bankdetail || '—'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(instructor.hourlyrate)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{formatPercent(instructor.commission)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(instructor.monthlyfix)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{instructor.note || '—'}</td>
+                      paginatedHotels.map((hotel) => (
+                        <tr key={hotel.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">{hotel.name || '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{hotel.phone || '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{hotel.address || '—'}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{hotel.note || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">
                             <div className="flex items-center gap-3">
                               <button
-                                onClick={() => onEditInstructor(instructor)}
+                                onClick={() => onEditHotel(hotel)}
                                 className="text-gray-500 hover:text-indigo-600 transition-colors"
-                                aria-label="Edit instructor"
+                                aria-label="Edit hotel"
                               >
                                 <svg
                                   className="w-5 h-5"
@@ -267,10 +239,10 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
                                 </svg>
                               </button>
                               <button
-                                onClick={() => handleDelete(instructor.id)}
-                                disabled={deletingId === instructor.id}
+                                onClick={() => handleDelete(hotel.id)}
+                                disabled={deletingId === hotel.id}
                                 className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                                aria-label="Delete instructor"
+                                aria-label="Delete hotel"
                               >
                                 <svg
                                   className="w-5 h-5"
@@ -297,23 +269,23 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
               </div>
 
               <div className="md:hidden space-y-3">
-                {paginatedInstructors.length === 0 ? (
+                {paginatedHotels.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    No instructors found. Try adjusting your search or filters.
+                    No hotels found. Try adjusting your search or filters.
                   </div>
                 ) : (
-                  paginatedInstructors.map((instructor) => (
-                    <div key={instructor.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                  paginatedHotels.map((hotel) => (
+                    <div key={hotel.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-base font-semibold text-gray-900">{instructor.fullname || '—'}</p>
-                          <p className="text-sm text-gray-500">{instructor.email || instructor.phone || '—'}</p>
+                          <p className="text-base font-semibold text-gray-900">{hotel.name || '—'}</p>
+                          <p className="text-sm text-gray-500">{hotel.phone || '—'}</p>
                         </div>
                         <div className="flex items-center gap-3">
                           <button
-                            onClick={() => onEditInstructor(instructor)}
+                            onClick={() => onEditHotel(hotel)}
                             className="text-gray-500 hover:text-indigo-600 transition-colors"
-                            aria-label="Edit instructor"
+                            aria-label="Edit hotel"
                           >
                             <svg
                               className="w-5 h-5"
@@ -331,10 +303,10 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
                             </svg>
                           </button>
                           <button
-                            onClick={() => handleDelete(instructor.id)}
-                            disabled={deletingId === instructor.id}
+                            onClick={() => handleDelete(hotel.id)}
+                            disabled={deletingId === hotel.id}
                             className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                            aria-label="Delete instructor"
+                            aria-label="Delete hotel"
                           >
                             <svg
                               className="w-5 h-5"
@@ -353,37 +325,20 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
                           </button>
                         </div>
                       </div>
-                      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm text-gray-600">
+                      <dl className="mt-4 space-y-2 text-sm text-gray-600">
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Phone</dt>
-                          <dd>{instructor.phone || '—'}</dd>
+                          <dt className="text-gray-400 text-xs uppercase">Address</dt>
+                          <dd>{hotel.address || '—'}</dd>
                         </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">Bank Detail</dt>
-                          <dd>{instructor.bankdetail || '—'}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">Hourly</dt>
-                          <dd>{formatCurrency(instructor.hourlyrate)}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">Commission</dt>
-                          <dd>{formatPercent(instructor.commission)}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">Monthly Fix</dt>
-                          <dd>{formatCurrency(instructor.monthlyfix)}</dd>
-                        </div>
-                        <div className="md:col-span-2">
-                          <dt className="text-gray-400 text-xs uppercase">Note</dt>
-                          <dd>{instructor.note || '—'}</dd>
-                        </div>
+                    <div>
+                      <dt className="text-gray-400 text-xs uppercase">Note</dt>
+                      <dd>{hotel.note || '—'}</dd>
+                    </div>
                       </dl>
                     </div>
                   ))
                 )}
               </div>
-
               {renderPagination()}
             </div>
           )}
@@ -393,5 +348,5 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
   )
 }
 
-export default Instructors
+export default Hotels
 

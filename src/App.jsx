@@ -2,10 +2,15 @@ import { useState, useEffect } from 'react'
 import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
 import Customers from './pages/Customers'
+import Hotels from './pages/Hotels'
+import Agencies from './pages/Agencies'
 import Instructors from './pages/Instructors'
 import Lessons from './pages/Lessons'
 import Rentals from './pages/Rentals'
 import CustomerForm from './pages/CustomerForm'
+import HotelForm from './pages/HotelForm'
+import AgencyForm from './pages/AgencyForm'
+import InstructorForm from './pages/InstructorForm'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import { getSession, deleteSession } from './lib/auth.js'
@@ -19,6 +24,12 @@ function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [customerFormCustomer, setCustomerFormCustomer] = useState(null)
   const [customersRefreshKey, setCustomersRefreshKey] = useState(0)
+  const [hotelFormHotel, setHotelFormHotel] = useState(null)
+  const [hotelsRefreshKey, setHotelsRefreshKey] = useState(0)
+  const [agencyFormAgency, setAgencyFormAgency] = useState(null)
+  const [agenciesRefreshKey, setAgenciesRefreshKey] = useState(0)
+  const [instructorFormInstructor, setInstructorFormInstructor] = useState(null)
+  const [instructorsRefreshKey, setInstructorsRefreshKey] = useState(0)
 
   // Check if user is logged in on mount using session
   useEffect(() => {
@@ -97,6 +108,54 @@ function App() {
     setCurrentPage('customers')
   }
 
+  const openHotelForm = (hotel = null) => {
+    setHotelFormHotel(hotel)
+    setCurrentPage('hotelForm')
+  }
+
+  const handleHotelFormSaved = () => {
+    setHotelsRefreshKey((prev) => prev + 1)
+    setHotelFormHotel(null)
+    setCurrentPage('hotels')
+  }
+
+  const handleHotelFormCancel = () => {
+    setHotelFormHotel(null)
+    setCurrentPage('hotels')
+  }
+
+  const openAgencyForm = (agency = null) => {
+    setAgencyFormAgency(agency)
+    setCurrentPage('agencyForm')
+  }
+
+  const handleAgencyFormSaved = () => {
+    setAgenciesRefreshKey((prev) => prev + 1)
+    setAgencyFormAgency(null)
+    setCurrentPage('agencies')
+  }
+
+  const handleAgencyFormCancel = () => {
+    setAgencyFormAgency(null)
+    setCurrentPage('agencies')
+  }
+
+  const openInstructorForm = (instructor = null) => {
+    setInstructorFormInstructor(instructor)
+    setCurrentPage('instructorForm')
+  }
+
+  const handleInstructorFormSaved = () => {
+    setInstructorsRefreshKey((prev) => prev + 1)
+    setInstructorFormInstructor(null)
+    setCurrentPage('instructors')
+  }
+
+  const handleInstructorFormCancel = () => {
+    setInstructorFormInstructor(null)
+    setCurrentPage('instructors')
+  }
+
   const closeSidebar = () => {
     setIsSidebarOpen(false)
   }
@@ -113,8 +172,30 @@ function App() {
             onEditCustomer={(customer) => openCustomerForm(customer)}
           />
         )
+      case 'hotels':
+        return (
+          <Hotels
+            refreshKey={hotelsRefreshKey}
+            onAddHotel={() => openHotelForm(null)}
+            onEditHotel={(hotel) => openHotelForm(hotel)}
+          />
+        )
+      case 'agencies':
+        return (
+          <Agencies
+            refreshKey={agenciesRefreshKey}
+            onAddAgency={() => openAgencyForm(null)}
+            onEditAgency={(agency) => openAgencyForm(agency)}
+          />
+        )
       case 'instructors':
-        return <Instructors />
+        return (
+          <Instructors
+            refreshKey={instructorsRefreshKey}
+            onAddInstructor={() => openInstructorForm(null)}
+            onEditInstructor={(instructor) => openInstructorForm(instructor)}
+          />
+        )
       case 'lessons':
         return <Lessons />
       case 'rentals':
@@ -125,6 +206,30 @@ function App() {
             customer={customerFormCustomer}
             onCancel={handleCustomerFormCancel}
             onSaved={handleCustomerFormSaved}
+          />
+        )
+      case 'hotelForm':
+        return (
+          <HotelForm
+            hotel={hotelFormHotel}
+            onCancel={handleHotelFormCancel}
+            onSaved={handleHotelFormSaved}
+          />
+        )
+      case 'agencyForm':
+        return (
+          <AgencyForm
+            agency={agencyFormAgency}
+            onCancel={handleAgencyFormCancel}
+            onSaved={handleAgencyFormSaved}
+          />
+        )
+      case 'instructorForm':
+        return (
+          <InstructorForm
+            instructor={instructorFormInstructor}
+            onCancel={handleInstructorFormCancel}
+            onSaved={handleInstructorFormSaved}
           />
         )
       default:

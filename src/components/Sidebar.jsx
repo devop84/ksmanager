@@ -100,6 +100,30 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
           </li>
           <li>
             <button
+              onClick={() => handleNavigateClick('hotels')}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
+                currentPage === 'hotels'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              Hotels
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => handleNavigateClick('agencies')}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
+                currentPage === 'agencies'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              Agencies
+            </button>
+          </li>
+          <li>
+            <button
               onClick={() => handleNavigateClick('instructors')}
               className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
                 currentPage === 'instructors'
