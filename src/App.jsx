@@ -6,8 +6,6 @@ import Hotels from './pages/Hotels'
 import Agencies from './pages/Agencies'
 import Instructors from './pages/Instructors'
 import Services from './pages/Services'
-import Lessons from './pages/Lessons'
-import Rentals from './pages/Rentals'
 import CustomerForm from './pages/CustomerForm'
 import HotelForm from './pages/HotelForm'
 import AgencyForm from './pages/AgencyForm'
@@ -224,10 +222,6 @@ function App() {
             onEditInstructor={(instructor) => openInstructorForm(instructor)}
           />
         )
-      case 'lessons':
-        return <Lessons />
-      case 'rentals':
-        return <Rentals />
       case 'customerForm':
         return (
           <CustomerForm
