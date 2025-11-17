@@ -149,8 +149,8 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, refres
   )
 
   return (
-    <div className="p-8">
-      <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-6">
+    <div className="px-4 py-6 sm:p-6 lg:p-8">
+      <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
