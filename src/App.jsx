@@ -5,6 +5,7 @@ import Customers from './pages/Customers'
 import Instructors from './pages/Instructors'
 import Lessons from './pages/Lessons'
 import Rentals from './pages/Rentals'
+import CustomerForm from './pages/CustomerForm'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import { getSession, deleteSession } from './lib/auth.js'
@@ -16,6 +17,8 @@ function App() {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
+  const [customerFormCustomer, setCustomerFormCustomer] = useState(null)
+  const [customersRefreshKey, setCustomersRefreshKey] = useState(0)
 
   // Check if user is logged in on mount using session
   useEffect(() => {
@@ -78,6 +81,22 @@ function App() {
     setIsSidebarOpen((prev) => !prev)
   }
 
+  const openCustomerForm = (customer = null) => {
+    setCustomerFormCustomer(customer)
+    setCurrentPage('customerForm')
+  }
+
+  const handleCustomerFormSaved = () => {
+    setCustomersRefreshKey((prev) => prev + 1)
+    setCustomerFormCustomer(null)
+    setCurrentPage('customers')
+  }
+
+  const handleCustomerFormCancel = () => {
+    setCustomerFormCustomer(null)
+    setCurrentPage('customers')
+  }
+
   const closeSidebar = () => {
     setIsSidebarOpen(false)
   }
@@ -87,13 +106,27 @@ function App() {
       case 'dashboard':
         return <Dashboard />
       case 'customers':
-        return <Customers />
+        return (
+          <Customers
+            refreshKey={customersRefreshKey}
+            onAddCustomer={() => openCustomerForm(null)}
+            onEditCustomer={(customer) => openCustomerForm(customer)}
+          />
+        )
       case 'instructors':
         return <Instructors />
       case 'lessons':
         return <Lessons />
       case 'rentals':
         return <Rentals />
+      case 'customerForm':
+        return (
+          <CustomerForm
+            customer={customerFormCustomer}
+            onCancel={handleCustomerFormCancel}
+            onSaved={handleCustomerFormSaved}
+          />
+        )
       default:
         return <Dashboard />
     }
