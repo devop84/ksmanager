@@ -380,7 +380,7 @@ function App() {
       />
       
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col min-h-screen bg-white">
+      <div className="flex-1 flex flex-col min-h-screen bg-white w-full">
         {/* Mobile header */}
         <header className="md:hidden sticky top-0 z-10 bg-gray-900 text-white px-4 py-4 flex items-center justify-between shadow-lg">
           <button

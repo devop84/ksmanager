@@ -245,7 +245,7 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
   }
 
   return (
-    <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
+    <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm" style={{ width: '100%', minWidth: '800px' }}>
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Daily Lessons</h2>
         
@@ -294,9 +294,9 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
       {instructors.length === 0 ? (
         <div className="text-gray-600">No lessons scheduled for this date.</div>
       ) : (
-        <div className="w-full overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 md:mx-0 md:px-0">
+        <div>
           {/* Instructor rows with lessons */}
-          <div className="space-y-3 md:space-y-2" style={{ minWidth: 'min(100%, 800px)' }}>
+          <div className="space-y-3 md:space-y-2" style={{ minWidth: '1200px' }}>
             {instructors.map((instructor) => {
               const instructorLessons = getInstructorLessons(instructor.id)
               
@@ -308,7 +308,7 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
                   </div>
                   
                   {/* Timeline row */}
-                  <div className="flex-1 relative h-14 sm:h-12 bg-gray-50 rounded" style={{ minWidth: 'min(100%, 800px)' }}>
+                  <div className="flex-1 relative h-14 sm:h-12 bg-gray-50 rounded" style={{ minWidth: '1200px' }}>
                     {instructorLessons.map((lesson, idx) => (
                       <div
                         key={lesson.order_id || idx}
