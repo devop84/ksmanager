@@ -245,7 +245,7 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
   }
 
   return (
-    <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm overflow-hidden">
+    <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm overflow-hidden max-w-full">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
         <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Daily Lessons</h2>
         
@@ -294,21 +294,21 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
       {instructors.length === 0 ? (
         <div className="text-gray-600">No lessons scheduled for this date.</div>
       ) : (
-        <div className="w-full overflow-x-auto">
+        <div className="w-full overflow-x-auto" style={{ width: '100%', maxWidth: '100%', minWidth: 0 }}>
           {/* Instructor rows with lessons */}
-          <div className="space-y-3 md:space-y-2" style={{ minWidth: '600px' }}>
+          <div className="space-y-3 md:space-y-2" style={{ minWidth: '800px' }}>
             {instructors.map((instructor) => {
               const instructorLessons = getInstructorLessons(instructor.id)
               
               return (
                 <div key={instructor.id} className="flex items-center gap-2 sm:gap-4">
                   {/* Instructor name */}
-                  <div className="w-20 sm:w-32 flex-shrink-0 text-xs sm:text-sm font-medium text-gray-800 pr-2">
+                  <div className="w-24 sm:w-32 flex-shrink-0 text-xs sm:text-sm font-medium text-gray-800 sticky left-0 bg-white z-10 pr-2">
                     {instructor.name}
                   </div>
                   
                   {/* Timeline row */}
-                  <div className="flex-1 relative h-14 sm:h-12 bg-gray-50 rounded" style={{ minWidth: '500px' }}>
+                  <div className="flex-1 relative h-14 sm:h-12 bg-gray-50 rounded" style={{ minWidth: '700px' }}>
                     {instructorLessons.map((lesson, idx) => (
                       <div
                         key={lesson.order_id || idx}
