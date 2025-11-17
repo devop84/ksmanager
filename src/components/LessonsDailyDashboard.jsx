@@ -277,8 +277,8 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
   }
 
   return (
-    <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm w-full">
-      <div className="sticky top-0 z-20 bg-white w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-gray-200">
+    <div className="rounded-xl bg-white p-2 sm:p-4 md:p-6 shadow-sm w-full">
+      <div className="sticky top-0 z-20 bg-white w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 md:gap-4 mb-2 sm:mb-3 md:mb-4 pb-2 sm:pb-3 md:pb-4 border-b border-gray-200">
         <h2 className="w-full sm:w-auto text-lg sm:text-xl font-semibold text-gray-800">Daily Lessons</h2>
         
         {/* Date navigation */}
