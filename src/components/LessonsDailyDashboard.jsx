@@ -328,7 +328,7 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
       ) : (
         <div className="overflow-x-auto w-full">
           {/* Instructor rows with lessons */}
-          <div className="space-y-3 md:space-y-2" style={{ minWidth: '1200px' }}>
+          <div className="space-y-3 md:space-y-2" style={{ minWidth: '800px' }}>
             {instructors.map((instructor) => {
               const instructorLessons = getInstructorLessons(instructor.id)
               const lessonCount = instructorLessons.length
@@ -342,7 +342,7 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
                   </div>
                   
                   {/* Timeline row */}
-                  <div className="flex-1 relative h-14 sm:h-12 bg-gray-50 rounded" style={{ minWidth: '1200px' }}>
+                  <div className="flex-1 relative h-14 sm:h-12 bg-gray-50 rounded" style={{ minWidth: '800px' }}>
                     {/* Current time indicator line - only for today */}
                     {(() => {
                       const timePosition = getCurrentTimePosition()
