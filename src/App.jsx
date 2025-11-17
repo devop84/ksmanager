@@ -15,6 +15,7 @@ function App() {
   const [showSignup, setShowSignup] = useState(false)
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
 
   // Check if user is logged in on mount using session
   useEffect(() => {
@@ -70,6 +71,15 @@ function App() {
 
   const handleNavigate = (page) => {
     setCurrentPage(page)
+    setIsSidebarOpen(false)
+  }
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen((prev) => !prev)
+  }
+
+  const closeSidebar = () => {
+    setIsSidebarOpen(false)
   }
 
   const renderPage = () => {
@@ -118,18 +128,45 @@ function App() {
 
   // Show main app if authenticated
   return (
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 flex">
       {/* Sidebar */}
       <Sidebar
         currentPage={currentPage}
         onNavigate={handleNavigate}
         onLogout={handleLogout}
         user={user}
+        isMobileOpen={isSidebarOpen}
+        onClose={closeSidebar}
       />
-      
+
       {/* Main Content Area */}
-      <div className="flex-1 bg-white">
-        {renderPage()}
+      <div className="flex-1 flex flex-col min-h-screen bg-white">
+        {/* Mobile header */}
+        <header className="md:hidden sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white shadow-sm">
+          <button
+            onClick={toggleSidebar}
+            className="text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-md p-2"
+            aria-label="Toggle sidebar"
+          >
+            <svg
+              className="w-6 h-6"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+            </svg>
+          </button>
+          <div className="text-base font-semibold text-gray-900">KSMANAGER</div>
+          <div className="text-sm text-gray-500 truncate max-w-[40%]">
+            {user?.name || user?.email}
+          </div>
+        </header>
+
+        <main className="flex-1">
+          {renderPage()}
+        </main>
       </div>
     </div>
   )

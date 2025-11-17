@@ -1,6 +1,43 @@
-function Sidebar({ currentPage, onNavigate, onLogout, user }) {
+function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClose }) {
+  const handleNavigateClick = (page) => {
+    onNavigate(page)
+    if (onClose) {
+      onClose()
+    }
+  }
+
   return (
-    <div className="w-64 bg-gray-900 text-white min-h-screen flex flex-col">
+    <>
+      {/* Mobile overlay */}
+      <div
+        className={`fixed inset-0 bg-black/40 z-30 transition-opacity duration-300 md:hidden ${
+          isMobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+        onClick={onClose}
+        aria-hidden="true"
+      />
+
+      <div
+        className={`fixed inset-y-0 left-0 z-40 w-64 bg-gray-900 text-white min-h-screen flex flex-col transform transition-transform duration-300 md:static md:translate-x-0 ${
+          isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
+        }`}
+      >
+        {/* Close button for mobile */}
+        <button
+          onClick={onClose}
+          className="md:hidden absolute top-4 right-4 text-gray-400 hover:text-white transition-colors duration-200"
+          aria-label="Close sidebar"
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            xmlns="http://www.w3.org/2000/svg"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
       {/* App Title */}
       <div className="p-6 border-b border-gray-800">
         <div className="flex items-center gap-3">
@@ -66,7 +103,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user }) {
         <ul className="space-y-2">
           <li>
             <button
-              onClick={() => onNavigate('dashboard')}
+              onClick={() => handleNavigateClick('dashboard')}
               className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
                 currentPage === 'dashboard'
                   ? 'bg-indigo-600 text-white'
@@ -78,7 +115,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user }) {
           </li>
           <li>
             <button
-              onClick={() => onNavigate('customers')}
+              onClick={() => handleNavigateClick('customers')}
               className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
                 currentPage === 'customers'
                   ? 'bg-indigo-600 text-white'
@@ -90,7 +127,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user }) {
           </li>
           <li>
             <button
-              onClick={() => onNavigate('instructors')}
+              onClick={() => handleNavigateClick('instructors')}
               className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
                 currentPage === 'instructors'
                   ? 'bg-indigo-600 text-white'
@@ -102,7 +139,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user }) {
           </li>
           <li>
             <button
-              onClick={() => onNavigate('lessons')}
+              onClick={() => handleNavigateClick('lessons')}
               className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
                 currentPage === 'lessons'
                   ? 'bg-indigo-600 text-white'
@@ -114,7 +151,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user }) {
           </li>
           <li>
             <button
-              onClick={() => onNavigate('rentals')}
+              onClick={() => handleNavigateClick('rentals')}
               className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
                 currentPage === 'rentals'
                   ? 'bg-indigo-600 text-white'
@@ -127,8 +164,8 @@ function Sidebar({ currentPage, onNavigate, onLogout, user }) {
         </ul>
       </nav>
     </div>
+    </>
   )
 }
 
 export default Sidebar
-
