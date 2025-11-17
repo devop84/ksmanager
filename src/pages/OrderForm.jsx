@@ -15,17 +15,25 @@ const baseState = {
   daily: false,
   weekly: false,
   monthly: false,
+  check_in: '',
+  check_out: '',
   starting: '',
   ending: '',
   lesson_day: '',
-  lesson_start_time: '',
-  lesson_end_time: ''
+  lesson_start_time: '00:00',
+  lesson_end_time: '00:00'
 }
 
 function toInputDateTime(value) {
   if (!value) return ''
   const date = new Date(value)
-  return date.toISOString().slice(0, 16)
+  // Convert to local time for datetime-local input
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
 function OrderForm({ order = null, onCancel, onSaved }) {
@@ -130,11 +138,13 @@ function OrderForm({ order = null, onCancel, onSaved }) {
               daily: row.daily || row.storage_daily || false,
               weekly: row.weekly || row.storage_weekly || false,
               monthly: row.storage_monthly || false,
+              check_in: toLocalDateInput(row.storage_start || row.rental_start || row.lesson_start),
+              check_out: toLocalDateInput(row.storage_end || row.rental_end || row.lesson_end),
               starting: toInputDateTime(starting),
               ending: toInputDateTime(ending),
-              lesson_day: starting ? new Date(starting).toISOString().slice(0, 10) : '',
-              lesson_start_time: starting ? new Date(starting).toISOString().slice(11, 16) : '',
-              lesson_end_time: ending ? new Date(ending).toISOString().slice(11, 16) : '',
+              lesson_day: toLocalDateInput(starting),
+              lesson_start_time: toLocalTimeInput(starting),
+              lesson_end_time: toLocalTimeInput(ending),
               category_name: categoryName
             })
           }
@@ -145,7 +155,10 @@ function OrderForm({ order = null, onCancel, onSaved }) {
             customer_id: customerRows?.[0]?.id || '',
             cancelled: false,
             starting: '',
-            ending: ''
+            ending: '',
+            lesson_day: '',
+            lesson_start_time: '00:00',
+            lesson_end_time: '00:00'
           }))
         }
       } catch (err) {
@@ -166,6 +179,18 @@ function OrderForm({ order = null, onCancel, onSaved }) {
 
   const categoryName = selectedService?.category_name
 
+  useEffect(() => {
+    if (!categoryName) return
+    if (categoryName === 'storage' && !isEditing) {
+      setFormData((prev) => ({
+        ...prev,
+        daily: true,
+        weekly: false,
+        monthly: false
+      }))
+    }
+  }, [categoryName, isEditing])
+
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target
     setFormData((prev) => ({
@@ -174,12 +199,47 @@ function OrderForm({ order = null, onCancel, onSaved }) {
     }))
   }
 
-  const combineDateAndTime = (date, time) => {
-    if (!date || !time) return null
-    return new Date(`${date}T${time}:00`).toISOString()
-  }
+const toLocalDateInput = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
+}
 
-  const ensureDate = (value) => (value ? new Date(value).toISOString() : null)
+const toLocalTimeInput = (value) => {
+  if (!value) return ''
+  const date = new Date(value)
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${hours}:${minutes}`
+}
+
+const combineDateAndTime = (date, time) => {
+  if (!date || !time) return null
+  const [year, month, day] = date.split('-').map(Number)
+  const [hours, minutes] = time.split(':').map(Number)
+  const utc = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0))
+  return utc.toISOString()
+}
+
+const ensureDate = (value, fallbackTime = null) => {
+  if (!value) return null
+  if (fallbackTime) {
+    return combineDateAndTime(value, fallbackTime)
+  }
+  // Handle datetime-local format (YYYY-MM-DDTHH:mm)
+  if (typeof value === 'string' && value.includes('T') && !value.includes('Z') && !value.includes('+')) {
+    const [datePart, timePart] = value.split('T')
+    const [year, month, day] = datePart.split('-').map(Number)
+    const [hours, minutes] = timePart.split(':').map(Number)
+    // Create UTC date to avoid timezone shifts
+    const utc = new Date(Date.UTC(year, month - 1, day, hours, minutes, 0, 0))
+    return utc.toISOString()
+  }
+  return new Date(value).toISOString()
+}
 
   const handleSubmit = async (event) => {
     event.preventDefault()
@@ -190,6 +250,11 @@ function OrderForm({ order = null, onCancel, onSaved }) {
     if (categoryName === 'lessons') {
       if (!formData.lesson_day || !formData.lesson_start_time || !formData.lesson_end_time) {
         setError('Please provide day, start time, and end time.')
+        return
+      }
+    } else if (categoryName === 'storage') {
+      if (!formData.check_in || !formData.check_out) {
+        setError('Please provide check-in and check-out dates.')
         return
       }
     } else if (!formData.starting || !formData.ending) {
@@ -221,14 +286,19 @@ function OrderForm({ order = null, onCancel, onSaved }) {
         orderId = inserted[0].id
       }
 
-      const starting =
-        categoryName === 'lessons'
-          ? combineDateAndTime(formData.lesson_day, formData.lesson_start_time)
-          : ensureDate(formData.starting)
-      const ending =
-        categoryName === 'lessons'
-          ? combineDateAndTime(formData.lesson_day, formData.lesson_end_time)
-          : ensureDate(formData.ending)
+      let starting = null
+      let ending = null
+
+      if (categoryName === 'lessons') {
+        starting = combineDateAndTime(formData.lesson_day, formData.lesson_start_time)
+        ending = combineDateAndTime(formData.lesson_day, formData.lesson_end_time)
+      } else if (categoryName === 'storage') {
+        starting = combineDateAndTime(formData.check_in, '00:00')
+        ending = combineDateAndTime(formData.check_out, '00:00')
+      } else {
+        starting = ensureDate(formData.starting)
+        ending = ensureDate(formData.ending)
+      }
 
       if (categoryName === 'lessons') {
         await sql`
@@ -280,7 +350,7 @@ function OrderForm({ order = null, onCancel, onSaved }) {
           VALUES (
             ${orderId},
             ${formData.storage_id || formData.service_id},
-            ${formData.daily},
+            ${formData.daily || (!formData.weekly && !formData.monthly)},
             ${formData.weekly},
             ${formData.monthly},
             ${starting},
@@ -480,11 +550,33 @@ function OrderForm({ order = null, onCancel, onSaved }) {
           )}
 
           {categoryName === 'rentals' && (
-            <>
-              <div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="equipment_id">
+                Equipment
+              </label>
+              <select
+                id="equipment_id"
+                name="equipment_id"
+                value={formData.equipment_id}
+                onChange={handleChange}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+              >
+                <option value="">Select equipment</option>
+                {equipment.map((item) => (
+                  <option key={item.id} value={item.id}>
+                    {item.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
-          {categoryName !== 'lessons' && (
-            <>
+          {categoryName === 'rentals' && (
+            <div
+              className={`md:col-span-2 grid grid-cols-1 gap-4 ${
+                categoryName === 'rentals' ? 'md:grid-cols-2' : ''
+              }`}
+            >
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="starting">
                   Start time
@@ -512,90 +604,53 @@ function OrderForm({ order = null, onCancel, onSaved }) {
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                 />
               </div>
-            </>
+            </div>
           )}
 
-          <div className="md:col-span-2 flex items-center gap-3">
-            <input
-              id="cancelled"
-              name="cancelled"
-              type="checkbox"
-              checked={formData.cancelled}
-              onChange={handleChange}
-              className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            />
-            <label htmlFor="cancelled" className="text-sm font-medium text-gray-700">
-              Mark as cancelled
-            </label>
-          </div>
-                <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="equipment_id">
-                  Equipment
-                </label>
-                <select
-                  id="equipment_id"
-                  name="equipment_id"
-                  value={formData.equipment_id}
-                  onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                >
-                  <option value="">Select equipment</option>
-                  {equipment.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex flex-wrap gap-4 md:col-span-2">
-                {['hourly', 'daily', 'weekly'].map((period) => (
-                  <label key={period} className="flex items-center gap-2 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      name={period}
-                      checked={Boolean(formData[period])}
-                      onChange={handleChange}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    Bill {period}
-                  </label>
-                ))}
-              </div>
-            </>
+          {categoryName !== 'rentals' && (
+            <div className="md:col-span-2 flex items-center gap-3">
+              <input
+                id="cancelled"
+                name="cancelled"
+                type="checkbox"
+                checked={formData.cancelled}
+                onChange={handleChange}
+                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+              />
+              <label htmlFor="cancelled" className="text-sm font-medium text-gray-700">
+                Mark as cancelled
+              </label>
+            </div>
           )}
 
           {categoryName === 'storage' && (
             <>
               <div>
-                <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="storage_id">
-                  Storage option
+                <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="check_in">
+                  Check-in date
                 </label>
-                <select
-                  id="storage_id"
-                  name="storage_id"
-                  value={formData.storage_id || formData.service_id}
+                <input
+                  id="check_in"
+                  name="check_in"
+                  type="date"
+                  value={formData.check_in}
                   onChange={handleChange}
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                >
-                  {storageOptions.map((storage) => (
-                    <option key={storage.id} value={storage.id}>
-                      {storage.name}
-                    </option>
-                  ))}
-                </select>
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                />
               </div>
-              <div className="flex flex-wrap gap-4 md:col-span-2">
-                {['daily', 'weekly', 'monthly'].map((period) => (
-                  <label key={period} className="flex items-center gap-2 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      name={period}
-                      checked={Boolean(formData[period])}
-                      onChange={handleChange}
-                      className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-                    />
-                    Bill {period}
-                  </label>
-                ))}
+
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="check_out">
+                  Check-out date
+                </label>
+                <input
+                  id="check_out"
+                  name="check_out"
+                  type="date"
+                  value={formData.check_out}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                />
               </div>
             </>
           )}

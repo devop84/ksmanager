@@ -388,6 +388,20 @@ function ServicesForm({ service, onCancel, onSaved }) {
                 />
               </div>
 
+              <div className="md:col-span-2 flex items-center gap-3">
+                <input
+                  id="requires_package_pricing"
+                  name="requires_package_pricing"
+                  type="checkbox"
+                  checked={formData.requires_package_pricing}
+                  onChange={handleChange}
+                  className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                />
+                <label htmlFor="requires_package_pricing" className="text-sm font-medium text-gray-700">
+                  Enable package pricing tiers
+                </label>
+              </div>
+
               {formData.requires_package_pricing && (
                 <div className="md:col-span-2">
                   <div className="flex items-center justify-between">
