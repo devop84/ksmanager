@@ -296,19 +296,19 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
       ) : (
         <div className="w-full overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 md:mx-0 md:px-0">
           {/* Instructor rows with lessons */}
-          <div className="space-y-3 md:space-y-2" style={{ minWidth: 'min(100%, 600px)' }}>
+          <div className="space-y-3 md:space-y-2" style={{ minWidth: 'min(100%, 800px)' }}>
             {instructors.map((instructor) => {
               const instructorLessons = getInstructorLessons(instructor.id)
               
               return (
                 <div key={instructor.id} className="flex items-center gap-2 sm:gap-4">
                   {/* Instructor name */}
-                  <div className="w-20 sm:w-32 flex-shrink-0 text-xs sm:text-sm font-medium text-gray-800 sticky left-0 bg-white z-10 pr-2">
+                  <div className="w-20 sm:w-32 flex-shrink-0 text-xs sm:text-sm font-medium text-gray-800 left-0 bg-white z-10 pr-2">
                     {instructor.name}
                   </div>
                   
                   {/* Timeline row */}
-                  <div className="flex-1 relative h-14 sm:h-12 bg-gray-50 rounded" style={{ minWidth: 'min(100%, 500px)' }}>
+                  <div className="flex-1 relative h-14 sm:h-12 bg-gray-50 rounded" style={{ minWidth: 'min(100%, 800px)' }}>
                     {instructorLessons.map((lesson, idx) => (
                       <div
                         key={lesson.order_id || idx}
