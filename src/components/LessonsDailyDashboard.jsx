@@ -294,7 +294,7 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
       {instructors.length === 0 ? (
         <div className="text-gray-600">No lessons scheduled for this date.</div>
       ) : (
-        <div className="w-full overflow-x-auto -mx-4 px-4 sm:-mx-6 sm:px-6 md:mx-0 md:px-0">
+        <div className="w-full overflow-x-auto">
           {/* Instructor rows with lessons */}
           <div className="space-y-3 md:space-y-2" style={{ minWidth: '600px' }}>
             {instructors.map((instructor) => {
