@@ -221,7 +221,7 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard />
+        return <Dashboard onEditOrder={(order) => openOrderForm(order)} />
       case 'customers':
         return (
           <Customers

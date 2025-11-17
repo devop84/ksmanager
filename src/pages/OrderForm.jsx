@@ -252,6 +252,63 @@ const ensureDate = (value, fallbackTime = null) => {
         setError('Please provide day, start time, and end time.')
         return
       }
+      
+      // Validate that instructor doesn't have overlapping lessons
+      if (formData.instructor_id) {
+        const starting = combineDateAndTime(formData.lesson_day, formData.lesson_start_time)
+        const ending = combineDateAndTime(formData.lesson_day, formData.lesson_end_time)
+        
+        if (starting && ending) {
+          try {
+            // Check for overlapping lessons for the same instructor
+            let overlappingLessons
+            if (isEditing) {
+              overlappingLessons = await sql`
+                SELECT ol.order_id, ol.starting, ol.ending, c.fullname AS student_name
+                FROM orders_lessons ol
+                JOIN orders o ON o.id = ol.order_id
+                LEFT JOIN customers c ON c.id = ol.student_id
+                WHERE ol.instructor_id = ${formData.instructor_id}
+                  AND ol.starting < ${ending}
+                  AND ol.ending > ${starting}
+                  AND o.cancelled = FALSE
+                  AND ol.order_id != ${formData.id}
+              `
+            } else {
+              overlappingLessons = await sql`
+                SELECT ol.order_id, ol.starting, ol.ending, c.fullname AS student_name
+                FROM orders_lessons ol
+                JOIN orders o ON o.id = ol.order_id
+                LEFT JOIN customers c ON c.id = ol.student_id
+                WHERE ol.instructor_id = ${formData.instructor_id}
+                  AND ol.starting < ${ending}
+                  AND ol.ending > ${starting}
+                  AND o.cancelled = FALSE
+              `
+            }
+            
+            if (overlappingLessons && overlappingLessons.length > 0) {
+              const conflict = overlappingLessons[0]
+              const conflictStart = new Date(conflict.starting).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              })
+              const conflictEnd = new Date(conflict.ending).toLocaleTimeString('en-US', {
+                hour: 'numeric',
+                minute: '2-digit',
+                hour12: true
+              })
+              setError(`This instructor already has a lesson scheduled at ${conflictStart} - ${conflictEnd}${conflict.student_name ? ` with ${conflict.student_name}` : ''}. Please choose a different time or instructor.`)
+              setSaving(false)
+              return
+            }
+          } catch (err) {
+            console.error('Failed to check for overlapping lessons:', err)
+            // Continue with save if check fails (don't block user)
+          }
+        }
+      }
     } else if (categoryName === 'storage') {
       if (!formData.check_in || !formData.check_out) {
         setError('Please provide check-in and check-out dates.')
