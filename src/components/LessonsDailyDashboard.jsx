@@ -245,7 +245,7 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
   }
 
   return (
-    <div className="rounded-xl bg-white p-6 shadow-sm">
+    <div className="rounded-xl bg-white p-6 shadow-sm overflow-hidden">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
         <h2 className="text-xl font-semibold text-gray-800">Daily Lessons</h2>
         
@@ -294,7 +294,7 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
       {instructors.length === 0 ? (
         <div className="text-gray-600">No lessons scheduled for this date.</div>
       ) : (
-        <div className="w-full overflow-x-auto">
+        <div className="w-full overflow-x-auto -mx-6 px-6 md:mx-0 md:px-0">
           {/* Instructor rows with lessons */}
           <div className="space-y-2" style={{ minWidth: '600px' }}>
             {instructors.map((instructor) => {
