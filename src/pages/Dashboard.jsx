@@ -2,9 +2,9 @@ import LessonsDailyDashboard from '../components/LessonsDailyDashboard'
 
 function Dashboard({ onEditOrder = () => {} }) {
   return (
-    <div className="p-8 min-w-0 max-w-full overflow-hidden">
+    <div className="p-8">
       <h1 className="text-3xl font-bold text-gray-800 mb-6">Dashboard</h1>
-      <div className="space-y-6 min-w-0">
+      <div className="space-y-6">
         <LessonsDailyDashboard onEditOrder={onEditOrder} />
       </div>
     </div>
