@@ -167,3 +167,47 @@ CREATE TABLE IF NOT EXISTS equipment (
 
 CREATE INDEX IF NOT EXISTS idx_equipment_category ON equipment(category_id);
 
+-- Orders
+CREATE TABLE IF NOT EXISTS orders (
+    id SERIAL PRIMARY KEY,
+    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    cancelled BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_orders_service_id ON orders(service_id);
+CREATE INDEX IF NOT EXISTS idx_orders_customer_id ON orders(customer_id);
+
+CREATE TABLE IF NOT EXISTS orders_lessons (
+    order_id INTEGER PRIMARY KEY REFERENCES orders(id) ON DELETE CASCADE,
+    student_id INTEGER REFERENCES customers(id) ON DELETE SET NULL,
+    instructor_id INTEGER REFERENCES instructors(id) ON DELETE SET NULL,
+    starting TIMESTAMP NOT NULL,
+    ending TIMESTAMP NOT NULL,
+    note TEXT
+);
+
+CREATE TABLE IF NOT EXISTS orders_rentals (
+    order_id INTEGER PRIMARY KEY REFERENCES orders(id) ON DELETE CASCADE,
+    equipment_id INTEGER REFERENCES equipment(id) ON DELETE SET NULL,
+    hourly BOOLEAN DEFAULT FALSE,
+    daily BOOLEAN DEFAULT FALSE,
+    weekly BOOLEAN DEFAULT FALSE,
+    starting TIMESTAMP NOT NULL,
+    ending TIMESTAMP NOT NULL,
+    note TEXT
+);
+
+CREATE TABLE IF NOT EXISTS orders_storage (
+    order_id INTEGER PRIMARY KEY REFERENCES orders(id) ON DELETE CASCADE,
+    storage_id INTEGER REFERENCES services_storage(service_id) ON DELETE SET NULL,
+    daily BOOLEAN DEFAULT FALSE,
+    weekly BOOLEAN DEFAULT FALSE,
+    monthly BOOLEAN DEFAULT FALSE,
+    starting TIMESTAMP NOT NULL,
+    ending TIMESTAMP NOT NULL,
+    note TEXT
+);
+

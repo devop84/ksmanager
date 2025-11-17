@@ -7,12 +7,14 @@ import Agencies from './pages/Agencies'
 import Instructors from './pages/Instructors'
 import Services from './pages/Services'
 import Equipment from './pages/Equipment'
+import Orders from './pages/Orders'
 import CustomerForm from './pages/CustomerForm'
 import HotelForm from './pages/HotelForm'
 import AgencyForm from './pages/AgencyForm'
 import InstructorForm from './pages/InstructorForm'
 import ServicesForm from './pages/ServicesForm'
 import EquipmentForm from './pages/EquipmentForm'
+import OrderForm from './pages/OrderForm'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import { getSession, deleteSession } from './lib/auth.js'
@@ -36,6 +38,8 @@ function App() {
   const [servicesRefreshKey, setServicesRefreshKey] = useState(0)
   const [equipmentRefreshKey, setEquipmentRefreshKey] = useState(0)
   const [equipmentFormItem, setEquipmentFormItem] = useState(null)
+  const [ordersRefreshKey, setOrdersRefreshKey] = useState(0)
+  const [orderFormOrder, setOrderFormOrder] = useState(null)
 
   // Check if user is logged in on mount using session
   useEffect(() => {
@@ -194,6 +198,22 @@ function App() {
     setCurrentPage('equipment')
   }
 
+  const openOrderForm = (order = null) => {
+    setOrderFormOrder(order)
+    setCurrentPage('orderForm')
+  }
+
+  const handleOrderFormSaved = () => {
+    setOrdersRefreshKey((prev) => prev + 1)
+    setOrderFormOrder(null)
+    setCurrentPage('orders')
+  }
+
+  const handleOrderFormCancel = () => {
+    setOrderFormOrder(null)
+    setCurrentPage('orders')
+  }
+
   const closeSidebar = () => {
     setIsSidebarOpen(false)
   }
@@ -232,6 +252,14 @@ function App() {
             refreshKey={servicesRefreshKey}
             onAddService={() => openServiceForm(null)}
             onEditService={(serviceItem) => openServiceForm(serviceItem)}
+          />
+        )
+      case 'orders':
+        return (
+          <Orders
+            refreshKey={ordersRefreshKey}
+            onAddOrder={() => openOrderForm(null)}
+            onEditOrder={(order) => openOrderForm(order)}
           />
         )
       case 'equipment':
@@ -296,6 +324,14 @@ function App() {
             equipment={equipmentFormItem}
             onCancel={handleEquipmentFormCancel}
             onSaved={handleEquipmentFormSaved}
+          />
+        )
+      case 'orderForm':
+        return (
+          <OrderForm
+            order={orderFormOrder}
+            onCancel={handleOrderFormCancel}
+            onSaved={handleOrderFormSaved}
           />
         )
       default:

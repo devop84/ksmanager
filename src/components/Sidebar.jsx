@@ -88,6 +88,18 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
           </li>
           <li>
             <button
+              onClick={() => handleNavigateClick('orders')}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
+                currentPage === 'orders'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              Orders
+            </button>
+          </li>
+          <li>
+            <button
               onClick={() => handleNavigateClick('customers')}
               className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
                 currentPage === 'customers'
