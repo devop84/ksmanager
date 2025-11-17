@@ -191,7 +191,7 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, refres
           {!loading && !error && (
             <div className="flex flex-col gap-4">
               {renderPagination()}
-              <div className="overflow-x-auto border border-gray-200 rounded-xl">
+              <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
                     <tr>
@@ -292,6 +292,90 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, refres
                     )}
                   </tbody>
                 </table>
+              </div>
+
+              <div className="md:hidden space-y-3">
+                {paginatedCustomers.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
+                    No customers found. Try adjusting your search or filters.
+                  </div>
+                ) : (
+                  paginatedCustomers.map((customer) => (
+                    <div key={customer.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-base font-semibold text-gray-900">{customer.fullname || '—'}</p>
+                          <p className="text-sm text-gray-500">{customer.email || customer.phone || '—'}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => onEditCustomer(customer)}
+                            className="text-gray-500 hover:text-indigo-600 transition-colors"
+                            aria-label="Edit customer"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(customer.id)}
+                            disabled={deletingId === customer.id}
+                            className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                            aria-label="Delete customer"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-600">
+                        <div>
+                          <dt className="text-gray-400 text-xs uppercase">Phone</dt>
+                          <dd>{customer.phone || '—'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-400 text-xs uppercase">Document</dt>
+                          <dd>{customer.doc || '—'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-400 text-xs uppercase">Country</dt>
+                          <dd>{customer.country || '—'}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-400 text-xs uppercase">Birthdate</dt>
+                          <dd>{formatDate(customer.birthdate)}</dd>
+                        </div>
+                        <div className="md:col-span-2">
+                          <dt className="text-gray-400 text-xs uppercase">Note</dt>
+                          <dd>{customer.note || '—'}</dd>
+                        </div>
+                      </dl>
+                    </div>
+                  ))
+                )}
               </div>
               {renderPagination()}
             </div>
