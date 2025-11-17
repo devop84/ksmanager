@@ -149,3 +149,21 @@ CREATE TABLE IF NOT EXISTS services_storage (
 
 CREATE INDEX IF NOT EXISTS idx_services_storage_service_id ON services_storage(service_id);
 
+-- Equipment categories
+CREATE TABLE IF NOT EXISTS equipment_categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- Equipment inventory
+CREATE TABLE IF NOT EXISTS equipment (
+    id SERIAL PRIMARY KEY,
+    category_id INTEGER REFERENCES equipment_categories(id) ON DELETE SET NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_equipment_category ON equipment(category_id);
+

@@ -58,7 +58,6 @@ SET gear_id = EXCLUDED.gear_id,
     daily_rate = EXCLUDED.daily_rate,
     weekly_rate = EXCLUDED.weekly_rate;
 
--- Storage services
 WITH storage_category AS (
   SELECT id FROM service_categories WHERE name = 'storage'
 )

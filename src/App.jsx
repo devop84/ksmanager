@@ -6,11 +6,13 @@ import Hotels from './pages/Hotels'
 import Agencies from './pages/Agencies'
 import Instructors from './pages/Instructors'
 import Services from './pages/Services'
+import Equipment from './pages/Equipment'
 import CustomerForm from './pages/CustomerForm'
 import HotelForm from './pages/HotelForm'
 import AgencyForm from './pages/AgencyForm'
 import InstructorForm from './pages/InstructorForm'
 import ServicesForm from './pages/ServicesForm'
+import EquipmentForm from './pages/EquipmentForm'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import { getSession, deleteSession } from './lib/auth.js'
@@ -32,6 +34,8 @@ function App() {
   const [instructorsRefreshKey, setInstructorsRefreshKey] = useState(0)
   const [serviceFormService, setServiceFormService] = useState(null)
   const [servicesRefreshKey, setServicesRefreshKey] = useState(0)
+  const [equipmentRefreshKey, setEquipmentRefreshKey] = useState(0)
+  const [equipmentFormItem, setEquipmentFormItem] = useState(null)
 
   // Check if user is logged in on mount using session
   useEffect(() => {
@@ -174,6 +178,22 @@ function App() {
     setCurrentPage('services')
   }
 
+  const openEquipmentForm = (item = null) => {
+    setEquipmentFormItem(item)
+    setCurrentPage('equipmentForm')
+  }
+
+  const handleEquipmentFormSaved = () => {
+    setEquipmentRefreshKey((prev) => prev + 1)
+    setEquipmentFormItem(null)
+    setCurrentPage('equipment')
+  }
+
+  const handleEquipmentFormCancel = () => {
+    setEquipmentFormItem(null)
+    setCurrentPage('equipment')
+  }
+
   const closeSidebar = () => {
     setIsSidebarOpen(false)
   }
@@ -212,6 +232,14 @@ function App() {
             refreshKey={servicesRefreshKey}
             onAddService={() => openServiceForm(null)}
             onEditService={(serviceItem) => openServiceForm(serviceItem)}
+          />
+        )
+      case 'equipment':
+        return (
+          <Equipment
+            refreshKey={equipmentRefreshKey}
+            onAddEquipment={() => openEquipmentForm(null)}
+            onEditEquipment={(item) => openEquipmentForm(item)}
           />
         )
       case 'instructors':
@@ -260,6 +288,14 @@ function App() {
             service={serviceFormService}
             onCancel={handleServiceFormCancel}
             onSaved={handleServiceFormSaved}
+          />
+        )
+      case 'equipmentForm':
+        return (
+          <EquipmentForm
+            equipment={equipmentFormItem}
+            onCancel={handleEquipmentFormCancel}
+            onSaved={handleEquipmentFormSaved}
           />
         )
       default:
