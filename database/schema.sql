@@ -90,3 +90,62 @@ CREATE TABLE IF NOT EXISTS instructors (
 CREATE INDEX IF NOT EXISTS idx_instructors_name ON instructors(fullname);
 CREATE INDEX IF NOT EXISTS idx_instructors_email ON instructors(email);
 
+-- Service categories
+CREATE TABLE IF NOT EXISTS service_categories (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE
+);
+
+-- Services catalog
+CREATE TABLE IF NOT EXISTS services (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    category_id INTEGER NOT NULL REFERENCES service_categories(id) ON DELETE CASCADE,
+    description TEXT,
+    active BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Lesson services
+CREATE TABLE IF NOT EXISTS services_lessons (
+    service_id INTEGER PRIMARY KEY REFERENCES services(id) ON DELETE CASCADE,
+    default_duration_hours NUMERIC(5,2) NOT NULL,
+    base_price_per_hour NUMERIC(10,2) NOT NULL,
+    requires_package_pricing BOOLEAN DEFAULT FALSE
+);
+
+-- Lesson pricing tiers (packages)
+CREATE TABLE IF NOT EXISTS services_lessons_packages (
+    id SERIAL PRIMARY KEY,
+    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
+    min_total_hours NUMERIC(6,2) NOT NULL,
+    max_total_hours NUMERIC(6,2),
+    price_per_hour NUMERIC(10,2) NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_services_category ON services(category_id);
+CREATE INDEX IF NOT EXISTS idx_services_lessons_service_id ON services_lessons(service_id);
+CREATE INDEX IF NOT EXISTS idx_services_lessons_packages_service_id ON services_lessons_packages(service_id);
+
+-- Rental services
+CREATE TABLE IF NOT EXISTS services_rentals (
+    service_id INTEGER PRIMARY KEY REFERENCES services(id) ON DELETE CASCADE,
+    gear_id VARCHAR(100),
+    hourly_rate NUMERIC(10,2),
+    daily_rate NUMERIC(10,2),
+    weekly_rate NUMERIC(10,2)
+);
+
+CREATE INDEX IF NOT EXISTS idx_services_rentals_service_id ON services_rentals(service_id);
+
+-- Storage services
+CREATE TABLE IF NOT EXISTS services_storage (
+    service_id INTEGER PRIMARY KEY REFERENCES services(id) ON DELETE CASCADE,
+    daily_rate NUMERIC(10,2),
+    weekly_rate NUMERIC(10,2),
+    monthly_rate NUMERIC(10,2)
+);
+
+CREATE INDEX IF NOT EXISTS idx_services_storage_service_id ON services_storage(service_id);
+

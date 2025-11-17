@@ -5,12 +5,14 @@ import Customers from './pages/Customers'
 import Hotels from './pages/Hotels'
 import Agencies from './pages/Agencies'
 import Instructors from './pages/Instructors'
+import Services from './pages/Services'
 import Lessons from './pages/Lessons'
 import Rentals from './pages/Rentals'
 import CustomerForm from './pages/CustomerForm'
 import HotelForm from './pages/HotelForm'
 import AgencyForm from './pages/AgencyForm'
 import InstructorForm from './pages/InstructorForm'
+import ServicesForm from './pages/ServicesForm'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import { getSession, deleteSession } from './lib/auth.js'
@@ -30,6 +32,8 @@ function App() {
   const [agenciesRefreshKey, setAgenciesRefreshKey] = useState(0)
   const [instructorFormInstructor, setInstructorFormInstructor] = useState(null)
   const [instructorsRefreshKey, setInstructorsRefreshKey] = useState(0)
+  const [serviceFormService, setServiceFormService] = useState(null)
+  const [servicesRefreshKey, setServicesRefreshKey] = useState(0)
 
   // Check if user is logged in on mount using session
   useEffect(() => {
@@ -156,6 +160,22 @@ function App() {
     setCurrentPage('instructors')
   }
 
+  const openServiceForm = (serviceData = null) => {
+    setServiceFormService(serviceData)
+    setCurrentPage('serviceForm')
+  }
+
+  const handleServiceFormSaved = () => {
+    setServicesRefreshKey((prev) => prev + 1)
+    setServiceFormService(null)
+    setCurrentPage('services')
+  }
+
+  const handleServiceFormCancel = () => {
+    setServiceFormService(null)
+    setCurrentPage('services')
+  }
+
   const closeSidebar = () => {
     setIsSidebarOpen(false)
   }
@@ -186,6 +206,14 @@ function App() {
             refreshKey={agenciesRefreshKey}
             onAddAgency={() => openAgencyForm(null)}
             onEditAgency={(agency) => openAgencyForm(agency)}
+          />
+        )
+      case 'services':
+        return (
+          <Services
+            refreshKey={servicesRefreshKey}
+            onAddService={() => openServiceForm(null)}
+            onEditService={(serviceItem) => openServiceForm(serviceItem)}
           />
         )
       case 'instructors':
@@ -230,6 +258,14 @@ function App() {
             instructor={instructorFormInstructor}
             onCancel={handleInstructorFormCancel}
             onSaved={handleInstructorFormSaved}
+          />
+        )
+      case 'serviceForm':
+        return (
+          <ServicesForm
+            service={serviceFormService}
+            onCancel={handleServiceFormCancel}
+            onSaved={handleServiceFormSaved}
           />
         )
       default:
