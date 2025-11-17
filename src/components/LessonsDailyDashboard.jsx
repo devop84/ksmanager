@@ -10,6 +10,18 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
     const today = new Date()
     return today.toISOString().split('T')[0] // Format: YYYY-MM-DD
   })
+  const [currentTime, setCurrentTime] = useState(new Date())
+
+  // Update current time every minute and on mount/date change
+  useEffect(() => {
+    setCurrentTime(new Date()) // Update immediately on mount/date change
+    
+    const timer = setInterval(() => {
+      setCurrentTime(new Date())
+    }, 60000) // Update every minute
+
+    return () => clearInterval(timer)
+  }, [selectedDate])
 
   useEffect(() => {
     const fetchLessons = async () => {
@@ -78,19 +90,19 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
     fetchLessons()
   }, [selectedDate])
 
-  // Total minutes in the day (7am to 7pm = 12 hours = 720 minutes)
-  const TOTAL_MINUTES = 12 * 60 // 720 minutes
+  // Total minutes in the day (6am to 7pm = 13 hours = 780 minutes)
+  const TOTAL_MINUTES = 13 * 60 // 780 minutes
 
   // Generate hour labels for the timeline
   const generateHourLabels = () => {
     const labels = []
-    for (let hour = 7; hour <= 19; hour++) {
+    for (let hour = 6; hour <= 19; hour++) {
       const displayHour = hour < 12 ? hour : hour === 12 ? 12 : hour - 12
       const ampm = hour < 12 ? 'AM' : 'PM'
       labels.push({
         hour,
         label: `${displayHour}:00 ${ampm}`,
-        position: ((hour - 7) / 12) * 100 // Percentage position
+        position: ((hour - 6) / 13) * 100 // Percentage position
       })
     }
     return labels
@@ -174,10 +186,30 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
     return selectedDate === todayStr
   }
 
+  // Calculate current time position for today
+  const getCurrentTimePosition = () => {
+    if (!isToday()) return null
+
+    const now = currentTime
+    const [year, month, day] = selectedDate.split('-').map(Number)
+    const dayStart = new Date(year, month - 1, day, 6, 0, 0) // 6am
+    
+    // Calculate minutes from start of day (6am = 0)
+    const currentMinutes = (now - dayStart) / (1000 * 60)
+    
+    // Only show if within the visible window (6am-7pm)
+    if (currentMinutes < 0 || currentMinutes > TOTAL_MINUTES) return null
+    
+    // Calculate percentage position (0% = 6am, 100% = 7pm)
+    const positionPercent = (currentMinutes / TOTAL_MINUTES) * 100
+    
+    return Math.max(0, Math.min(100, positionPercent))
+  }
+
   // Get lessons for an instructor and calculate their precise positions
   const getInstructorLessons = (instructorId) => {
     const [year, month, day] = selectedDate.split('-').map(Number)
-    const dayStart = new Date(year, month - 1, day, 7, 0, 0) // 7am on selected date
+    const dayStart = new Date(year, month - 1, day, 6, 0, 0) // 6am on selected date
     
     return lessons
       .filter((lesson) => lesson.instructor_id === instructorId)
@@ -185,13 +217,13 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
         const lessonStart = new Date(lesson.starting)
         const lessonEnd = new Date(lesson.ending)
         
-        // Calculate minutes from start of day (7am = 0)
-        // Clip to the visible window (7am-7pm)
+        // Calculate minutes from start of day (6am = 0)
+        // Clip to the visible window (6am-7pm)
         const startMinutes = Math.max(0, Math.min(TOTAL_MINUTES, (lessonStart - dayStart) / (1000 * 60)))
         const endMinutes = Math.max(0, Math.min(TOTAL_MINUTES, (lessonEnd - dayStart) / (1000 * 60)))
         const duration = Math.max(0, endMinutes - startMinutes)
         
-        // Calculate percentage positions (0% = 7am, 100% = 7pm)
+        // Calculate percentage positions (0% = 6am, 100% = 7pm)
         const leftPercent = (startMinutes / TOTAL_MINUTES) * 100
         const widthPercent = (duration / TOTAL_MINUTES) * 100
         
@@ -245,12 +277,12 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
   }
 
   return (
-    <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm" style={{ width: '100%', minWidth: '800px' }}>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4">
-        <h2 className="text-lg sm:text-xl font-semibold text-gray-800">Daily Lessons</h2>
+    <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm w-full">
+      <div className="sticky top-0 z-20 bg-white w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 mb-3 sm:mb-4 pb-3 sm:pb-4 border-b border-gray-200">
+        <h2 className="w-full sm:w-auto text-lg sm:text-xl font-semibold text-gray-800">Daily Lessons</h2>
         
         {/* Date navigation */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="w-full sm:w-auto flex items-center gap-1.5 sm:gap-2">
           <button
             onClick={goToPreviousDay}
             className="p-1.5 sm:p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
@@ -294,7 +326,7 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
       {instructors.length === 0 ? (
         <div className="text-gray-600">No lessons scheduled for this date.</div>
       ) : (
-        <div>
+        <div className="overflow-x-auto w-full">
           {/* Instructor rows with lessons */}
           <div className="space-y-3 md:space-y-2" style={{ minWidth: '1200px' }}>
             {instructors.map((instructor) => {
@@ -304,13 +336,31 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
               return (
                 <div key={instructor.id} className="flex items-center gap-2 sm:gap-4">
                   {/* Instructor name */}
-                  <div className="w-20 sm:w-32 flex-shrink-0 text-xs sm:text-sm font-medium text-gray-800 left-0 bg-white z-10 pr-2">
+                  <div className="sticky left-0 w-20 sm:w-32 flex-shrink-0 text-xs sm:text-sm font-medium text-gray-800 bg-white z-20 pr-2 py-1">
                     {instructor.name}
                     <span className="text-gray-500 font-normal ml-1">({lessonCount})</span>
                   </div>
                   
                   {/* Timeline row */}
                   <div className="flex-1 relative h-14 sm:h-12 bg-gray-50 rounded" style={{ minWidth: '1200px' }}>
+                    {/* Current time indicator line - only for today */}
+                    {(() => {
+                      const timePosition = getCurrentTimePosition()
+                      if (timePosition === null) return null
+                      
+                      return (
+                        <div
+                          className="absolute top-0 bottom-0 z-30 pointer-events-none"
+                          style={{
+                            left: `${timePosition}%`,
+                            width: '2px',
+                            transform: 'translateX(-50%)'
+                          }}
+                        >
+                          <div className="w-full h-full bg-indigo-500"></div>
+                        </div>
+                      )
+                    })()}
                     {instructorLessons.map((lesson, idx) => (
                       <div
                         key={lesson.order_id || idx}
