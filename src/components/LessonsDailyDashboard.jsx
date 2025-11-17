@@ -1,38 +1,35 @@
 import { useEffect, useState } from 'react'
 import sql from '../lib/neon'
 
-function TodaysLessons({ onEditOrder = () => {} }) {
+function LessonsDailyDashboard({ onEditOrder = () => {} }) {
   const [lessons, setLessons] = useState([])
   const [instructors, setInstructors] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [selectedDate, setSelectedDate] = useState(() => {
+    const today = new Date()
+    return today.toISOString().split('T')[0] // Format: YYYY-MM-DD
+  })
 
   useEffect(() => {
-    const fetchTodaysLessons = async () => {
+    const fetchLessons = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        // Get today's date range (entire day for query, 7am-7pm for display)
-        const today = new Date()
-        const year = today.getFullYear()
-        const month = today.getMonth()
-        const day = today.getDate()
+        // Parse selected date
+        const [year, month, day] = selectedDate.split('-').map(Number)
+        const selectedDateObj = new Date(year, month - 1, day)
 
         // Create start and end timestamps for the entire day (00:00 to 23:59:59)
-        const startOfDay = new Date(year, month, day, 0, 0, 0)
-        const endOfDay = new Date(year, month, day, 23, 59, 59)
+        const startOfDay = new Date(year, month - 1, day, 0, 0, 0)
+        const endOfDay = new Date(year, month - 1, day, 23, 59, 59)
 
         // Convert to ISO strings for database query (database stores UTC)
         const startISO = startOfDay.toISOString()
         const endISO = endOfDay.toISOString()
 
-        // Display window (7am to 7pm for visual display)
-        const displayStart = new Date(year, month, day, 7, 0, 0)
-        const displayEnd = new Date(year, month, day, 19, 0, 0)
-
-        // Fetch today's lessons with instructor info (including cancelled and completed)
-        // Get all lessons that start or end today
+        // Fetch lessons for the selected date
         const rows = await sql`
           SELECT
             ol.order_id,
@@ -57,7 +54,7 @@ function TodaysLessons({ onEditOrder = () => {} }) {
 
         setLessons(rows || [])
 
-        // Get unique instructors from today's lessons
+        // Get unique instructors from the lessons
         const uniqueInstructors = [...new Set((rows || []).map((r) => r.instructor_id).filter(Boolean))]
           .map((id) => {
             const row = rows.find((r) => r.instructor_id === id)
@@ -71,15 +68,15 @@ function TodaysLessons({ onEditOrder = () => {} }) {
 
         setInstructors(uniqueInstructors)
       } catch (err) {
-        console.error('Failed to load today\'s lessons:', err)
-        setError('Unable to load today\'s lessons. Please try again later.')
+        console.error('Failed to load lessons:', err)
+        setError('Unable to load lessons. Please try again later.')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchTodaysLessons()
-  }, [])
+    fetchLessons()
+  }, [selectedDate])
 
   // Total minutes in the day (7am to 7pm = 12 hours = 720 minutes)
   const TOTAL_MINUTES = 12 * 60 // 720 minutes
@@ -149,13 +146,24 @@ function TodaysLessons({ onEditOrder = () => {} }) {
     }
   }
 
+  // Date navigation functions
+  const goToPreviousDay = () => {
+    const date = new Date(selectedDate)
+    date.setDate(date.getDate() - 1)
+    setSelectedDate(date.toISOString().split('T')[0])
+  }
+
+  const goToNextDay = () => {
+    const date = new Date(selectedDate)
+    date.setDate(date.getDate() + 1)
+    setSelectedDate(date.toISOString().split('T')[0])
+  }
+
+
   // Get lessons for an instructor and calculate their precise positions
   const getInstructorLessons = (instructorId) => {
-    const today = new Date()
-    const year = today.getFullYear()
-    const month = today.getMonth()
-    const day = today.getDate()
-    const dayStart = new Date(year, month, day, 7, 0, 0) // 7am today
+    const [year, month, day] = selectedDate.split('-').map(Number)
+    const dayStart = new Date(year, month - 1, day, 7, 0, 0) // 7am on selected date
     
     return lessons
       .filter((lesson) => lesson.instructor_id === instructorId)
@@ -207,7 +215,7 @@ function TodaysLessons({ onEditOrder = () => {} }) {
   if (loading) {
     return (
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Today's Lessons</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Daily Lessons</h2>
         <div className="text-gray-600">Loading...</div>
       </div>
     )
@@ -216,68 +224,96 @@ function TodaysLessons({ onEditOrder = () => {} }) {
   if (error) {
     return (
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Today's Lessons</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Daily Lessons</h2>
         <div className="text-red-600">{error}</div>
-      </div>
-    )
-  }
-
-  if (instructors.length === 0) {
-    return (
-      <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Today's Lessons</h2>
-        <div className="text-gray-600">No lessons scheduled for today.</div>
       </div>
     )
   }
 
   return (
     <div className="rounded-xl bg-white p-6 shadow-sm">
-      <h2 className="text-xl font-semibold text-gray-800 mb-4">Today's Lessons</h2>
-      <div className="w-full overflow-x-auto">
-        {/* Instructor rows with lessons */}
-        <div className="space-y-2" style={{ minWidth: '600px' }}>
-          {instructors.map((instructor) => {
-            const instructorLessons = getInstructorLessons(instructor.id)
-            
-            return (
-              <div key={instructor.id} className="flex items-center gap-2 sm:gap-4">
-                {/* Instructor name */}
-                <div className="w-24 sm:w-32 flex-shrink-0 text-xs sm:text-sm font-medium text-gray-800 sticky left-0 bg-white z-10 pr-2">
-                  {instructor.name}
-                </div>
-                
-                {/* Timeline row */}
-                <div className="flex-1 relative h-12 bg-gray-50 rounded" style={{ minWidth: '500px' }}>
-                  {instructorLessons.map((lesson, idx) => (
-                    <div
-                      key={lesson.order_id || idx}
-                      onClick={() => onEditOrder({ id: lesson.order_id })}
-                      className={`absolute top-1 bottom-1 ${lesson.statusStyles.bg} ${lesson.statusStyles.border} rounded px-1 sm:px-2 py-1 flex flex-col justify-center overflow-hidden cursor-pointer hover:shadow-md transition-shadow ${lesson.status === 'cancelled' ? 'opacity-60' : ''}`}
-                      style={{
-                        left: `${lesson.leftPercent}%`,
-                        width: `${lesson.widthPercent}%`,
-                        minWidth: '50px'
-                      }}
-                      title={`${lesson.student_name || 'Unknown'}: ${lesson.startStr} - ${lesson.endStr} (${lesson.status}) - Click to edit`}
-                    >
-                      <div className={`text-xs font-semibold ${lesson.statusStyles.text} truncate`}>
-                        {lesson.student_name || 'Unknown'}
-                      </div>
-                      <div className={`text-[10px] sm:text-xs ${lesson.statusStyles.textSecondary} opacity-75 truncate`}>
-                        {lesson.startStr} - {lesson.endStr}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )
-          })}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-4">
+        <h2 className="text-xl font-semibold text-gray-800">Daily Lessons</h2>
+        
+        {/* Date navigation */}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={goToPreviousDay}
+            className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
+            aria-label="Previous day"
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+            </svg>
+          </button>
+          
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+          />
+          
+          <button
+            onClick={goToNextDay}
+            className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
+            aria-label="Next day"
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
         </div>
       </div>
+
+      {instructors.length === 0 ? (
+        <div className="text-gray-600">No lessons scheduled for this date.</div>
+      ) : (
+        <div className="w-full overflow-x-auto">
+          {/* Instructor rows with lessons */}
+          <div className="space-y-2" style={{ minWidth: '600px' }}>
+            {instructors.map((instructor) => {
+              const instructorLessons = getInstructorLessons(instructor.id)
+              
+              return (
+                <div key={instructor.id} className="flex items-center gap-2 sm:gap-4">
+                  {/* Instructor name */}
+                  <div className="w-24 sm:w-32 flex-shrink-0 text-xs sm:text-sm font-medium text-gray-800 sticky left-0 bg-white z-10 pr-2">
+                    {instructor.name}
+                  </div>
+                  
+                  {/* Timeline row */}
+                  <div className="flex-1 relative h-12 bg-gray-50 rounded" style={{ minWidth: '500px' }}>
+                    {instructorLessons.map((lesson, idx) => (
+                      <div
+                        key={lesson.order_id || idx}
+                        onClick={() => onEditOrder({ id: lesson.order_id })}
+                        className={`absolute top-1 bottom-1 ${lesson.statusStyles.bg} ${lesson.statusStyles.border} rounded px-1 sm:px-2 py-1 flex flex-col justify-center overflow-hidden cursor-pointer hover:shadow-md transition-shadow ${lesson.status === 'cancelled' ? 'opacity-60' : ''}`}
+                        style={{
+                          left: `${lesson.leftPercent}%`,
+                          width: `${lesson.widthPercent}%`,
+                          minWidth: '50px'
+                        }}
+                        title={`${lesson.student_name || 'Unknown'}: ${lesson.startStr} - ${lesson.endStr} (${lesson.status}) - Click to edit`}
+                      >
+                        <div className={`text-xs font-semibold ${lesson.statusStyles.text} truncate`}>
+                          {lesson.student_name || 'Unknown'}
+                        </div>
+                        <div className={`text-[10px] sm:text-xs ${lesson.statusStyles.textSecondary} opacity-75 truncate`}>
+                          {lesson.startStr} - {lesson.endStr}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
-export default TodaysLessons
+export default LessonsDailyDashboard
 
