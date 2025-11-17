@@ -159,6 +159,20 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
     setSelectedDate(date.toISOString().split('T')[0])
   }
 
+  const goToToday = () => {
+    const today = new Date()
+    setSelectedDate(today.toISOString().split('T')[0])
+  }
+
+  // Check if selected date is today
+  const isToday = () => {
+    const today = new Date()
+    const todayYear = today.getFullYear()
+    const todayMonth = today.getMonth() + 1
+    const todayDay = today.getDate()
+    const todayStr = `${todayYear}-${String(todayMonth).padStart(2, '0')}-${String(todayDay).padStart(2, '0')}`
+    return selectedDate === todayStr
+  }
 
   // Get lessons for an instructor and calculate their precise positions
   const getInstructorLessons = (instructorId) => {
@@ -253,6 +267,17 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
             onChange={(e) => setSelectedDate(e.target.value)}
             className="px-3 py-2 rounded-lg border border-gray-300 bg-white text-sm font-medium text-gray-700 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
           />
+          
+          <button
+            onClick={goToToday}
+            disabled={isToday()}
+            className="p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+            aria-label="Go to today"
+          >
+            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+          </button>
           
           <button
             onClick={goToNextDay}
