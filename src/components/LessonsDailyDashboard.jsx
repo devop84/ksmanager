@@ -299,12 +299,14 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
           <div className="space-y-3 md:space-y-2" style={{ minWidth: '1200px' }}>
             {instructors.map((instructor) => {
               const instructorLessons = getInstructorLessons(instructor.id)
+              const lessonCount = instructorLessons.length
               
               return (
                 <div key={instructor.id} className="flex items-center gap-2 sm:gap-4">
                   {/* Instructor name */}
                   <div className="w-20 sm:w-32 flex-shrink-0 text-xs sm:text-sm font-medium text-gray-800 left-0 bg-white z-10 pr-2">
                     {instructor.name}
+                    <span className="text-gray-500 font-normal ml-1">({lessonCount})</span>
                   </div>
                   
                   {/* Timeline row */}
