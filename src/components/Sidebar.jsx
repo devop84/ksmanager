@@ -146,6 +146,18 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
               Services
             </button>
           </li>
+          <li>
+            <button
+              onClick={() => handleNavigateClick('equipment')}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
+                currentPage === 'equipment'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              Equipment
+            </button>
+          </li>
         </ul>
       </nav>
     </div>

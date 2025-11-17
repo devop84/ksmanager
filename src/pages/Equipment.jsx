@@ -264,4 +264,77 @@ function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment 
                   </tbody>
                 </table>
               </div>
+              <div className="md:hidden space-y-3">
+                {paginatedItems.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
+                    No equipment found. Try adjusting your search.
+                  </div>
+                ) : (
+                  paginatedItems.map((item) => (
+                    <div key={item.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-base font-semibold text-gray-900">{item.name}</p>
+                          <p className="text-sm text-gray-500">{item.category_name || 'Uncategorized'}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <button
+                            onClick={() => onEditEquipment(item)}
+                            className="text-gray-500 hover:text-indigo-600 transition-colors"
+                            aria-label="Edit equipment"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z"
+                              />
+                            </svg>
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item.id)}
+                            disabled={deletingId === item.id}
+                            className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
+                            aria-label="Delete equipment"
+                          >
+                            <svg
+                              className="w-5 h-5"
+                              fill="none"
+                              stroke="currentColor"
+                              viewBox="0 0 24 24"
+                              xmlns="http://www.w3.org/2000/svg"
+                            >
+                              <path
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                                strokeWidth={2}
+                                d="M6 18L18 6M6 6l12 12"
+                              />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
+                      {item.description && (
+                        <p className="mt-2 text-sm text-gray-600">{item.description}</p>
+                      )}
+                    </div>
+                  ))
+                )}
+              </div>
+              {renderPagination()}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
 
+export default Equipment
