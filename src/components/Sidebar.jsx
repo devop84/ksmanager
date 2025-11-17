@@ -41,41 +41,14 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
       {/* App Title */}
       <div className="p-6 border-b border-gray-800">
         <div className="flex items-center gap-3">
-          <svg 
-            className="w-8 h-8 text-indigo-400" 
-            fill="none" 
-            stroke="currentColor" 
+          <svg
+            className="w-8 h-8 text-indigo-400"
             viewBox="0 0 24 24"
+            fill="currentColor"
             xmlns="http://www.w3.org/2000/svg"
+            aria-hidden="true"
           >
-            {/* Graduation cap */}
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M6 8l6-3 6 3M6 8v6l6 3 6-3V8M6 8l6 3 6-3"
-            />
-            {/* Tassel */}
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M12 11v2"
-            />
-            <circle cx="12" cy="13" r="1" fill="currentColor"/>
-            {/* Waves */}
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M3 18c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1 2-1 4-1"
-            />
-            <path 
-              strokeLinecap="round" 
-              strokeLinejoin="round" 
-              strokeWidth={2} 
-              d="M3 21c2 0 2-1 4-1s2 1 4 1 2-1 4-1 2 1 4 1 2-1 4-1"
-            />
+            <path d="M24 15v-2.3c-1.63.6-3.33.81-5 .61-2.26-.28-4.24-1.32-6.22-2.38-3.02-1.62-5.93-3.18-9.78-2.45-1.06.19-2.08.57-3 1.11v2.36c1.63-.6 3.33-.81 5-.61 2.26.28 4.24 1.32 6.22 2.38 3.02 1.61 5.93 3.18 9.78 2.44 1.06-.18 2.08-.56 3-1.12zm0-5.5V7.2c-1.63.6-3.33.82-5 .62-2.26-.29-4.24-1.33-6.22-2.39C9 3.8 6.1 2.22 2.25 2.95c-1.06.19-2.08.57-3 1.11v2.36c1.63-.6 3.33-.81 5-.61 2.26.28 4.24 1.33 6.22 2.39 3.02 1.61 5.93 3.17 9.78 2.44 1.06-.2 2.08-.58 3-1.13z" />
           </svg>
           <h1 className="text-2xl font-bold">KSMANAGER</h1>
         </div>

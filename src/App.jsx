@@ -142,10 +142,10 @@ function App() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-h-screen bg-white">
         {/* Mobile header */}
-        <header className="md:hidden sticky top-0 z-10 flex items-center justify-between px-4 py-3 border-b border-gray-200 bg-white shadow-sm">
+        <header className="md:hidden sticky top-0 z-10 bg-gray-900 text-white px-4 py-4 flex items-center justify-between shadow-lg">
           <button
             onClick={toggleSidebar}
-            className="text-gray-700 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-md p-2"
+            className="text-white hover:text-gray-300 transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded-md p-2"
             aria-label="Toggle sidebar"
           >
             <svg
@@ -158,10 +158,19 @@ function App() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <div className="text-base font-semibold text-gray-900">KSMANAGER</div>
-          <div className="text-sm text-gray-500 truncate max-w-[40%]">
-            {user?.name || user?.email}
+          <div className="flex items-center gap-2">
+            <svg
+              className="w-6 h-6 text-indigo-300"
+              viewBox="0 0 24 24"
+              fill="currentColor"
+              xmlns="http://www.w3.org/2000/svg"
+              aria-hidden="true"
+            >
+              <path d="M24 15v-2.3c-1.63.6-3.33.81-5 .61-2.26-.28-4.24-1.32-6.22-2.38-3.02-1.62-5.93-3.18-9.78-2.45-1.06.19-2.08.57-3 1.11v2.36c1.63-.6 3.33-.81 5-.61 2.26.28 4.24 1.32 6.22 2.38 3.02 1.61 5.93 3.18 9.78 2.44 1.06-.18 2.08-.56 3-1.12zm0-5.5V7.2c-1.63.6-3.33.82-5 .62-2.26-.29-4.24-1.33-6.22-2.39C9 3.8 6.1 2.22 2.25 2.95c-1.06.19-2.08.57-3 1.11v2.36c1.63-.6 3.33-.81 5-.61 2.26.28 4.24 1.33 6.22 2.39 3.02 1.61 5.93 3.17 9.78 2.44 1.06-.2 2.08-.58 3-1.13z" />
+            </svg>
+            <h1 className="text-lg font-bold">KSMANAGER</h1>
           </div>
+          <div className="w-6" aria-hidden="true" />
         </header>
 
         <main className="flex-1">
