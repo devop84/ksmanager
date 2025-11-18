@@ -210,6 +210,55 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
     })
   }
 
+  // Format total time in a human-readable way (similar to RentalsInProgress)
+  const formatTotalTime = (totalHours) => {
+    if (totalHours === 0) return 'none'
+    
+    const totalMinutes = Math.floor(totalHours * 60)
+    const days = Math.floor(totalMinutes / (24 * 60))
+    const hours = Math.floor((totalMinutes % (24 * 60)) / 60)
+    const minutes = totalMinutes % 60
+    
+    const parts = []
+    if (days > 0) parts.push(`${days}d`)
+    if (hours > 0) parts.push(`${hours}h`)
+    if (minutes > 0 || parts.length === 0) parts.push(`${minutes}m`)
+    
+    return parts.join(' ')
+  }
+
+  // Calculate order statistics
+  const calculateOrderStats = () => {
+    if (!orders || orders.length === 0) {
+      return { lessonHours: 0, rentalHours: 0, storageHours: 0 }
+    }
+
+    let lessonHours = 0
+    let rentalHours = 0
+    let storageHours = 0
+
+    orders.forEach((order) => {
+      if (order.starting && order.ending) {
+        const start = new Date(order.starting)
+        const end = new Date(order.ending)
+        const diffMs = end - start
+        const diffHours = diffMs / (1000 * 60 * 60)
+        
+        if (order.type === 'lessons') {
+          lessonHours += diffHours
+        } else if (order.type === 'rentals') {
+          rentalHours += diffHours
+        } else if (order.type === 'storage') {
+          storageHours += diffHours
+        }
+      }
+    })
+
+    return { lessonHours, rentalHours, storageHours }
+  }
+
+  const orderStats = calculateOrderStats()
+
   if (loading) {
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
@@ -301,215 +350,218 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
           </div>
         </div>
 
-        {/* Customer Details */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Personal Information */}
-          <div className="space-y-6">
+        {/* Main Content: Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Left Column: Orders (2/3 width) */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Quick Look Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4">
+                <div className="text-sm font-medium text-blue-700 mb-1">Lesson Hours</div>
+                <div className="text-2xl font-bold text-blue-900">{formatTotalTime(orderStats.lessonHours)}</div>
+              </div>
+              <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-green-50 to-green-100 p-4">
+                <div className="text-sm font-medium text-green-700 mb-1">Rental</div>
+                <div className="text-2xl font-bold text-green-900">{formatTotalTime(orderStats.rentalHours)}</div>
+              </div>
+              <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-purple-50 to-purple-100 p-4">
+                <div className="text-sm font-medium text-purple-700 mb-1">Storage</div>
+                <div className="text-2xl font-bold text-purple-900">{formatTotalTime(orderStats.storageHours)}</div>
+              </div>
+            </div>
+
+            {/* Orders Section */}
             <div>
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Orders</h2>
+                  <p className="text-gray-500 text-sm mt-1">
+                    {orders.length} {orders.length === 1 ? 'order' : 'orders'}
+                  </p>
+                </div>
+              </div>
+
+              {ordersLoading ? (
+                <div className="text-gray-600 text-sm py-8">Loading orders...</div>
+              ) : orders.length === 0 ? (
+                <div className="text-gray-500 text-sm py-8 text-center border border-dashed border-gray-300 rounded-lg">
+                  No orders found for this customer.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Desktop view */}
+                  <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Order #
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Type
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Service
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Category
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Status
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Starting
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Ending
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-100">
+                        {orders.map((order) => (
+                          <tr
+                            key={order.id}
+                            onClick={() => onEditOrder({ id: order.id })}
+                            className="hover:bg-gray-50 cursor-pointer"
+                          >
+                            <td className="px-4 py-3 text-sm text-gray-900 font-medium">#{order.id}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600 capitalize">{order.type || '—'}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{order.service_name || '—'}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{order.category_name || '—'}</td>
+                            <td className="px-4 py-3 text-sm">{renderStatusBadge(order.status)}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{formatOrderDate(order.starting)}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{formatOrderDate(order.ending)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Mobile view */}
+                  <div className="md:hidden space-y-4">
+                    {orders.map((order) => (
+                      <div
+                        key={order.id}
+                        onClick={() => onEditOrder({ id: order.id })}
+                        className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      >
+                        <div className="flex items-start justify-between gap-3 mb-3">
+                          <div className="flex-1">
+                            <p className="text-base font-semibold text-gray-900">
+                              Order #{order.id} · {order.type || 'other'}
+                            </p>
+                            <p className="text-sm text-gray-600">{order.service_name || '—'}</p>
+                            <p className="text-xs text-gray-400">{order.category_name || '—'}</p>
+                          </div>
+                          <div>{renderStatusBadge(order.status)}</div>
+                        </div>
+
+                        {/* Order Details */}
+                        <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600 mt-3 pt-3 border-t border-gray-100">
+                          {order.type === 'lessons' && order.instructor_name && (
+                            <div className="col-span-2">
+                              <dt className="text-gray-400 text-xs uppercase">Instructor</dt>
+                              <dd>{order.instructor_name}</dd>
+                            </div>
+                          )}
+                          {order.type === 'rentals' && order.equipment_name && (
+                            <div className="col-span-2">
+                              <dt className="text-gray-400 text-xs uppercase">Equipment</dt>
+                              <dd>{order.equipment_name}</dd>
+                            </div>
+                          )}
+                          {order.starting && (
+                            <div>
+                              <dt className="text-gray-400 text-xs uppercase">Starting</dt>
+                              <dd className="font-medium">{formatOrderDate(order.starting)}</dd>
+                            </div>
+                          )}
+                          {order.ending && (
+                            <div>
+                              <dt className="text-gray-400 text-xs uppercase">Ending</dt>
+                              <dd className="font-medium">{formatOrderDate(order.ending)}</dd>
+                            </div>
+                          )}
+                          {(order.lesson_note || order.rental_note || order.storage_note) && (
+                            <div className="col-span-2">
+                              <dt className="text-gray-400 text-xs uppercase">Note</dt>
+                              <dd className="mt-1">{order.lesson_note || order.rental_note || order.storage_note}</dd>
+                            </div>
+                          )}
+                        </dl>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Right Column: Personal Information Card (1/3 width) */}
+          <div className="lg:col-span-1">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm sticky top-6">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h2>
+              
               <dl className="space-y-4">
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Full Name</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">Full Name</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.fullname || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Phone</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">Phone</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.phone || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Email</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">Email</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.email || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Birthdate</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">Birthdate</dt>
                   <dd className="mt-1 text-sm text-gray-900">{formatDate(customer.birthdate)}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Country</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">Country</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.country || '—'}</dd>
                 </div>
-              </dl>
-            </div>
-          </div>
-
-          {/* Document & Contact Information */}
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Document & Contact</h2>
-              <dl className="space-y-4">
-                <div>
-                  <dt className="text-sm font-medium text-gray-500">Document Type</dt>
+                <div className="pt-4 border-t border-gray-200">
+                  <dt className="text-xs font-medium text-gray-500 uppercase">Document Type</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.doctype || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Document Number</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">Document Number</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.doc || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Hotel</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">Hotel</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.hotel_name || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-sm font-medium text-gray-500">Agency</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">Agency</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.agency_name || '—'}</dd>
                 </div>
+                {customer.note && (
+                  <div className="pt-4 border-t border-gray-200">
+                    <dt className="text-xs font-medium text-gray-500 uppercase mb-2 block">Note</dt>
+                    <dd className="text-sm text-gray-700 whitespace-pre-wrap">{customer.note}</dd>
+                  </div>
+                )}
+                <div className="pt-4 border-t border-gray-200">
+                  <dt className="text-xs font-medium text-gray-500 uppercase">Customer ID</dt>
+                  <dd className="mt-1 text-sm text-gray-900 font-mono">#{customer.id}</dd>
+                </div>
+                <div>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">Created At</dt>
+                  <dd className="mt-1 text-sm text-gray-900">{formatDateTime(customer.created_at)}</dd>
+                </div>
+                {customer.updated_at && (
+                  <div>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">Last Updated</dt>
+                    <dd className="mt-1 text-sm text-gray-900">{formatDateTime(customer.updated_at)}</dd>
+                  </div>
+                )}
               </dl>
             </div>
           </div>
-        </div>
-
-        {/* Note */}
-        {customer.note && (
-          <div className="mt-6 pt-6 border-t border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Note</h2>
-            <p className="text-sm text-gray-700 whitespace-pre-wrap">{customer.note}</p>
-          </div>
-        )}
-
-        {/* Metadata */}
-        <div className="mt-6 pt-6 border-t border-gray-200">
-          <dl className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div>
-              <dt className="text-gray-500">Customer ID</dt>
-              <dd className="mt-1 text-gray-900 font-mono">#{customer.id}</dd>
-            </div>
-            <div>
-              <dt className="text-gray-500">Created At</dt>
-              <dd className="mt-1 text-gray-900">{formatDateTime(customer.created_at)}</dd>
-            </div>
-            {customer.updated_at && (
-              <div>
-                <dt className="text-gray-500">Last Updated</dt>
-                <dd className="mt-1 text-gray-900">{formatDateTime(customer.updated_at)}</dd>
-              </div>
-            )}
-          </dl>
-        </div>
-
-        {/* Orders Section */}
-        <div className="mt-8 pt-8 border-t border-gray-200">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Orders</h2>
-              <p className="text-gray-500 text-sm mt-1">
-                All orders for this customer ({orders.length} {orders.length === 1 ? 'order' : 'orders'})
-              </p>
-            </div>
-          </div>
-
-          {ordersLoading ? (
-            <div className="text-gray-600 text-sm py-8">Loading orders...</div>
-          ) : orders.length === 0 ? (
-            <div className="text-gray-500 text-sm py-8 text-center border border-dashed border-gray-300 rounded-lg">
-              No orders found for this customer.
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {/* Desktop view */}
-              <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Order #
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Service
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Category
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Starting
-                      </th>
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Ending
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-100">
-                    {orders.map((order) => (
-                      <tr
-                        key={order.id}
-                        onClick={() => onEditOrder({ id: order.id })}
-                        className="hover:bg-gray-50 cursor-pointer"
-                      >
-                        <td className="px-4 py-3 text-sm text-gray-900 font-medium">#{order.id}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600 capitalize">{order.type || '—'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{order.service_name || '—'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{order.category_name || '—'}</td>
-                        <td className="px-4 py-3 text-sm">{renderStatusBadge(order.status)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{formatOrderDate(order.starting)}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">{formatOrderDate(order.ending)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Mobile view */}
-              <div className="md:hidden space-y-4">
-                {orders.map((order) => (
-                  <div
-                    key={order.id}
-                    onClick={() => onEditOrder({ id: order.id })}
-                    className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                  >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div className="flex-1">
-                        <p className="text-base font-semibold text-gray-900">
-                          Order #{order.id} · {order.type || 'other'}
-                        </p>
-                        <p className="text-sm text-gray-600">{order.service_name || '—'}</p>
-                        <p className="text-xs text-gray-400">{order.category_name || '—'}</p>
-                      </div>
-                      <div>{renderStatusBadge(order.status)}</div>
-                    </div>
-
-                    {/* Order Details */}
-                    <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600 mt-3 pt-3 border-t border-gray-100">
-                      {order.type === 'lessons' && order.instructor_name && (
-                        <div className="col-span-2">
-                          <dt className="text-gray-400 text-xs uppercase">Instructor</dt>
-                          <dd>{order.instructor_name}</dd>
-                        </div>
-                      )}
-                      {order.type === 'rentals' && order.equipment_name && (
-                        <div className="col-span-2">
-                          <dt className="text-gray-400 text-xs uppercase">Equipment</dt>
-                          <dd>{order.equipment_name}</dd>
-                        </div>
-                      )}
-                      {order.starting && (
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">Starting</dt>
-                          <dd className="font-medium">{formatOrderDate(order.starting)}</dd>
-                        </div>
-                      )}
-                      {order.ending && (
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">Ending</dt>
-                          <dd className="font-medium">{formatOrderDate(order.ending)}</dd>
-                        </div>
-                      )}
-                      {(order.lesson_note || order.rental_note || order.storage_note) && (
-                        <div className="col-span-2">
-                          <dt className="text-gray-400 text-xs uppercase">Note</dt>
-                          <dd className="mt-1">{order.lesson_note || order.rental_note || order.storage_note}</dd>
-                        </div>
-                      )}
-                    </dl>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
