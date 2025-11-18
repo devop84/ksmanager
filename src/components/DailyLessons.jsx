@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import sql from '../lib/neon'
 
-function LessonsDailyDashboard({ onEditOrder = () => {} }) {
+function DailyLessons({ onEditOrder = () => {} }) {
   const [lessons, setLessons] = useState([])
   const [instructors, setInstructors] = useState([])
   const [loading, setLoading] = useState(true)
@@ -392,5 +392,5 @@ function LessonsDailyDashboard({ onEditOrder = () => {} }) {
   )
 }
 
-export default LessonsDailyDashboard
+export default DailyLessons
 

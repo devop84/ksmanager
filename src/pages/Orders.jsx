@@ -56,7 +56,7 @@ function renderStatusBadge(status) {
   )
 }
 
-function Orders({ refreshKey = 0, onAddOrder = () => {}, onEditOrder = () => {} }) {
+function Orders({ refreshKey = 0, onAddOrder = () => {}, onEditOrder = () => {}, onViewOrder = () => {} }) {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -290,7 +290,14 @@ function Orders({ refreshKey = 0, onAddOrder = () => {}, onEditOrder = () => {} 
                     ) : (
                       paginatedOrders.map((order) => (
                         <tr key={order.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">#{order.id}</td>
+                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">
+                            <button
+                              onClick={() => onViewOrder(order)}
+                              className="text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+                            >
+                              #{order.id}
+                            </button>
+                          </td>
                           <td className="px-4 py-3 text-sm text-gray-600">{order.service_name}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{order.customer_name}</td>
                           <td className="px-4 py-3 text-sm capitalize text-gray-600">{order.category_name}</td>
@@ -359,9 +366,12 @@ function Orders({ refreshKey = 0, onAddOrder = () => {}, onEditOrder = () => {} 
                     <div key={order.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-base font-semibold text-gray-900">
+                          <button
+                            onClick={() => onViewOrder(order)}
+                            className="text-base font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors text-left"
+                          >
                             #{order.id} · {order.service_name}
-                          </p>
+                          </button>
                           <p className="text-sm text-gray-500">{order.customer_name}</p>
                           <p className="text-xs text-gray-400 capitalize">{order.category_name}</p>
                   <div className="mt-2 flex items-center gap-2">

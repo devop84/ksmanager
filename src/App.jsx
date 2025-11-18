@@ -9,12 +9,14 @@ import Services from './pages/Services'
 import Equipment from './pages/Equipment'
 import Orders from './pages/Orders'
 import CustomerForm from './pages/CustomerForm'
+import CustomerDetail from './pages/CustomerDetail'
 import HotelForm from './pages/HotelForm'
 import AgencyForm from './pages/AgencyForm'
 import InstructorForm from './pages/InstructorForm'
 import ServicesForm from './pages/ServicesForm'
 import EquipmentForm from './pages/EquipmentForm'
 import OrderForm from './pages/OrderForm'
+import OrderDetail from './pages/OrderDetail'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import { getSession, deleteSession } from './lib/auth.js'
@@ -27,6 +29,7 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [customerFormCustomer, setCustomerFormCustomer] = useState(null)
+  const [customerDetailId, setCustomerDetailId] = useState(null)
   const [customersRefreshKey, setCustomersRefreshKey] = useState(0)
   const [hotelFormHotel, setHotelFormHotel] = useState(null)
   const [hotelsRefreshKey, setHotelsRefreshKey] = useState(0)
@@ -40,6 +43,7 @@ function App() {
   const [equipmentFormItem, setEquipmentFormItem] = useState(null)
   const [ordersRefreshKey, setOrdersRefreshKey] = useState(0)
   const [orderFormOrder, setOrderFormOrder] = useState(null)
+  const [orderDetailId, setOrderDetailId] = useState(null)
 
   // Check if user is logged in on mount using session
   useEffect(() => {
@@ -107,6 +111,11 @@ function App() {
     setCurrentPage('customerForm')
   }
 
+  const openCustomerDetail = (customer) => {
+    setCustomerDetailId(customer.id)
+    setCurrentPage('customerDetail')
+  }
+
   const handleCustomerFormSaved = () => {
     setCustomersRefreshKey((prev) => prev + 1)
     setCustomerFormCustomer(null)
@@ -115,6 +124,23 @@ function App() {
 
   const handleCustomerFormCancel = () => {
     setCustomerFormCustomer(null)
+    setCurrentPage('customers')
+  }
+
+  const handleCustomerDetailBack = () => {
+    setCustomerDetailId(null)
+    setCurrentPage('customers')
+  }
+
+  const handleCustomerDetailEdit = (customer) => {
+    setCustomerFormCustomer(customer)
+    setCustomerDetailId(null)
+    setCurrentPage('customerForm')
+  }
+
+  const handleCustomerDetailDelete = () => {
+    setCustomersRefreshKey((prev) => prev + 1)
+    setCustomerDetailId(null)
     setCurrentPage('customers')
   }
 
@@ -214,6 +240,28 @@ function App() {
     setCurrentPage('orders')
   }
 
+  const openOrderDetail = (order) => {
+    setOrderDetailId(order.id)
+    setCurrentPage('orderDetail')
+  }
+
+  const handleOrderDetailBack = () => {
+    setOrderDetailId(null)
+    setCurrentPage('orders')
+  }
+
+  const handleOrderDetailEdit = (order) => {
+    setOrderFormOrder(order)
+    setOrderDetailId(null)
+    setCurrentPage('orderForm')
+  }
+
+  const handleOrderDetailDelete = () => {
+    setOrdersRefreshKey((prev) => prev + 1)
+    setOrderDetailId(null)
+    setCurrentPage('orders')
+  }
+
   const closeSidebar = () => {
     setIsSidebarOpen(false)
   }
@@ -228,6 +276,7 @@ function App() {
             refreshKey={customersRefreshKey}
             onAddCustomer={() => openCustomerForm(null)}
             onEditCustomer={(customer) => openCustomerForm(customer)}
+            onViewCustomer={(customer) => openCustomerDetail(customer)}
           />
         )
       case 'hotels':
@@ -260,6 +309,7 @@ function App() {
             refreshKey={ordersRefreshKey}
             onAddOrder={() => openOrderForm(null)}
             onEditOrder={(order) => openOrderForm(order)}
+            onViewOrder={(order) => openOrderDetail(order)}
           />
         )
       case 'equipment':
@@ -276,6 +326,16 @@ function App() {
             refreshKey={instructorsRefreshKey}
             onAddInstructor={() => openInstructorForm(null)}
             onEditInstructor={(instructor) => openInstructorForm(instructor)}
+          />
+        )
+      case 'customerDetail':
+        return (
+          <CustomerDetail
+            customerId={customerDetailId}
+            onBack={handleCustomerDetailBack}
+            onEdit={handleCustomerDetailEdit}
+            onDelete={handleCustomerDetailDelete}
+            onEditOrder={(order) => openOrderForm(order)}
           />
         )
       case 'customerForm':
@@ -324,6 +384,15 @@ function App() {
             equipment={equipmentFormItem}
             onCancel={handleEquipmentFormCancel}
             onSaved={handleEquipmentFormSaved}
+          />
+        )
+      case 'orderDetail':
+        return (
+          <OrderDetail
+            orderId={orderDetailId}
+            onBack={handleOrderDetailBack}
+            onEdit={handleOrderDetailEdit}
+            onDelete={handleOrderDetailDelete}
           />
         )
       case 'orderForm':

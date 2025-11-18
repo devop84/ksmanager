@@ -15,7 +15,7 @@ const columns = [
   { key: 'note', label: 'Note' }
 ]
 
-function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, refreshKey = 0 }) {
+function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onViewCustomer = () => {}, refreshKey = 0 }) {
   const [customers, setCustomers] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -253,7 +253,12 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, refres
                       paginatedCustomers.map((customer) => (
                         <tr key={customer.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                            {customer.fullname || '—'}
+                            <button
+                              onClick={() => onViewCustomer(customer)}
+                              className="text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
+                            >
+                              {customer.fullname || '—'}
+                            </button>
                           </td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.phone || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.email || '—'}</td>
@@ -327,7 +332,12 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, refres
                     <div key={customer.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-base font-semibold text-gray-900">{customer.fullname || '—'}</p>
+                          <button
+                            onClick={() => onViewCustomer(customer)}
+                            className="text-base font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors text-left"
+                          >
+                            {customer.fullname || '—'}
+                          </button>
                           <p className="text-sm text-gray-500">{customer.email || customer.phone || '—'}</p>
                         </div>
                         <div className="flex items-center gap-3">
