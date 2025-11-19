@@ -125,11 +125,22 @@ function RentalsInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
     
     if (diff < 0) return 'Overdue'
     
-    const hours = Math.floor(diff / (1000 * 60 * 60))
+    const totalHours = Math.floor(diff / (1000 * 60 * 60))
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
     
-    if (hours > 0) {
-      return `${hours}h ${minutes}m`
+    // If more than 24 hours, show in days
+    if (totalHours >= 24) {
+      const days = Math.floor(totalHours / 24)
+      const remainingHours = totalHours % 24
+      if (remainingHours > 0) {
+        return `${days}d ${remainingHours}h`
+      }
+      return `${days}d`
+    }
+    
+    // Less than 24 hours, show hours and minutes
+    if (totalHours > 0) {
+      return `${totalHours}h ${minutes}m`
     }
     return `${minutes}m`
   }

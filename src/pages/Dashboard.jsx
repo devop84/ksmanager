@@ -7,7 +7,7 @@ import RecentTransactions from '../components/RecentTransactions'
 function Dashboard({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
   return (
     <div className="px-4 py-6 sm:p-6 lg:p-8">
-      <div className="mb-6">
+      <div className="mb-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
         <p className="text-gray-500 text-sm">View daily lessons schedule and overview.</p>
       </div>

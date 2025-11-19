@@ -52,6 +52,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
           </svg>
           <h1 className="text-2xl font-bold">KSMANAGER</h1>
         </div>
+        <p className="text-xs text-gray-400 mt-2">v0.1.0-alpha</p>
       </div>
 
       {/* User Info */}
