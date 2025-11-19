@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import sql from '../lib/neon'
 
-function RentalsInProgress({ onEditOrder = () => {} }) {
+function RentalsInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
   const [rentals, setRentals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -37,6 +37,7 @@ function RentalsInProgress({ onEditOrder = () => {} }) {
             orent.ending,
             orent.note,
             o.cancelled,
+            o.customer_id,
             c.fullname AS customer_name,
             e.name AS equipment_name,
             s.name AS service_name
@@ -185,7 +186,9 @@ function RentalsInProgress({ onEditOrder = () => {} }) {
                 {rentals.map((rental) => (
                   <tr
                     key={rental.order_id}
-                    onClick={() => onEditOrder({ id: rental.order_id })}
+                    onClick={() =>
+                      rental.customer_id ? onViewCustomer({ id: rental.customer_id }) : onEditOrder({ id: rental.order_id })
+                    }
                     className="hover:bg-gray-50 cursor-pointer"
                   >
                     <td className="px-4 py-3 text-sm text-gray-900 font-medium">
@@ -214,7 +217,9 @@ function RentalsInProgress({ onEditOrder = () => {} }) {
             {rentals.map((rental) => (
               <div
                 key={rental.order_id}
-                onClick={() => onEditOrder({ id: rental.order_id })}
+                onClick={() =>
+                  rental.customer_id ? onViewCustomer({ id: rental.customer_id }) : onEditOrder({ id: rental.order_id })
+                }
                 className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between gap-3 mb-2">

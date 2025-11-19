@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import sql from '../lib/neon'
 
-function StorageInProgress({ onEditOrder = () => {} }) {
+function StorageInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
   const [storages, setStorages] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -38,6 +38,7 @@ function StorageInProgress({ onEditOrder = () => {} }) {
             ost.ending,
             ost.note,
             o.cancelled,
+            o.customer_id,
             c.fullname AS customer_name,
             s.name AS service_name
           FROM orders_storage ost
@@ -162,7 +163,11 @@ function StorageInProgress({ onEditOrder = () => {} }) {
                 {storages.map((storage) => (
                   <tr
                     key={storage.order_id}
-                    onClick={() => onEditOrder({ id: storage.order_id })}
+                    onClick={() =>
+                      storage.customer_id
+                        ? onViewCustomer({ id: storage.customer_id })
+                        : onEditOrder({ id: storage.order_id })
+                    }
                     className="hover:bg-gray-50 cursor-pointer"
                   >
                     <td className="px-4 py-3 text-sm text-gray-900 font-medium">
@@ -191,7 +196,11 @@ function StorageInProgress({ onEditOrder = () => {} }) {
             {storages.map((storage) => (
               <div
                 key={storage.order_id}
-                onClick={() => onEditOrder({ id: storage.order_id })}
+                onClick={() =>
+                  storage.customer_id
+                    ? onViewCustomer({ id: storage.customer_id })
+                    : onEditOrder({ id: storage.order_id })
+                }
                 className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
               >
                 <div className="flex items-start justify-between gap-3 mb-2">

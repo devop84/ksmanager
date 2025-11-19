@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import sql from '../lib/neon'
 
-function DailyLessons({ onEditOrder = () => {} }) {
+function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
   const [lessons, setLessons] = useState([])
   const [instructors, setInstructors] = useState([])
   const [loading, setLoading] = useState(true)
@@ -364,7 +364,11 @@ function DailyLessons({ onEditOrder = () => {} }) {
                     {instructorLessons.map((lesson, idx) => (
                       <div
                         key={lesson.order_id || idx}
-                        onClick={() => onEditOrder({ id: lesson.order_id })}
+                        onClick={() =>
+                          lesson.student_id
+                            ? onViewCustomer({ id: lesson.student_id })
+                            : onEditOrder({ id: lesson.order_id })
+                        }
                         className={`absolute top-1 bottom-1 ${lesson.statusStyles.bg} ${lesson.statusStyles.border} rounded px-2 py-1.5 sm:py-1 flex flex-col justify-center overflow-hidden cursor-pointer hover:shadow-md transition-shadow ${lesson.status === 'cancelled' ? 'opacity-60' : ''}`}
                         style={{
                           left: `${lesson.leftPercent}%`,

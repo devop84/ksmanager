@@ -1,6 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import sql from '../lib/neon'
 
+const STORAGE_BILLING_OPTIONS = [
+  { key: 'daily', label: 'By day', description: 'Charge per day of storage' },
+  { key: 'weekly', label: 'By week', description: 'Charge per 7-day block' },
+  { key: 'monthly', label: 'By month', description: 'Charge per calendar month' }
+]
+
+const RENTAL_BILLING_OPTIONS = [
+  { key: 'hourly', label: 'By hour', description: 'Charge per hour of rental time', threshold: 24 },
+  { key: 'daily', label: 'By day', description: 'Charge per 24-hour period', threshold: Infinity }
+]
+
+const getStorageOptionLabel = (mode) => STORAGE_BILLING_OPTIONS.find((option) => option.key === mode)?.label || mode
+const getRentalOptionLabel = (mode) => RENTAL_BILLING_OPTIONS.find((option) => option.key === mode)?.label || mode
+
 const baseState = {
   id: null,
   service_id: '',
@@ -47,6 +61,8 @@ function OrderForm({ order = null, onCancel, onSaved }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [storageDurationInfo, setStorageDurationInfo] = useState(null)
+  const [rentalDurationInfo, setRentalDurationInfo] = useState(null)
 
   useEffect(() => {
     const loadForm = async () => {
@@ -180,16 +196,98 @@ function OrderForm({ order = null, onCancel, onSaved }) {
   const categoryName = selectedService?.category_name
 
   useEffect(() => {
-    if (!categoryName) return
-    if (categoryName === 'storage' && !isEditing) {
+    if (!categoryName || isEditing) return
+    if (categoryName === 'storage') {
       setFormData((prev) => ({
         ...prev,
         daily: true,
         weekly: false,
         monthly: false
       }))
+    } else if (categoryName === 'rentals') {
+      setFormData((prev) => ({
+        ...prev,
+        hourly: true,
+        daily: false,
+        weekly: false,
+        monthly: false
+      }))
     }
   }, [categoryName, isEditing])
+  useEffect(() => {
+    if (categoryName !== 'storage') {
+      setStorageDurationInfo(null)
+      return
+    }
+    const { check_in: checkIn, check_out: checkOut } = formData
+    if (!checkIn || !checkOut) {
+      setStorageDurationInfo(null)
+      return
+    }
+    const start = new Date(checkIn)
+    const end = new Date(checkOut)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) {
+      setStorageDurationInfo(null)
+      return
+    }
+    const diffMs = end - start
+    const diffDays = Math.max(1, Math.ceil(diffMs / (1000 * 60 * 60 * 24)))
+    let mode = 'daily'
+    if (diffDays >= 30) {
+      mode = 'monthly'
+    } else if (diffDays >= 7) {
+      mode = 'weekly'
+    }
+    setStorageDurationInfo({ days: diffDays, mode })
+    setFormData((prev) => {
+      const currentMode = prev.monthly ? 'monthly' : prev.weekly ? 'weekly' : 'daily'
+      if (currentMode === mode) return prev
+      return {
+        ...prev,
+        daily: mode === 'daily',
+        weekly: mode === 'weekly',
+        monthly: mode === 'monthly'
+      }
+    })
+  }, [formData.check_in, formData.check_out, categoryName])
+
+  useEffect(() => {
+    if (categoryName !== 'rentals') {
+      setRentalDurationInfo(null)
+      return
+    }
+    const { starting, ending } = formData
+    if (!starting || !ending) {
+      setRentalDurationInfo(null)
+      return
+    }
+    const start = new Date(starting)
+    const end = new Date(ending)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+      setRentalDurationInfo(null)
+      return
+    }
+    const diffMs = end - start
+    const totalHours = diffMs / (1000 * 60 * 60)
+    const totalDays = totalHours / 24
+    setRentalDurationInfo({
+      hours: totalHours,
+      days: totalDays
+    })
+    setFormData((prev) => {
+      const suggestedMode = totalHours < 24 ? 'hourly' : 'daily'
+      const currentMode = prev.daily ? 'daily' : 'hourly'
+      if (currentMode === suggestedMode) return prev
+      return {
+        ...prev,
+        hourly: suggestedMode === 'hourly',
+        daily: suggestedMode === 'daily',
+        weekly: false,
+        monthly: false
+      }
+    })
+  }, [formData.starting, formData.ending, categoryName])
+
 
   const handleChange = (event) => {
     const { name, value, type, checked } = event.target
@@ -198,6 +296,27 @@ function OrderForm({ order = null, onCancel, onSaved }) {
       [name]: type === 'checkbox' ? checked : value
     }))
   }
+
+  const handleStorageBillingChange = (mode) => {
+    setFormData((prev) => ({
+      ...prev,
+      daily: mode === 'daily',
+      weekly: mode === 'weekly',
+      monthly: mode === 'monthly'
+    }))
+  }
+
+  const storageBillingMode = formData.monthly ? 'monthly' : formData.weekly ? 'weekly' : 'daily'
+  const handleRentalBillingChange = (mode) => {
+    setFormData((prev) => ({
+      ...prev,
+      hourly: mode === 'hourly',
+      daily: mode === 'daily',
+      weekly: false,
+      monthly: false
+    }))
+  }
+  const rentalBillingMode = formData.daily ? 'daily' : 'hourly'
 
 const toLocalDateInput = (value) => {
   if (!value) return ''
@@ -664,19 +783,51 @@ const ensureDate = (value, fallbackTime = null) => {
             </div>
           )}
 
-          {categoryName !== 'rentals' && (
-            <div className="md:col-span-2 flex items-center gap-3">
-              <input
-                id="cancelled"
-                name="cancelled"
-                type="checkbox"
-                checked={formData.cancelled}
-                onChange={handleChange}
-                className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-              />
-              <label htmlFor="cancelled" className="text-sm font-medium text-gray-700">
-                Mark as cancelled
-              </label>
+          {categoryName === 'rentals' && rentalDurationInfo && (
+            <div className="md:col-span-2 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+              Rental duration:{' '}
+              <span className="font-semibold">
+                {rentalDurationInfo.hours < 24
+                  ? `${rentalDurationInfo.hours.toFixed(1)} hours`
+                  : `${rentalDurationInfo.days.toFixed(2)} days`}
+              </span>{' '}
+              • Suggested billing:{' '}
+              <span className="font-semibold">
+                {rentalDurationInfo.hours < 24 ? getRentalOptionLabel('hourly') : getRentalOptionLabel('daily')}
+              </span>
+            </div>
+          )}
+
+          {categoryName === 'rentals' && (
+            <div className="md:col-span-2">
+              <p className="mb-2 text-sm font-medium text-gray-700">Billing cadence</p>
+              <div className="grid gap-3 md:grid-cols-3">
+                {RENTAL_BILLING_OPTIONS.map((option) => {
+                  const isActive = rentalBillingMode === option.key
+                  const isSuggested =
+                    rentalDurationInfo &&
+                    ((option.key === 'hourly' && rentalDurationInfo.hours < 24) ||
+                      (option.key === 'daily' && rentalDurationInfo.hours >= 24))
+                  return (
+                    <button
+                      key={option.key}
+                      type="button"
+                      onClick={() => handleRentalBillingChange(option.key)}
+                      className={`rounded-xl border px-4 py-3 text-left transition-colors ${
+                        isActive
+                          ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-sm'
+                          : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-200 hover:bg-indigo-50'
+                      }`}
+                    >
+                      <span className="flex items-center gap-2 text-sm font-semibold">
+                        {option.label}
+                        {isSuggested && <span className="text-xs font-semibold text-indigo-600">(Suggested)</span>}
+                      </span>
+                      <span className="mt-1 block text-xs text-gray-500">{option.description}</span>
+                    </button>
+                  )
+                })}
+              </div>
             </div>
           )}
 
@@ -708,6 +859,41 @@ const ensureDate = (value, fallbackTime = null) => {
                   onChange={handleChange}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                 />
+              </div>
+
+              {storageDurationInfo && (
+                <div className="md:col-span-2 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
+                  Storage duration:{' '}
+                  <span className="font-semibold">
+                    {storageDurationInfo.days} {storageDurationInfo.days === 1 ? 'day' : 'days'}
+                  </span>{' '}
+                  • Suggested billing:{' '}
+                  <span className="font-semibold">{getStorageOptionLabel(storageDurationInfo.mode)}</span>
+                </div>
+              )}
+
+              <div className="md:col-span-2">
+                <p className="mb-2 text-sm font-medium text-gray-700">Billing cadence</p>
+                <div className="grid gap-3 md:grid-cols-3">
+                  {STORAGE_BILLING_OPTIONS.map((option) => {
+                    const isActive = storageBillingMode === option.key
+                    return (
+                      <button
+                        key={option.key}
+                        type="button"
+                        onClick={() => handleStorageBillingChange(option.key)}
+                        className={`rounded-xl border px-4 py-3 text-left transition-colors ${
+                          isActive
+                            ? 'border-indigo-500 bg-indigo-50 text-indigo-900 shadow-sm'
+                            : 'border-gray-200 bg-white text-gray-700 hover:border-indigo-200 hover:bg-indigo-50'
+                        }`}
+                      >
+                        <span className="block text-sm font-semibold">{option.label}</span>
+                        <span className="mt-1 block text-xs text-gray-500">{option.description}</span>
+                      </button>
+                    )
+                  })}
+                </div>
               </div>
             </>
           )}

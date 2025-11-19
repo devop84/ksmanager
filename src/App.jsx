@@ -19,6 +19,12 @@ import OrderForm from './pages/OrderForm'
 import OrderDetail from './pages/OrderDetail'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
+import CompanyAccounts from './pages/CompanyAccounts'
+import CompanyAccountForm from './pages/CompanyAccountForm'
+import ThirdParties from './pages/ThirdParties'
+import ThirdPartyForm from './pages/ThirdPartyForm'
+import Ledger from './pages/Ledger'
+import TransactionForm from './pages/TransactionForm'
 import { getSession, deleteSession } from './lib/auth.js'
 
 function App() {
@@ -44,6 +50,12 @@ function App() {
   const [ordersRefreshKey, setOrdersRefreshKey] = useState(0)
   const [orderFormOrder, setOrderFormOrder] = useState(null)
   const [orderDetailId, setOrderDetailId] = useState(null)
+  const [companyAccountsRefreshKey, setCompanyAccountsRefreshKey] = useState(0)
+  const [companyAccountFormAccount, setCompanyAccountFormAccount] = useState(null)
+  const [thirdPartiesRefreshKey, setThirdPartiesRefreshKey] = useState(0)
+  const [thirdPartyFormItem, setThirdPartyFormItem] = useState(null)
+  const [ledgerRefreshKey, setLedgerRefreshKey] = useState(0)
+  const [transactionFormTransaction, setTransactionFormTransaction] = useState(null)
 
   // Check if user is logged in on mount using session
   useEffect(() => {
@@ -208,6 +220,54 @@ function App() {
     setCurrentPage('services')
   }
 
+  const openCompanyAccountForm = (account = null) => {
+    setCompanyAccountFormAccount(account)
+    setCurrentPage('companyAccountForm')
+  }
+
+  const handleCompanyAccountFormSaved = () => {
+    setCompanyAccountsRefreshKey((prev) => prev + 1)
+    setCompanyAccountFormAccount(null)
+    setCurrentPage('companyAccounts')
+  }
+
+  const handleCompanyAccountFormCancel = () => {
+    setCompanyAccountFormAccount(null)
+    setCurrentPage('companyAccounts')
+  }
+
+  const openThirdPartyForm = (thirdParty = null) => {
+    setThirdPartyFormItem(thirdParty)
+    setCurrentPage('thirdPartyForm')
+  }
+
+  const handleThirdPartyFormSaved = () => {
+    setThirdPartiesRefreshKey((prev) => prev + 1)
+    setThirdPartyFormItem(null)
+    setCurrentPage('thirdParties')
+  }
+
+  const handleThirdPartyFormCancel = () => {
+    setThirdPartyFormItem(null)
+    setCurrentPage('thirdParties')
+  }
+
+  const openTransactionForm = (ledgerEntry = null) => {
+    setTransactionFormTransaction(ledgerEntry)
+    setCurrentPage('transactionForm')
+  }
+
+  const handleTransactionFormSaved = () => {
+    setLedgerRefreshKey((prev) => prev + 1)
+    setTransactionFormTransaction(null)
+    setCurrentPage('ledger')
+  }
+
+  const handleTransactionFormCancel = () => {
+    setTransactionFormTransaction(null)
+    setCurrentPage('ledger')
+  }
+
   const openEquipmentForm = (item = null) => {
     setEquipmentFormItem(item)
     setCurrentPage('equipmentForm')
@@ -269,7 +329,7 @@ function App() {
   const renderPage = () => {
     switch (currentPage) {
       case 'dashboard':
-        return <Dashboard onEditOrder={(order) => openOrderForm(order)} />
+        return <Dashboard onEditOrder={(order) => openOrderForm(order)} onViewCustomer={(customer) => openCustomerDetail(customer)} />
       case 'customers':
         return (
           <Customers
@@ -301,6 +361,30 @@ function App() {
             refreshKey={servicesRefreshKey}
             onAddService={() => openServiceForm(null)}
             onEditService={(serviceItem) => openServiceForm(serviceItem)}
+          />
+        )
+      case 'ledger':
+        return (
+          <Ledger
+            refreshKey={ledgerRefreshKey}
+            onAddTransaction={() => openTransactionForm(null)}
+            onEditTransaction={(transactionItem) => openTransactionForm(transactionItem)}
+          />
+        )
+      case 'thirdParties':
+        return (
+          <ThirdParties
+            refreshKey={thirdPartiesRefreshKey}
+            onAddThirdParty={() => openThirdPartyForm(null)}
+            onEditThirdParty={(thirdParty) => openThirdPartyForm(thirdParty)}
+          />
+        )
+      case 'companyAccounts':
+        return (
+          <CompanyAccounts
+            refreshKey={companyAccountsRefreshKey}
+            onAddAccount={() => openCompanyAccountForm(null)}
+            onEditAccount={(account) => openCompanyAccountForm(account)}
           />
         )
       case 'orders':
@@ -376,6 +460,30 @@ function App() {
             service={serviceFormService}
             onCancel={handleServiceFormCancel}
             onSaved={handleServiceFormSaved}
+          />
+        )
+      case 'thirdPartyForm':
+        return (
+          <ThirdPartyForm
+            thirdParty={thirdPartyFormItem}
+            onCancel={handleThirdPartyFormCancel}
+            onSaved={handleThirdPartyFormSaved}
+          />
+        )
+      case 'transactionForm':
+        return (
+          <TransactionForm
+            transaction={transactionFormTransaction}
+            onCancel={handleTransactionFormCancel}
+            onSaved={handleTransactionFormSaved}
+          />
+        )
+      case 'companyAccountForm':
+        return (
+          <CompanyAccountForm
+            account={companyAccountFormAccount}
+            onCancel={handleCompanyAccountFormCancel}
+            onSaved={handleCompanyAccountFormSaved}
           />
         )
       case 'equipmentForm':

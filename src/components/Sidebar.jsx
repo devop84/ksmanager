@@ -88,6 +88,18 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
           </li>
           <li>
             <button
+              onClick={() => handleNavigateClick('ledger')}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
+                currentPage === 'ledger'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              Ledger
+            </button>
+          </li>
+          <li>
+            <button
               onClick={() => handleNavigateClick('orders')}
               className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
                 currentPage === 'orders'
@@ -156,6 +168,30 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
               }`}
             >
               Services
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => handleNavigateClick('thirdParties')}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
+                currentPage === 'thirdParties'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              Third Parties
+            </button>
+          </li>
+          <li>
+            <button
+              onClick={() => handleNavigateClick('companyAccounts')}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
+                currentPage === 'companyAccounts'
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              Company Accounts
             </button>
           </li>
           <li>

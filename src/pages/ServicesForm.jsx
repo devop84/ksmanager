@@ -246,12 +246,12 @@ function ServicesForm({ service, onCancel, onSaved }) {
       if (isRentalsCategory) {
         await sql`
           INSERT INTO services_rentals (service_id, gear_id, hourly_rate, daily_rate, weekly_rate)
-          VALUES (${serviceId}, ${formData.gear_id}, ${formData.hourly_rate || null}, ${formData.daily_rate || null}, ${formData.weekly_rate || null})
+          VALUES (${serviceId}, ${formData.gear_id}, ${formData.hourly_rate || null}, ${formData.daily_rate || null}, NULL)
           ON CONFLICT (service_id) DO UPDATE
           SET gear_id = EXCLUDED.gear_id,
               hourly_rate = EXCLUDED.hourly_rate,
               daily_rate = EXCLUDED.daily_rate,
-              weekly_rate = EXCLUDED.weekly_rate
+              weekly_rate = NULL
         `
       } else {
         await sql`DELETE FROM services_rentals WHERE service_id = ${serviceId}`
@@ -356,7 +356,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
 
           {isLessonsCategory && (
             <>
-              <div>
+              <div className="md:col-span-2 grid grid-cols-2 gap-4">
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="default_duration_hours">
                   Default duration (hours)
                 </label>
@@ -372,9 +372,9 @@ function ServicesForm({ service, onCancel, onSaved }) {
                 />
               </div>
 
-              <div>
+              <div className="md:col-span-2 grid grid-cols-2 gap-4">
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="base_price_per_hour">
-                  Base price per hour (USD)
+                  Base price per hour
                 </label>
                 <input
                   id="base_price_per_hour"
@@ -479,60 +479,45 @@ function ServicesForm({ service, onCancel, onSaved }) {
           )}
 
           {isRentalsCategory && (
-            <div className="md:col-span-2 grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="hourly_rate">
-                    Hourly rate (USD)
-                  </label>
-                  <input
-                    id="hourly_rate"
-                    name="hourly_rate"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={formData.hourly_rate}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="daily_rate">
-                    Daily rate (USD)
-                  </label>
-                  <input
-                    id="daily_rate"
-                    name="daily_rate"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={formData.daily_rate}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="weekly_rate">
-                    Weekly rate (USD)
-                  </label>
-                  <input
-                    id="weekly_rate"
-                    name="weekly_rate"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={formData.weekly_rate}
-                    onChange={handleChange}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                  />
-                </div>
+            <div className="md:col-span-2 grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="hourly_rate">
+                  Hourly rate
+                </label>
+                <input
+                  id="hourly_rate"
+                  name="hourly_rate"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formData.hourly_rate}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                />
               </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="daily_rate">
+                  Daily rate
+                </label>
+                <input
+                  id="daily_rate"
+                  name="daily_rate"
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={formData.daily_rate}
+                  onChange={handleChange}
+                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                />
+              </div>
+            </div>
           )}
 
           {isStorageCategory && (
             <div className="md:col-span-2 grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="storage_daily_rate">
-                  Daily rate (USD)
+                  Daily rate
                 </label>
                 <input
                   id="storage_daily_rate"
@@ -547,7 +532,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="storage_weekly_rate">
-                  Weekly rate (USD)
+                  Weekly rate
                 </label>
                 <input
                   id="storage_weekly_rate"
@@ -562,7 +547,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="storage_monthly_rate">
-                  Monthly rate (USD)
+                  Monthly rate
                 </label>
                 <input
                   id="storage_monthly_rate"
