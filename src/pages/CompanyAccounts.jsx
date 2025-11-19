@@ -9,14 +9,13 @@ const columns = [
   { key: 'note', label: 'Note' }
 ]
 
-function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccount = () => {} }) {
+function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccount = () => {}, onViewAccount = () => {} }) {
   const [accounts, setAccounts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' })
   const [currentPage, setCurrentPage] = useState(1)
-  const [deletingId, setDeletingId] = useState(null)
 
   useEffect(() => {
     const fetchAccounts = async () => {
@@ -88,20 +87,6 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
 
   const handlePageChange = (newPage) => {
     setCurrentPage((prev) => Math.min(Math.max(newPage, 1), totalPages))
-  }
-
-  const handleDelete = async (accountId) => {
-    if (!window.confirm('Are you sure you want to delete this account?')) return
-    try {
-      setDeletingId(accountId)
-      await sql`DELETE FROM company_accounts WHERE id = ${accountId}`
-      setAccounts((prev) => prev.filter((account) => account.id !== accountId))
-    } catch (err) {
-      console.error('Failed to delete company account:', err)
-      alert('Unable to delete company account. Please try again.')
-    } finally {
-      setDeletingId(null)
-    }
   }
 
   const renderPagination = () => (
@@ -191,64 +176,25 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
                           </th>
                         )
                       })}
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Actions
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {paginatedAccounts.length === 0 ? (
                       <tr>
-                        <td colSpan={columns.length + 1} className="px-6 py-10 text-center text-sm text-gray-500">
+                        <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-gray-500">
                           No company accounts found. Try adjusting your search or filters.
                         </td>
                       </tr>
                     ) : (
                       paginatedAccounts.map((account) => (
-                        <tr key={account.id} className="hover:bg-gray-50">
+                        <tr
+                          key={account.id}
+                          className="hover:bg-gray-50 cursor-pointer"
+                          onClick={() => onViewAccount(account)}
+                        >
                           <td className="px-4 py-3 text-sm text-gray-900 font-medium">{account.name || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{account.details || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{account.note || '—'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => onEditAccount(account)}
-                                className="text-gray-500 hover:text-indigo-600 transition-colors"
-                                aria-label="Edit account"
-                              >
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z"
-                                  />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleDelete(account.id)}
-                                disabled={deletingId === account.id}
-                                className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                                aria-label="Delete account"
-                              >
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
                         </tr>
                       ))
                     )}
@@ -263,49 +209,15 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
                   </div>
                 ) : (
                   paginatedAccounts.map((account) => (
-                    <div key={account.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div
+                      key={account.id}
+                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => onViewAccount(account)}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-base font-semibold text-gray-900">{account.name || '—'}</p>
                           <p className="text-sm text-gray-500">{account.details?.slice(0, 80) || '—'}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => onEditAccount(account)}
-                            className="text-gray-500 hover:text-indigo-600 transition-colors"
-                            aria-label="Edit account"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(account.id)}
-                            disabled={deletingId === account.id}
-                            className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                            aria-label="Delete account"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
                         </div>
                       </div>
                       <dl className="mt-4 space-y-3 text-sm text-gray-600">

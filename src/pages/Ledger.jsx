@@ -17,7 +17,7 @@ const entityTypeLabels = {
   third_party: 'Third Party'
 }
 
-function Ledger({ refreshKey = 0, onAddTransaction = () => {}, onEditTransaction = () => {} }) {
+function Ledger({ refreshKey = 0, onAddTransaction = () => {}, onViewTransaction = () => {} }) {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -26,7 +26,6 @@ function Ledger({ refreshKey = 0, onAddTransaction = () => {}, onEditTransaction
   const [directionFilter, setDirectionFilter] = useState('all')
   const [paymentFilter, setPaymentFilter] = useState('all')
   const [currentPage, setCurrentPage] = useState(1)
-  const [deletingId, setDeletingId] = useState(null)
   const [typeOptions, setTypeOptions] = useState([])
   const [paymentOptions, setPaymentOptions] = useState([])
 
@@ -174,20 +173,6 @@ function Ledger({ refreshKey = 0, onAddTransaction = () => {}, onEditTransaction
     setCurrentPage(1)
   }, [searchTerm, typeFilter, directionFilter, paymentFilter])
 
-  const handleDelete = async (transactionId) => {
-    if (!window.confirm('Are you sure you want to delete this transaction?')) return
-    try {
-      setDeletingId(transactionId)
-      await sql`DELETE FROM transactions WHERE id = ${transactionId}`
-      setTransactions((prev) => prev.filter((txn) => txn.id !== transactionId))
-    } catch (err) {
-      console.error('Failed to delete transaction:', err)
-      alert('Unable to delete transaction. Please try again.')
-    } finally {
-      setDeletingId(null)
-    }
-  }
-
   const handlePageChange = (nextPage) => {
     setCurrentPage((prev) => Math.min(Math.max(nextPage, 1), totalPages))
   }
@@ -325,19 +310,22 @@ const formatAmount = (amount) =>
                     <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Reference</th>
                     <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Note</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
                   {paginatedTransactions.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="px-6 py-10 text-center text-sm text-gray-500">
+                      <td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-500">
                         No transactions found. Try adjusting your filters.
                       </td>
                     </tr>
                   ) : (
                     paginatedTransactions.map((transaction) => (
-                      <tr key={transaction.id} className="hover:bg-gray-50">
+                      <tr
+                        key={transaction.id}
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() => onViewTransaction(transaction)}
+                      >
                         <td className="px-4 py-3 text-sm text-gray-600">{formatDate(transaction.occurred_at)}</td>
                         <td className="px-4 py-3 text-sm">
                           <span
@@ -374,29 +362,6 @@ const formatAmount = (amount) =>
                         </td>
                         <td className="px-4 py-3 text-sm text-gray-600">{transaction.reference || '—'}</td>
                         <td className="px-4 py-3 text-sm text-gray-600">{transaction.note || '—'}</td>
-                        <td className="px-4 py-3 text-sm text-gray-600">
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => onEditTransaction(transaction)}
-                              className="text-gray-500 hover:text-indigo-600 transition-colors"
-                              aria-label="Edit transaction"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z" />
-                              </svg>
-                            </button>
-                            <button
-                              onClick={() => handleDelete(transaction.id)}
-                              disabled={deletingId === transaction.id}
-                              className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                              aria-label="Delete transaction"
-                            >
-                              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                              </svg>
-                            </button>
-                          </div>
-                        </td>
                       </tr>
                     ))
                   )}
@@ -411,7 +376,11 @@ const formatAmount = (amount) =>
                 </div>
               ) : (
                 paginatedTransactions.map((transaction) => (
-                  <div key={transaction.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                  <div
+                    key={transaction.id}
+                    className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                    onClick={() => onViewTransaction(transaction)}
+                  >
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-base font-semibold text-gray-900">{transaction.type_label}</p>
@@ -450,27 +419,6 @@ const formatAmount = (amount) =>
                         <dt className="text-gray-400 text-xs uppercase">Note</dt>
                         <dd>{transaction.note || '—'}</dd>
                       </div>
-                    </div>
-                    <div className="mt-4 flex items-center justify-end gap-3">
-                      <button
-                        onClick={() => onEditTransaction(transaction)}
-                        className="text-gray-500 hover:text-indigo-600 transition-colors"
-                        aria-label="Edit transaction"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
-                      <button
-                        onClick={() => handleDelete(transaction.id)}
-                        disabled={deletingId === transaction.id}
-                        className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                        aria-label="Delete transaction"
-                      >
-                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                      </button>
                     </div>
                   </div>
                 ))

@@ -9,14 +9,13 @@ const columns = [
   { key: 'description', label: 'Description' }
 ]
 
-function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment = () => {} }) {
+function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment = () => {}, onViewEquipment = () => {} }) {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' })
   const [currentPage, setCurrentPage] = useState(1)
-  const [deletingId, setDeletingId] = useState(null)
 
   useEffect(() => {
     const fetchEquipment = async () => {
@@ -89,20 +88,6 @@ function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment 
 
   const handlePageChange = (newPage) => {
     setCurrentPage((prev) => Math.min(Math.max(newPage, 1), totalPages))
-  }
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this equipment?')) return
-    try {
-      setDeletingId(id)
-      await sql`DELETE FROM equipment WHERE id = ${id}`
-      setItems((prev) => prev.filter((item) => item.id !== id))
-    } catch (err) {
-      console.error('Failed to delete equipment:', err)
-      alert('Unable to delete equipment. Please try again.')
-    } finally {
-      setDeletingId(null)
-    }
   }
 
   const renderPagination = () => (
@@ -195,69 +180,25 @@ function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment 
                           </th>
                         )
                       })}
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Actions
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {paginatedItems.length === 0 ? (
                       <tr>
-                        <td colSpan={columns.length + 1} className="px-6 py-10 text-center text-sm text-gray-500">
+                        <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-gray-500">
                           No equipment found. Try adjusting your search.
                         </td>
                       </tr>
                     ) : (
                       paginatedItems.map((item) => (
-                        <tr key={item.id} className="hover:bg-gray-50">
+                        <tr
+                          key={item.id}
+                          className="hover:bg-gray-50 cursor-pointer"
+                          onClick={() => onViewEquipment(item)}
+                        >
                           <td className="px-4 py-3 text-sm text-gray-900 font-medium">{item.name}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{item.category_name || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{item.description || '—'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => onEditEquipment(item)}
-                                className="text-gray-500 hover:text-indigo-600 transition-colors"
-                                aria-label="Edit equipment"
-                              >
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z"
-                                  />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleDelete(item.id)}
-                                disabled={deletingId === item.id}
-                                className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                                aria-label="Delete equipment"
-                              >
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M6 18L18 6M6 6l12 12"
-                                  />
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
                         </tr>
                       ))
                     )}
@@ -271,54 +212,15 @@ function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment 
                   </div>
                 ) : (
                   paginatedItems.map((item) => (
-                    <div key={item.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => onViewEquipment(item)}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-base font-semibold text-gray-900">{item.name}</p>
                           <p className="text-sm text-gray-500">{item.category_name || 'Uncategorized'}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => onEditEquipment(item)}
-                            className="text-gray-500 hover:text-indigo-600 transition-colors"
-                            aria-label="Edit equipment"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(item.id)}
-                            disabled={deletingId === item.id}
-                            className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                            aria-label="Delete equipment"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
                         </div>
                       </div>
                       {item.description && (

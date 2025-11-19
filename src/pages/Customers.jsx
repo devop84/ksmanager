@@ -234,87 +234,31 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
                           </th>
                         )
                       })}
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Actions
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {paginatedCustomers.length === 0 ? (
                       <tr>
-                        <td
-                          colSpan={columns.length + 1}
-                          className="px-6 py-10 text-center text-sm text-gray-500"
-                        >
+                        <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-gray-500">
                           No customers found. Try adjusting your search or filters.
                         </td>
                       </tr>
                     ) : (
                       paginatedCustomers.map((customer) => (
-                        <tr key={customer.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                            <button
-                              onClick={() => onViewCustomer(customer)}
-                              className="text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
-                            >
-                              {customer.fullname || '—'}
-                            </button>
-                          </td>
+                        <tr
+                          key={customer.id}
+                          className="hover:bg-gray-50 cursor-pointer"
+                          onClick={() => onViewCustomer(customer)}
+                        >
+                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">{customer.fullname || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.phone || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.email || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.doc || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.country || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{formatDate(customer.birthdate)}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.hotel_name || '—'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            {customer.agency_name || '—'}
-                          </td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{customer.agency_name || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.note || '—'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => onEditCustomer(customer)}
-                                className="text-gray-500 hover:text-indigo-600 transition-colors"
-                                aria-label="Edit customer"
-                              >
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z"
-                                  />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleDelete(customer.id)}
-                                disabled={deletingId === customer.id}
-                                className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                                aria-label="Delete customer"
-                              >
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M6 18L18 6M6 6l12 12"
-                                  />
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
                         </tr>
                       ))
                     )}
@@ -329,60 +273,19 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
                   </div>
                 ) : (
                   paginatedCustomers.map((customer) => (
-                    <div key={customer.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div
+                      key={customer.id}
+                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => onViewCustomer(customer)}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <button
-                            onClick={() => onViewCustomer(customer)}
-                            className="text-base font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors text-left"
-                          >
-                            {customer.fullname || '—'}
-                          </button>
+                          <p className="text-base font-semibold text-gray-900">{customer.fullname || '—'}</p>
                           <p className="text-sm text-gray-500">{customer.email || customer.phone || '—'}</p>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => onEditCustomer(customer)}
-                            className="text-gray-500 hover:text-indigo-600 transition-colors"
-                            aria-label="Edit customer"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(customer.id)}
-                            disabled={deletingId === customer.id}
-                            className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                            aria-label="Delete customer"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
-                        </div>
+                        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                          {customer.agency_name || 'Direct'}
+                        </span>
                       </div>
                       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-600">
                         <div>

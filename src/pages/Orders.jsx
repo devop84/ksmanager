@@ -275,80 +275,29 @@ function Orders({ refreshKey = 0, onAddOrder = () => {}, onEditOrder = () => {},
                           </th>
                         )
                       })}
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Actions
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {paginatedOrders.length === 0 ? (
                       <tr>
-                        <td colSpan={columns.length + 1} className="px-6 py-10 text-center text-sm text-gray-500">
+                        <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-gray-500">
                           No orders found. Try adjusting your search.
                         </td>
                       </tr>
                     ) : (
                       paginatedOrders.map((order) => (
-                        <tr key={order.id} className="hover:bg-gray-50">
-                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">
-                            <button
-                              onClick={() => onViewOrder(order)}
-                              className="text-indigo-600 hover:text-indigo-800 hover:underline transition-colors"
-                            >
-                              #{order.id}
-                            </button>
-                          </td>
+                        <tr
+                          key={order.id}
+                          className="hover:bg-gray-50 cursor-pointer"
+                          onClick={() => onViewOrder(order)}
+                        >
+                          <td className="px-4 py-3 text-sm text-gray-900 font-medium">#{order.id}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{order.service_name}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{order.customer_name}</td>
                           <td className="px-4 py-3 text-sm capitalize text-gray-600">{order.category_name}</td>
                           <td className="px-4 py-3 text-sm">{renderStatusBadge(order.status)}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{formatDate(order.starting)}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{formatDate(order.ending)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => onEditOrder(order)}
-                                className="text-gray-500 hover:text-indigo-600 transition-colors"
-                                aria-label="Edit order"
-                              >
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z"
-                                  />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleDelete(order.id)}
-                                disabled={deletingId === order.id}
-                                className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                                aria-label="Delete order"
-                              >
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M6 18L18 6M6 6l12 12"
-                                  />
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
                         </tr>
                       ))
                     )}
@@ -363,67 +312,28 @@ function Orders({ refreshKey = 0, onAddOrder = () => {}, onEditOrder = () => {},
                   </div>
                 ) : (
                   paginatedOrders.map((order) => (
-                    <div key={order.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div
+                      key={order.id}
+                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => onViewOrder(order)}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <button
-                            onClick={() => onViewOrder(order)}
-                            className="text-base font-semibold text-indigo-600 hover:text-indigo-800 hover:underline transition-colors text-left"
-                          >
+                          <p className="text-base font-semibold text-gray-900">
                             #{order.id} · {order.service_name}
-                          </button>
+                          </p>
                           <p className="text-sm text-gray-500">{order.customer_name}</p>
                           <p className="text-xs text-gray-400 capitalize">{order.category_name}</p>
-                  <div className="mt-2 flex items-center gap-2">
-                    {renderStatusBadge(order.status)}
-                    <span className="text-xs text-gray-500">
-                      {formatDate(order.starting)} → {formatDate(order.ending)}
-                    </span>
-                  </div>
+                          <div className="mt-2 flex items-center gap-2">
+                            {renderStatusBadge(order.status)}
+                            <span className="text-xs text-gray-500">
+                              {formatDate(order.starting)} → {formatDate(order.ending)}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => onEditOrder(order)}
-                            className="text-gray-500 hover:text-indigo-600 transition-colors"
-                            aria-label="Edit order"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(order.id)}
-                            disabled={deletingId === order.id}
-                            className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                            aria-label="Delete order"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
-                        </div>
+                        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                          {order.status}
+                        </span>
                       </div>
                     </div>
                   ))

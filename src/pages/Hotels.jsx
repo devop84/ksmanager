@@ -10,7 +10,7 @@ const columns = [
   { key: 'note', label: 'Note' }
 ]
 
-function Hotels({ onAddHotel = () => {}, onEditHotel = () => {}, refreshKey = 0 }) {
+function Hotels({ onAddHotel = () => {}, onEditHotel = () => {}, onViewHotel = () => {}, refreshKey = 0 }) {
   const [hotels, setHotels] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -194,16 +194,13 @@ function Hotels({ onAddHotel = () => {}, onEditHotel = () => {}, refreshKey = 0 
                           </th>
                         )
                       })}
-                      <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                        Actions
-                      </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-100">
                     {paginatedHotels.length === 0 ? (
                       <tr>
                         <td
-                          colSpan={columns.length + 1}
+                          colSpan={columns.length}
                           className="px-6 py-10 text-center text-sm text-gray-500"
                         >
                           No hotels found. Try adjusting your search or filters.
@@ -211,56 +208,15 @@ function Hotels({ onAddHotel = () => {}, onEditHotel = () => {}, refreshKey = 0 
                       </tr>
                     ) : (
                       paginatedHotels.map((hotel) => (
-                        <tr key={hotel.id} className="hover:bg-gray-50">
+                        <tr
+                          key={hotel.id}
+                          className="hover:bg-gray-50 cursor-pointer"
+                          onClick={() => onViewHotel(hotel)}
+                        >
                           <td className="px-4 py-3 text-sm text-gray-900 font-medium">{hotel.name || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{hotel.phone || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{hotel.address || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{hotel.note || '—'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">
-                            <div className="flex items-center gap-3">
-                              <button
-                                onClick={() => onEditHotel(hotel)}
-                                className="text-gray-500 hover:text-indigo-600 transition-colors"
-                                aria-label="Edit hotel"
-                              >
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z"
-                                  />
-                                </svg>
-                              </button>
-                              <button
-                                onClick={() => handleDelete(hotel.id)}
-                                disabled={deletingId === hotel.id}
-                                className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                                aria-label="Delete hotel"
-                              >
-                                <svg
-                                  className="w-5 h-5"
-                                  fill="none"
-                                  stroke="currentColor"
-                                  viewBox="0 0 24 24"
-                                  xmlns="http://www.w3.org/2000/svg"
-                                >
-                                  <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth={2}
-                                    d="M6 18L18 6M6 6l12 12"
-                                  />
-                                </svg>
-                              </button>
-                            </div>
-                          </td>
                         </tr>
                       ))
                     )}
@@ -275,54 +231,15 @@ function Hotels({ onAddHotel = () => {}, onEditHotel = () => {}, refreshKey = 0 
                   </div>
                 ) : (
                   paginatedHotels.map((hotel) => (
-                    <div key={hotel.id} className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+                    <div
+                      key={hotel.id}
+                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                      onClick={() => onViewHotel(hotel)}
+                    >
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-base font-semibold text-gray-900">{hotel.name || '—'}</p>
                           <p className="text-sm text-gray-500">{hotel.phone || '—'}</p>
-                        </div>
-                        <div className="flex items-center gap-3">
-                          <button
-                            onClick={() => onEditHotel(hotel)}
-                            className="text-gray-500 hover:text-indigo-600 transition-colors"
-                            aria-label="Edit hotel"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z"
-                              />
-                            </svg>
-                          </button>
-                          <button
-                            onClick={() => handleDelete(hotel.id)}
-                            disabled={deletingId === hotel.id}
-                            className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50"
-                            aria-label="Delete hotel"
-                          >
-                            <svg
-                              className="w-5 h-5"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                              xmlns="http://www.w3.org/2000/svg"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M6 18L18 6M6 6l12 12"
-                              />
-                            </svg>
-                          </button>
                         </div>
                       </div>
                       <dl className="mt-4 space-y-2 text-sm text-gray-600">

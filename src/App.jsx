@@ -6,25 +6,33 @@ import Hotels from './pages/Hotels'
 import Agencies from './pages/Agencies'
 import Instructors from './pages/Instructors'
 import Services from './pages/Services'
+import ServiceDetail from './pages/ServiceDetail'
 import Equipment from './pages/Equipment'
 import Orders from './pages/Orders'
 import CustomerForm from './pages/CustomerForm'
 import CustomerDetail from './pages/CustomerDetail'
 import HotelForm from './pages/HotelForm'
+import HotelDetail from './pages/HotelDetail'
 import AgencyForm from './pages/AgencyForm'
+import AgencyDetail from './pages/AgencyDetail'
 import InstructorForm from './pages/InstructorForm'
+import InstructorDetail from './pages/InstructorDetail'
 import ServicesForm from './pages/ServicesForm'
 import EquipmentForm from './pages/EquipmentForm'
+import EquipmentDetail from './pages/EquipmentDetail'
 import OrderForm from './pages/OrderForm'
 import OrderDetail from './pages/OrderDetail'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
 import CompanyAccounts from './pages/CompanyAccounts'
 import CompanyAccountForm from './pages/CompanyAccountForm'
+import CompanyAccountDetail from './pages/CompanyAccountDetail'
 import ThirdParties from './pages/ThirdParties'
 import ThirdPartyForm from './pages/ThirdPartyForm'
+import ThirdPartyDetail from './pages/ThirdPartyDetail'
 import Ledger from './pages/Ledger'
 import TransactionForm from './pages/TransactionForm'
+import TransactionDetail from './pages/TransactionDetail'
 import { getSession, deleteSession } from './lib/auth.js'
 
 function App() {
@@ -38,24 +46,32 @@ function App() {
   const [customerDetailId, setCustomerDetailId] = useState(null)
   const [customersRefreshKey, setCustomersRefreshKey] = useState(0)
   const [hotelFormHotel, setHotelFormHotel] = useState(null)
+  const [hotelDetailId, setHotelDetailId] = useState(null)
   const [hotelsRefreshKey, setHotelsRefreshKey] = useState(0)
   const [agencyFormAgency, setAgencyFormAgency] = useState(null)
+  const [agencyDetailId, setAgencyDetailId] = useState(null)
   const [agenciesRefreshKey, setAgenciesRefreshKey] = useState(0)
   const [instructorFormInstructor, setInstructorFormInstructor] = useState(null)
   const [instructorsRefreshKey, setInstructorsRefreshKey] = useState(0)
+  const [instructorDetailId, setInstructorDetailId] = useState(null)
   const [serviceFormService, setServiceFormService] = useState(null)
+  const [serviceDetailId, setServiceDetailId] = useState(null)
   const [servicesRefreshKey, setServicesRefreshKey] = useState(0)
   const [equipmentRefreshKey, setEquipmentRefreshKey] = useState(0)
   const [equipmentFormItem, setEquipmentFormItem] = useState(null)
+  const [equipmentDetailId, setEquipmentDetailId] = useState(null)
   const [ordersRefreshKey, setOrdersRefreshKey] = useState(0)
   const [orderFormOrder, setOrderFormOrder] = useState(null)
   const [orderDetailId, setOrderDetailId] = useState(null)
   const [companyAccountsRefreshKey, setCompanyAccountsRefreshKey] = useState(0)
   const [companyAccountFormAccount, setCompanyAccountFormAccount] = useState(null)
+  const [companyAccountDetailId, setCompanyAccountDetailId] = useState(null)
   const [thirdPartiesRefreshKey, setThirdPartiesRefreshKey] = useState(0)
   const [thirdPartyFormItem, setThirdPartyFormItem] = useState(null)
+  const [thirdPartyDetailId, setThirdPartyDetailId] = useState(null)
   const [ledgerRefreshKey, setLedgerRefreshKey] = useState(0)
   const [transactionFormTransaction, setTransactionFormTransaction] = useState(null)
+  const [transactionDetailId, setTransactionDetailId] = useState(null)
 
   // Check if user is logged in on mount using session
   useEffect(() => {
@@ -172,6 +188,28 @@ function App() {
     setCurrentPage('hotels')
   }
 
+  const openHotelDetail = (hotel) => {
+    setHotelDetailId(hotel.id)
+    setCurrentPage('hotelDetail')
+  }
+
+  const handleHotelDetailBack = () => {
+    setHotelDetailId(null)
+    setCurrentPage('hotels')
+  }
+
+  const handleHotelDetailEdit = (hotel) => {
+    setHotelFormHotel(hotel)
+    setHotelDetailId(null)
+    setCurrentPage('hotelForm')
+  }
+
+  const handleHotelDetailDelete = () => {
+    setHotelsRefreshKey((prev) => prev + 1)
+    setHotelDetailId(null)
+    setCurrentPage('hotels')
+  }
+
   const openAgencyForm = (agency = null) => {
     setAgencyFormAgency(agency)
     setCurrentPage('agencyForm')
@@ -185,6 +223,28 @@ function App() {
 
   const handleAgencyFormCancel = () => {
     setAgencyFormAgency(null)
+    setCurrentPage('agencies')
+  }
+
+  const openAgencyDetail = (agency) => {
+    setAgencyDetailId(agency.id)
+    setCurrentPage('agencyDetail')
+  }
+
+  const handleAgencyDetailBack = () => {
+    setAgencyDetailId(null)
+    setCurrentPage('agencies')
+  }
+
+  const handleAgencyDetailEdit = (agency) => {
+    setAgencyFormAgency(agency)
+    setAgencyDetailId(null)
+    setCurrentPage('agencyForm')
+  }
+
+  const handleAgencyDetailDelete = () => {
+    setAgenciesRefreshKey((prev) => prev + 1)
+    setAgencyDetailId(null)
     setCurrentPage('agencies')
   }
 
@@ -204,6 +264,16 @@ function App() {
     setCurrentPage('instructors')
   }
 
+  const openInstructorDetail = (instructor) => {
+    setInstructorDetailId(instructor.id)
+    setCurrentPage('instructorDetail')
+  }
+
+  const handleInstructorDetailBack = () => {
+    setInstructorDetailId(null)
+    setCurrentPage('instructors')
+  }
+
   const openServiceForm = (serviceData = null) => {
     setServiceFormService(serviceData)
     setCurrentPage('serviceForm')
@@ -217,6 +287,28 @@ function App() {
 
   const handleServiceFormCancel = () => {
     setServiceFormService(null)
+    setCurrentPage('services')
+  }
+
+  const openServiceDetail = (service) => {
+    setServiceDetailId(service.id)
+    setCurrentPage('serviceDetail')
+  }
+
+  const handleServiceDetailBack = () => {
+    setServiceDetailId(null)
+    setCurrentPage('services')
+  }
+
+  const handleServiceDetailEdit = (service) => {
+    setServiceFormService(service)
+    setServiceDetailId(null)
+    setCurrentPage('serviceForm')
+  }
+
+  const handleServiceDetailDelete = () => {
+    setServicesRefreshKey((prev) => prev + 1)
+    setServiceDetailId(null)
     setCurrentPage('services')
   }
 
@@ -236,6 +328,28 @@ function App() {
     setCurrentPage('companyAccounts')
   }
 
+  const openCompanyAccountDetail = (account) => {
+    setCompanyAccountDetailId(account.id)
+    setCurrentPage('companyAccountDetail')
+  }
+
+  const handleCompanyAccountDetailBack = () => {
+    setCompanyAccountDetailId(null)
+    setCurrentPage('companyAccounts')
+  }
+
+  const handleCompanyAccountDetailEdit = (account) => {
+    setCompanyAccountFormAccount(account)
+    setCompanyAccountDetailId(null)
+    setCurrentPage('companyAccountForm')
+  }
+
+  const handleCompanyAccountDetailDelete = () => {
+    setCompanyAccountsRefreshKey((prev) => prev + 1)
+    setCompanyAccountDetailId(null)
+    setCurrentPage('companyAccounts')
+  }
+
   const openThirdPartyForm = (thirdParty = null) => {
     setThirdPartyFormItem(thirdParty)
     setCurrentPage('thirdPartyForm')
@@ -249,6 +363,28 @@ function App() {
 
   const handleThirdPartyFormCancel = () => {
     setThirdPartyFormItem(null)
+    setCurrentPage('thirdParties')
+  }
+
+  const openThirdPartyDetail = (thirdParty) => {
+    setThirdPartyDetailId(thirdParty.id)
+    setCurrentPage('thirdPartyDetail')
+  }
+
+  const handleThirdPartyDetailBack = () => {
+    setThirdPartyDetailId(null)
+    setCurrentPage('thirdParties')
+  }
+
+  const handleThirdPartyDetailEdit = (thirdParty) => {
+    setThirdPartyFormItem(thirdParty)
+    setThirdPartyDetailId(null)
+    setCurrentPage('thirdPartyForm')
+  }
+
+  const handleThirdPartyDetailDelete = () => {
+    setThirdPartiesRefreshKey((prev) => prev + 1)
+    setThirdPartyDetailId(null)
     setCurrentPage('thirdParties')
   }
 
@@ -268,6 +404,28 @@ function App() {
     setCurrentPage('ledger')
   }
 
+  const openTransactionDetail = (transaction) => {
+    setTransactionDetailId(transaction.id)
+    setCurrentPage('transactionDetail')
+  }
+
+  const handleTransactionDetailBack = () => {
+    setTransactionDetailId(null)
+    setCurrentPage('ledger')
+  }
+
+  const handleTransactionDetailEdit = (transaction) => {
+    setTransactionFormTransaction(transaction)
+    setTransactionDetailId(null)
+    setCurrentPage('transactionForm')
+  }
+
+  const handleTransactionDetailDelete = () => {
+    setLedgerRefreshKey((prev) => prev + 1)
+    setTransactionDetailId(null)
+    setCurrentPage('ledger')
+  }
+
   const openEquipmentForm = (item = null) => {
     setEquipmentFormItem(item)
     setCurrentPage('equipmentForm')
@@ -281,6 +439,28 @@ function App() {
 
   const handleEquipmentFormCancel = () => {
     setEquipmentFormItem(null)
+    setCurrentPage('equipment')
+  }
+
+  const openEquipmentDetail = (equipment) => {
+    setEquipmentDetailId(equipment.id)
+    setCurrentPage('equipmentDetail')
+  }
+
+  const handleEquipmentDetailBack = () => {
+    setEquipmentDetailId(null)
+    setCurrentPage('equipment')
+  }
+
+  const handleEquipmentDetailEdit = (equipment) => {
+    setEquipmentFormItem(equipment)
+    setEquipmentDetailId(null)
+    setCurrentPage('equipmentForm')
+  }
+
+  const handleEquipmentDetailDelete = () => {
+    setEquipmentRefreshKey((prev) => prev + 1)
+    setEquipmentDetailId(null)
     setCurrentPage('equipment')
   }
 
@@ -345,6 +525,7 @@ function App() {
             refreshKey={hotelsRefreshKey}
             onAddHotel={() => openHotelForm(null)}
             onEditHotel={(hotel) => openHotelForm(hotel)}
+            onViewHotel={(hotel) => openHotelDetail(hotel)}
           />
         )
       case 'agencies':
@@ -353,6 +534,7 @@ function App() {
             refreshKey={agenciesRefreshKey}
             onAddAgency={() => openAgencyForm(null)}
             onEditAgency={(agency) => openAgencyForm(agency)}
+        onViewAgency={(agency) => openAgencyDetail(agency)}
           />
         )
       case 'services':
@@ -360,7 +542,7 @@ function App() {
           <Services
             refreshKey={servicesRefreshKey}
             onAddService={() => openServiceForm(null)}
-            onEditService={(serviceItem) => openServiceForm(serviceItem)}
+            onViewService={(service) => openServiceDetail(service)}
           />
         )
       case 'ledger':
@@ -368,7 +550,7 @@ function App() {
           <Ledger
             refreshKey={ledgerRefreshKey}
             onAddTransaction={() => openTransactionForm(null)}
-            onEditTransaction={(transactionItem) => openTransactionForm(transactionItem)}
+            onViewTransaction={(transaction) => openTransactionDetail(transaction)}
           />
         )
       case 'thirdParties':
@@ -377,6 +559,7 @@ function App() {
             refreshKey={thirdPartiesRefreshKey}
             onAddThirdParty={() => openThirdPartyForm(null)}
             onEditThirdParty={(thirdParty) => openThirdPartyForm(thirdParty)}
+            onViewThirdParty={(thirdParty) => openThirdPartyDetail(thirdParty)}
           />
         )
       case 'companyAccounts':
@@ -385,6 +568,7 @@ function App() {
             refreshKey={companyAccountsRefreshKey}
             onAddAccount={() => openCompanyAccountForm(null)}
             onEditAccount={(account) => openCompanyAccountForm(account)}
+            onViewAccount={(account) => openCompanyAccountDetail(account)}
           />
         )
       case 'orders':
@@ -402,6 +586,7 @@ function App() {
             refreshKey={equipmentRefreshKey}
             onAddEquipment={() => openEquipmentForm(null)}
             onEditEquipment={(item) => openEquipmentForm(item)}
+            onViewEquipment={(item) => openEquipmentDetail(item)}
           />
         )
       case 'instructors':
@@ -410,6 +595,7 @@ function App() {
             refreshKey={instructorsRefreshKey}
             onAddInstructor={() => openInstructorForm(null)}
             onEditInstructor={(instructor) => openInstructorForm(instructor)}
+            onViewInstructor={(instructor) => openInstructorDetail(instructor)}
           />
         )
       case 'customerDetail':
@@ -438,12 +624,30 @@ function App() {
             onSaved={handleHotelFormSaved}
           />
         )
+      case 'hotelDetail':
+        return (
+          <HotelDetail
+            hotelId={hotelDetailId}
+            onBack={handleHotelDetailBack}
+            onEdit={(hotel) => handleHotelDetailEdit(hotel)}
+            onDelete={handleHotelDetailDelete}
+          />
+        )
       case 'agencyForm':
         return (
           <AgencyForm
             agency={agencyFormAgency}
             onCancel={handleAgencyFormCancel}
             onSaved={handleAgencyFormSaved}
+          />
+        )
+      case 'agencyDetail':
+        return (
+          <AgencyDetail
+            agencyId={agencyDetailId}
+            onBack={handleAgencyDetailBack}
+            onEdit={(agency) => handleAgencyDetailEdit(agency)}
+            onDelete={handleAgencyDetailDelete}
           />
         )
       case 'instructorForm':
@@ -454,12 +658,29 @@ function App() {
             onSaved={handleInstructorFormSaved}
           />
         )
+      case 'instructorDetail':
+        return (
+          <InstructorDetail
+            instructorId={instructorDetailId}
+            onBack={handleInstructorDetailBack}
+            onEdit={(instructor) => openInstructorForm(instructor)}
+          />
+        )
       case 'serviceForm':
         return (
           <ServicesForm
             service={serviceFormService}
             onCancel={handleServiceFormCancel}
             onSaved={handleServiceFormSaved}
+          />
+        )
+      case 'serviceDetail':
+        return (
+          <ServiceDetail
+            serviceId={serviceDetailId}
+            onBack={handleServiceDetailBack}
+            onEdit={(service) => handleServiceDetailEdit(service)}
+            onDelete={handleServiceDetailDelete}
           />
         )
       case 'thirdPartyForm':
@@ -470,12 +691,30 @@ function App() {
             onSaved={handleThirdPartyFormSaved}
           />
         )
+      case 'thirdPartyDetail':
+        return (
+          <ThirdPartyDetail
+            thirdPartyId={thirdPartyDetailId}
+            onBack={handleThirdPartyDetailBack}
+            onEdit={(thirdParty) => handleThirdPartyDetailEdit(thirdParty)}
+            onDelete={handleThirdPartyDetailDelete}
+          />
+        )
       case 'transactionForm':
         return (
           <TransactionForm
             transaction={transactionFormTransaction}
             onCancel={handleTransactionFormCancel}
             onSaved={handleTransactionFormSaved}
+          />
+        )
+      case 'transactionDetail':
+        return (
+          <TransactionDetail
+            transactionId={transactionDetailId}
+            onBack={handleTransactionDetailBack}
+            onEdit={(transaction) => handleTransactionDetailEdit(transaction)}
+            onDelete={handleTransactionDetailDelete}
           />
         )
       case 'companyAccountForm':
@@ -486,12 +725,30 @@ function App() {
             onSaved={handleCompanyAccountFormSaved}
           />
         )
+      case 'companyAccountDetail':
+        return (
+          <CompanyAccountDetail
+            accountId={companyAccountDetailId}
+            onBack={handleCompanyAccountDetailBack}
+            onEdit={(account) => handleCompanyAccountDetailEdit(account)}
+            onDelete={handleCompanyAccountDetailDelete}
+          />
+        )
       case 'equipmentForm':
         return (
           <EquipmentForm
             equipment={equipmentFormItem}
             onCancel={handleEquipmentFormCancel}
             onSaved={handleEquipmentFormSaved}
+          />
+        )
+      case 'equipmentDetail':
+        return (
+          <EquipmentDetail
+            equipmentId={equipmentDetailId}
+            onBack={handleEquipmentDetailBack}
+            onEdit={(equipment) => handleEquipmentDetailEdit(equipment)}
+            onDelete={handleEquipmentDetailDelete}
           />
         )
       case 'orderDetail':
