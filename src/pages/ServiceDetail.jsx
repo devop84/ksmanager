@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import sql from '../lib/neon'
+import { canModify } from '../lib/permissions'
 
 const statusStyles = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -8,7 +9,7 @@ const statusStyles = {
   cancelled: 'bg-red-100 text-red-800'
 }
 
-function ServiceDetail({ serviceId, onBack, onEdit, onDelete }) {
+function ServiceDetail({ serviceId, onBack, onEdit, onDelete, user = null }) {
   const [service, setService] = useState(null)
   const [lessonPackages, setLessonPackages] = useState([])
   const [orders, setOrders] = useState([])
@@ -280,14 +281,15 @@ function ServiceDetail({ serviceId, onBack, onEdit, onDelete }) {
             <div className="flex items-center gap-2">
               <button
                 onClick={() => onEdit?.(service)}
-                className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+                disabled={!canModify(user)}
+                className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               >
                 Edit
               </button>
               <button
                 onClick={handleDelete}
-                disabled={deleting}
-                className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-60"
+                disabled={deleting || !canModify(user)}
+                className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               >
                 {deleting ? 'Deleting…' : 'Delete'}
               </button>

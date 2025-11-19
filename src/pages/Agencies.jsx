@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import sql from '../lib/neon'
+import { canModify } from '../lib/permissions'
 
 const PAGE_SIZE = 25
 
@@ -11,7 +12,7 @@ const columns = [
   { key: 'note', label: 'Note' }
 ]
 
-function Agencies({ onAddAgency = () => {}, onEditAgency = () => {}, onViewAgency = () => {}, refreshKey = 0 }) {
+function Agencies({ onAddAgency = () => {}, onEditAgency = () => {}, onViewAgency = () => {}, refreshKey = 0, user = null }) {
   const [agencies, setAgencies] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -130,7 +131,8 @@ function Agencies({ onAddAgency = () => {}, onEditAgency = () => {}, onViewAgenc
           </div>
           <button
             onClick={onAddAgency}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors"
+            disabled={!canModify(user)}
+            className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-indigo-600 text-white hover:bg-indigo-500 disabled:bg-gray-400 disabled:hover:bg-gray-400"
           >
             <svg
               className="w-4 h-4"

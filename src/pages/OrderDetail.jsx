@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
 import sql from '../lib/neon'
+import { canModify } from '../lib/permissions'
 
-function OrderDetail({ orderId, onEdit, onDelete, onBack }) {
+function OrderDetail({ orderId, onEdit, onDelete, onBack, user = null }) {
   const [order, setOrder] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -214,7 +215,8 @@ function OrderDetail({ orderId, onEdit, onDelete, onBack }) {
           <div className="flex items-center gap-3">
             <button
               onClick={() => onEdit?.({ id: order.id })}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+              disabled={!canModify(user)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
             >
               <svg
                 className="w-4 h-4"
@@ -234,8 +236,8 @@ function OrderDetail({ orderId, onEdit, onDelete, onBack }) {
             </button>
             <button
               onClick={handleDelete}
-              disabled={deleting}
-              className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={deleting || !canModify(user)}
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
             >
               <svg
                 className="w-4 h-4"

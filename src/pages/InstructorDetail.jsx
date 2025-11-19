@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import sql from '../lib/neon'
+import { canModify } from '../lib/permissions'
 
-function InstructorDetail({ instructorId, onBack, onEdit, onDelete }) {
+function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null }) {
   const [instructor, setInstructor] = useState(null)
   const [lessons, setLessons] = useState([])
   const [transactions, setTransactions] = useState([])
@@ -326,7 +327,8 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete }) {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onEdit?.(instructor)}
-                      className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+                      disabled={!canModify(user)}
+                      className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
                       title="Edit instructor"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -335,7 +337,8 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete }) {
                     </button>
                     <button
                       onClick={onDelete}
-                      className="inline-flex items-center justify-center p-2 rounded-lg border border-red-300 bg-white text-red-700 shadow-sm hover:bg-red-50 transition-colors"
+                      disabled={!canModify(user)}
+                      className="inline-flex items-center justify-center p-2 rounded-lg border border-red-300 bg-white text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
                       title="Delete instructor"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

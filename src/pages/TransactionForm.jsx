@@ -251,7 +251,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">{isEditing ? 'Edit Transaction' : 'Add Transaction'}</h1>
             <p className="text-gray-500 text-sm">
-              {isEditing ? 'Update the ledger entry details.' : 'Record a new entry in the company ledger.'}
+              {isEditing ? 'Update the transaction details.' : 'Record a new transaction entry.'}
             </p>
           </div>
           <button onClick={onCancel} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">

@@ -30,10 +30,11 @@ import CompanyAccountDetail from './pages/CompanyAccountDetail'
 import ThirdParties from './pages/ThirdParties'
 import ThirdPartyForm from './pages/ThirdPartyForm'
 import ThirdPartyDetail from './pages/ThirdPartyDetail'
-import Ledger from './pages/Ledger'
+import Transactions from './pages/Transactions'
 import TransactionForm from './pages/TransactionForm'
 import TransactionDetail from './pages/TransactionDetail'
 import { getSession, deleteSession } from './lib/auth.js'
+import { canModify } from './lib/permissions.js'
 
 function App() {
   const [currentPage, setCurrentPage] = useState('dashboard')
@@ -69,7 +70,7 @@ function App() {
   const [thirdPartiesRefreshKey, setThirdPartiesRefreshKey] = useState(0)
   const [thirdPartyFormItem, setThirdPartyFormItem] = useState(null)
   const [thirdPartyDetailId, setThirdPartyDetailId] = useState(null)
-  const [ledgerRefreshKey, setLedgerRefreshKey] = useState(0)
+  const [transactionsRefreshKey, setTransactionsRefreshKey] = useState(0)
   const [transactionFormTransaction, setTransactionFormTransaction] = useState(null)
   const [transactionDetailId, setTransactionDetailId] = useState(null)
 
@@ -388,20 +389,20 @@ function App() {
     setCurrentPage('thirdParties')
   }
 
-  const openTransactionForm = (ledgerEntry = null) => {
-    setTransactionFormTransaction(ledgerEntry)
+  const openTransactionForm = (transactionEntry = null) => {
+    setTransactionFormTransaction(transactionEntry)
     setCurrentPage('transactionForm')
   }
 
   const handleTransactionFormSaved = () => {
-    setLedgerRefreshKey((prev) => prev + 1)
+    setTransactionsRefreshKey((prev) => prev + 1)
     setTransactionFormTransaction(null)
-    setCurrentPage('ledger')
+    setCurrentPage('transactions')
   }
 
   const handleTransactionFormCancel = () => {
     setTransactionFormTransaction(null)
-    setCurrentPage('ledger')
+    setCurrentPage('transactions')
   }
 
   const openTransactionDetail = (transaction) => {
@@ -411,7 +412,7 @@ function App() {
 
   const handleTransactionDetailBack = () => {
     setTransactionDetailId(null)
-    setCurrentPage('ledger')
+    setCurrentPage('transactions')
   }
 
   const handleTransactionDetailEdit = (transaction) => {
@@ -421,9 +422,9 @@ function App() {
   }
 
   const handleTransactionDetailDelete = () => {
-    setLedgerRefreshKey((prev) => prev + 1)
+    setTransactionsRefreshKey((prev) => prev + 1)
     setTransactionDetailId(null)
-    setCurrentPage('ledger')
+    setCurrentPage('transactions')
   }
 
   const openEquipmentForm = (item = null) => {
@@ -514,6 +515,7 @@ function App() {
         return (
           <Customers
             refreshKey={customersRefreshKey}
+            user={user}
             onAddCustomer={() => openCustomerForm(null)}
             onEditCustomer={(customer) => openCustomerForm(customer)}
             onViewCustomer={(customer) => openCustomerDetail(customer)}
@@ -523,6 +525,7 @@ function App() {
         return (
           <Hotels
             refreshKey={hotelsRefreshKey}
+            user={user}
             onAddHotel={() => openHotelForm(null)}
             onEditHotel={(hotel) => openHotelForm(hotel)}
             onViewHotel={(hotel) => openHotelDetail(hotel)}
@@ -532,6 +535,7 @@ function App() {
         return (
           <Agencies
             refreshKey={agenciesRefreshKey}
+            user={user}
             onAddAgency={() => openAgencyForm(null)}
             onEditAgency={(agency) => openAgencyForm(agency)}
         onViewAgency={(agency) => openAgencyDetail(agency)}
@@ -541,14 +545,16 @@ function App() {
         return (
           <Services
             refreshKey={servicesRefreshKey}
+            user={user}
             onAddService={() => openServiceForm(null)}
             onViewService={(service) => openServiceDetail(service)}
           />
         )
-      case 'ledger':
+      case 'transactions':
         return (
-          <Ledger
-            refreshKey={ledgerRefreshKey}
+          <Transactions
+            refreshKey={transactionsRefreshKey}
+            user={user}
             onAddTransaction={() => openTransactionForm(null)}
             onViewTransaction={(transaction) => openTransactionDetail(transaction)}
           />
@@ -557,6 +563,7 @@ function App() {
         return (
           <ThirdParties
             refreshKey={thirdPartiesRefreshKey}
+            user={user}
             onAddThirdParty={() => openThirdPartyForm(null)}
             onEditThirdParty={(thirdParty) => openThirdPartyForm(thirdParty)}
             onViewThirdParty={(thirdParty) => openThirdPartyDetail(thirdParty)}
@@ -566,6 +573,7 @@ function App() {
         return (
           <CompanyAccounts
             refreshKey={companyAccountsRefreshKey}
+            user={user}
             onAddAccount={() => openCompanyAccountForm(null)}
             onEditAccount={(account) => openCompanyAccountForm(account)}
             onViewAccount={(account) => openCompanyAccountDetail(account)}
@@ -575,6 +583,7 @@ function App() {
         return (
           <Orders
             refreshKey={ordersRefreshKey}
+            user={user}
             onAddOrder={() => openOrderForm(null)}
             onEditOrder={(order) => openOrderForm(order)}
             onViewOrder={(order) => openOrderDetail(order)}
@@ -584,6 +593,7 @@ function App() {
         return (
           <Equipment
             refreshKey={equipmentRefreshKey}
+            user={user}
             onAddEquipment={() => openEquipmentForm(null)}
             onEditEquipment={(item) => openEquipmentForm(item)}
             onViewEquipment={(item) => openEquipmentDetail(item)}
@@ -593,6 +603,7 @@ function App() {
         return (
           <Instructors
             refreshKey={instructorsRefreshKey}
+            user={user}
             onAddInstructor={() => openInstructorForm(null)}
             onEditInstructor={(instructor) => openInstructorForm(instructor)}
             onViewInstructor={(instructor) => openInstructorDetail(instructor)}
@@ -606,6 +617,7 @@ function App() {
             onEdit={handleCustomerDetailEdit}
             onDelete={handleCustomerDetailDelete}
             onEditOrder={(order) => openOrderForm(order)}
+            user={user}
           />
         )
       case 'customerForm':
@@ -631,6 +643,7 @@ function App() {
             onBack={handleHotelDetailBack}
             onEdit={(hotel) => handleHotelDetailEdit(hotel)}
             onDelete={handleHotelDetailDelete}
+            user={user}
           />
         )
       case 'agencyForm':
@@ -648,6 +661,7 @@ function App() {
             onBack={handleAgencyDetailBack}
             onEdit={(agency) => handleAgencyDetailEdit(agency)}
             onDelete={handleAgencyDetailDelete}
+            user={user}
           />
         )
       case 'instructorForm':
@@ -664,6 +678,7 @@ function App() {
             instructorId={instructorDetailId}
             onBack={handleInstructorDetailBack}
             onEdit={(instructor) => openInstructorForm(instructor)}
+            user={user}
           />
         )
       case 'serviceForm':
@@ -681,6 +696,7 @@ function App() {
             onBack={handleServiceDetailBack}
             onEdit={(service) => handleServiceDetailEdit(service)}
             onDelete={handleServiceDetailDelete}
+            user={user}
           />
         )
       case 'thirdPartyForm':
@@ -698,6 +714,7 @@ function App() {
             onBack={handleThirdPartyDetailBack}
             onEdit={(thirdParty) => handleThirdPartyDetailEdit(thirdParty)}
             onDelete={handleThirdPartyDetailDelete}
+            user={user}
           />
         )
       case 'transactionForm':
@@ -715,6 +732,7 @@ function App() {
             onBack={handleTransactionDetailBack}
             onEdit={(transaction) => handleTransactionDetailEdit(transaction)}
             onDelete={handleTransactionDetailDelete}
+            user={user}
           />
         )
       case 'companyAccountForm':
@@ -732,6 +750,7 @@ function App() {
             onBack={handleCompanyAccountDetailBack}
             onEdit={(account) => handleCompanyAccountDetailEdit(account)}
             onDelete={handleCompanyAccountDetailDelete}
+            user={user}
           />
         )
       case 'equipmentForm':
@@ -749,6 +768,7 @@ function App() {
             onBack={handleEquipmentDetailBack}
             onEdit={(equipment) => handleEquipmentDetailEdit(equipment)}
             onDelete={handleEquipmentDetailDelete}
+            user={user}
           />
         )
       case 'orderDetail':
@@ -758,6 +778,7 @@ function App() {
             onBack={handleOrderDetailBack}
             onEdit={handleOrderDetailEdit}
             onDelete={handleOrderDetailDelete}
+            user={user}
           />
         )
       case 'orderForm':

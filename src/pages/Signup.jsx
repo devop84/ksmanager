@@ -48,6 +48,7 @@ function Signup({ onSignup, onSwitchToLogin }) {
         id: user.id,
         name: user.name,
         email: user.email,
+        role: user.role,
         sessionToken: session.session_token
       })
     } catch (err) {

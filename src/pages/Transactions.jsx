@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import sql from '../lib/neon'
+import { canModify } from '../lib/permissions'
 
 const PAGE_SIZE = 25
 
@@ -17,7 +18,7 @@ const entityTypeLabels = {
   third_party: 'Third Party'
 }
 
-function Ledger({ refreshKey = 0, onAddTransaction = () => {}, onViewTransaction = () => {} }) {
+function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTransaction = () => {}, user = null }) {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -30,11 +31,11 @@ function Ledger({ refreshKey = 0, onAddTransaction = () => {}, onViewTransaction
   const [paymentOptions, setPaymentOptions] = useState([])
 
   useEffect(() => {
-    const fetchLedger = async () => {
+    const fetchTransactions = async () => {
       try {
         setLoading(true)
         setError(null)
-        const [ledgerResult, typesResult, paymentsResult] = await Promise.all([
+        const [transactionsResult, typesResult, paymentsResult] = await Promise.all([
           sql`
             SELECT
               t.id,
@@ -82,18 +83,18 @@ function Ledger({ refreshKey = 0, onAddTransaction = () => {}, onViewTransaction
           sql`SELECT id, name FROM payment_methods ORDER BY name`
         ])
 
-        setTransactions(ledgerResult || [])
+        setTransactions(transactionsResult || [])
         setTypeOptions(typesResult || [])
         setPaymentOptions(paymentsResult || [])
       } catch (err) {
-        console.error('Failed to load ledger:', err)
-        setError('Unable to load ledger transactions. Please try again later.')
+        console.error('Failed to load transactions:', err)
+        setError('Unable to load transactions. Please try again later.')
       } finally {
         setLoading(false)
       }
     }
 
-    fetchLedger()
+    fetchTransactions()
   }, [refreshKey])
 
   const formatEntityName = (transaction, role = 'source') => {
@@ -211,12 +212,13 @@ const formatAmount = (amount) =>
       <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Ledger</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
             <p className="text-gray-500 text-sm">Track all incoming and outgoing cash movement, including internal transfers.</p>
           </div>
           <button
             onClick={onAddTransaction}
-            className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors"
+            disabled={!canModify(user)}
+            className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-indigo-600 text-white hover:bg-indigo-500 disabled:bg-gray-400 disabled:hover:bg-gray-400"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -292,7 +294,7 @@ const formatAmount = (amount) =>
           </div>
         </div>
 
-        {loading && <div className="text-gray-600 text-sm">Loading ledger...</div>}
+        {loading && <div className="text-gray-600 text-sm">Loading transactions...</div>}
         {error && <div className="text-red-600 text-sm">{error}</div>}
         {!loading && !error && (
           <div className="flex flex-col gap-4">
@@ -433,6 +435,5 @@ const formatAmount = (amount) =>
   )
 }
 
-export default Ledger
-
+export default Transactions
 

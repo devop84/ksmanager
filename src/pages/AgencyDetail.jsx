@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import sql from '../lib/neon'
+import { canModify } from '../lib/permissions'
 
 const statusStyles = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -8,7 +9,7 @@ const statusStyles = {
   cancelled: 'bg-red-100 text-red-800'
 }
 
-function AgencyDetail({ agencyId, onBack, onEdit, onDelete }) {
+function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
   const [agency, setAgency] = useState(null)
   const [customers, setCustomers] = useState([])
   const [orders, setOrders] = useState([])
@@ -484,10 +485,10 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete }) {
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900">Commission transactions</h2>
-                <p className="text-sm text-gray-500">{transactions.length} ledger entries</p>
+                <p className="text-sm text-gray-500">{transactions.length} transaction{transactions.length !== 1 ? 's' : ''}</p>
               </div>
               {transactions.length === 0 ? (
-                <div className="text-gray-600">No ledger entries have been recorded for this agency.</div>
+                <div className="text-gray-600">No transactions have been recorded for this agency.</div>
               ) : (
                 <div className="space-y-3">
                   <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
@@ -568,7 +569,8 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete }) {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onEdit?.(agency)}
-                      className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 transition-colors"
+                      disabled={!canModify(user)}
+                      className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
                       title="Edit agency"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -577,8 +579,8 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete }) {
                     </button>
                     <button
                       onClick={handleDelete}
-                      disabled={deleting}
-                      className="inline-flex items-center justify-center p-2 rounded-lg border border-red-300 bg-white text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                      disabled={deleting || !canModify(user)}
+                      className="inline-flex items-center justify-center p-2 rounded-lg border border-red-300 bg-white text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
                       title="Delete agency"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

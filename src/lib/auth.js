@@ -9,11 +9,11 @@ export async function createUser(name, email, password) {
     // Hash the password
     const passwordHash = await hashPassword(password)
 
-    // Insert user into database
+    // Insert user into database (default role is viewonly)
     const result = await sql`
-      INSERT INTO users (name, email, password_hash)
-      VALUES (${name}, ${email}, ${passwordHash})
-      RETURNING id, name, email, created_at
+      INSERT INTO users (name, email, password_hash, role)
+      VALUES (${name}, ${email}, ${passwordHash}, 'viewonly')
+      RETURNING id, name, email, role, created_at
     `
 
     return result[0]
@@ -32,7 +32,7 @@ export async function authenticateUser(email, password) {
   try {
     // Find user by email
     const users = await sql`
-      SELECT id, name, email, password_hash
+      SELECT id, name, email, password_hash, role
       FROM users
       WHERE email = ${email}
       LIMIT 1
@@ -54,7 +54,8 @@ export async function authenticateUser(email, password) {
     return {
       id: user.id,
       name: user.name,
-      email: user.email
+      email: user.email,
+      role: user.role || 'viewonly'
     }
   } catch (error) {
     throw error
@@ -92,7 +93,7 @@ export async function createSession(userId) {
 export async function getSession(sessionToken) {
   try {
     const sessions = await sql`
-      SELECT s.id, s.user_id, s.expires_at, u.id as user_id, u.name, u.email
+      SELECT s.id, s.user_id, s.expires_at, u.id as user_id, u.name, u.email, u.role
       FROM sessions s
       INNER JOIN users u ON s.user_id = u.id
       WHERE s.session_token = ${sessionToken}
@@ -112,7 +113,8 @@ export async function getSession(sessionToken) {
       user: {
         id: session.user_id,
         name: session.name,
-        email: session.email
+        email: session.email,
+        role: session.role || 'viewonly'
       }
     }
   } catch (error) {
