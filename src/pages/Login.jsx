@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { authenticateUser, createSession } from '../lib/auth.js'
 
-function Login({ onLogin, onSwitchToSignup }) {
+function Login({ onLogin, onSwitchToSignup, onNavigate }) {
+  const { t } = useTranslation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -58,6 +60,16 @@ function Login({ onLogin, onSwitchToSignup }) {
               create a new account
             </button>
           </p>
+          {onNavigate && (
+            <p className="mt-2 text-center text-sm text-gray-600">
+              <button
+                onClick={() => onNavigate('landing')}
+                className="font-medium text-indigo-600 hover:text-indigo-500"
+              >
+                {t('login.backToHome')}
+              </button>
+            </p>
+          )}
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           {error && (

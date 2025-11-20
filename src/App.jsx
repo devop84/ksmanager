@@ -41,11 +41,13 @@ import Transactions from './pages/Transactions'
 import TransactionForm from './pages/TransactionForm'
 import TransactionDetail from './pages/TransactionDetail'
 import Settings from './pages/Settings'
+import Landing from './pages/Landing'
+import Roadmap from './pages/Roadmap'
 import { getSession, deleteSession } from './lib/auth.js'
 import { canModify } from './lib/permissions.js'
 function App() {
   const { t } = useTranslation()
-  const [currentPage, setCurrentPage] = useState('dashboardManagement')
+  const [currentPage, setCurrentPage] = useState('landing')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
   const [user, setUser] = useState(null)
@@ -133,11 +135,22 @@ function App() {
       setUser(null)
       setIsAuthenticated(false)
       localStorage.removeItem('kiteManager_session')
-      setCurrentPage('dashboardManagement')
+      setCurrentPage('landing')
     }
   }
 
   const handleNavigate = (page) => {
+    // Allow navigation to public pages (landing, roadmap) even when not authenticated
+    if (page === 'landing' || page === 'roadmap') {
+      setCurrentPage(page)
+      setIsSidebarOpen(false)
+      return
+    }
+    // For protected pages, check authentication
+    if (!isAuthenticated && page !== 'login' && page !== 'signup') {
+      setCurrentPage('login')
+      return
+    }
     setCurrentPage(page)
     setIsSidebarOpen(false)
   }
@@ -864,6 +877,10 @@ function App() {
         )
       case 'settings':
         return <Settings />
+      case 'landing':
+        return <Landing onNavigate={handleNavigate} isAuthenticated={isAuthenticated} />
+      case 'roadmap':
+        return <Roadmap />
       case 'orderDetail':
         return (
           <OrderDetail
@@ -883,7 +900,7 @@ function App() {
           />
         )
       default:
-        return <Dashboard />
+        return <DashboardManagement onEditOrder={(order) => openOrderForm(order)} onViewCustomer={(customer) => openCustomerDetail(customer)} onNavigate={(page) => setCurrentPage(page)} />
     }
   }
 
@@ -896,8 +913,16 @@ function App() {
     )
   }
 
-  // Show login/signup if not authenticated
+  // Show public pages (landing, roadmap) or login/signup if not authenticated
   if (!isAuthenticated) {
+    // Show public pages
+    if (currentPage === 'landing') {
+      return <Landing onNavigate={handleNavigate} isAuthenticated={false} />
+    }
+    if (currentPage === 'roadmap') {
+      return <Roadmap />
+    }
+    // Show login/signup
     if (showSignup) {
       return (
         <Signup
@@ -910,9 +935,11 @@ function App() {
       <Login
         onLogin={handleLogin}
         onSwitchToSignup={() => setShowSignup(true)}
+        onNavigate={handleNavigate}
       />
     )
   }
+
 
   // Show main app if authenticated
   return (

@@ -44,6 +44,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
     { key: 'equipment', label: t('nav.equipment', 'Equipment') },
     { key: 'hotels', label: t('nav.hotels', 'Hotels') },
     { key: 'settings', label: t('nav.settings', 'Settings') },
+    { key: 'roadmap', label: t('nav.roadmap', 'Roadmap') },
   ]
 
   return (
@@ -92,7 +93,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
           </svg>
           <h1 className="text-2xl font-bold">KSMANAGER</h1>
         </div>
-        <p className="text-xs text-gray-400 mt-2">v0.1.0-alpha</p>
+        <p className="text-xs text-gray-400 mt-2">v0.1.0-beta</p>
       </div>
 
       {/* User Info */}
