@@ -4,10 +4,12 @@ import Sidebar from './components/Sidebar'
 import DashboardOperations from './pages/DashboardOperations'
 import DashboardFinancial from './pages/DashboardFinancial'
 import DashboardManagement from './pages/DashboardManagement'
+import DashboardPartners from './pages/DashboardPartners'
 import Customers from './pages/Customers'
 import Hotels from './pages/Hotels'
 import Agencies from './pages/Agencies'
 import Instructors from './pages/Instructors'
+import Staff from './pages/Staff'
 import Services from './pages/Services'
 import ServiceDetail from './pages/ServiceDetail'
 import Equipment from './pages/Equipment'
@@ -20,6 +22,8 @@ import AgencyForm from './pages/AgencyForm'
 import AgencyDetail from './pages/AgencyDetail'
 import InstructorForm from './pages/InstructorForm'
 import InstructorDetail from './pages/InstructorDetail'
+import StaffForm from './pages/StaffForm'
+import StaffDetail from './pages/StaffDetail'
 import ServicesForm from './pages/ServicesForm'
 import EquipmentForm from './pages/EquipmentForm'
 import EquipmentDetail from './pages/EquipmentDetail'
@@ -59,6 +63,9 @@ function App() {
   const [instructorFormInstructor, setInstructorFormInstructor] = useState(null)
   const [instructorsRefreshKey, setInstructorsRefreshKey] = useState(0)
   const [instructorDetailId, setInstructorDetailId] = useState(null)
+  const [staffFormStaff, setStaffFormStaff] = useState(null)
+  const [staffRefreshKey, setStaffRefreshKey] = useState(0)
+  const [staffDetailId, setStaffDetailId] = useState(null)
   const [serviceFormService, setServiceFormService] = useState(null)
   const [serviceDetailId, setServiceDetailId] = useState(null)
   const [servicesRefreshKey, setServicesRefreshKey] = useState(0)
@@ -277,6 +284,44 @@ function App() {
   const handleInstructorDetailBack = () => {
     setInstructorDetailId(null)
     setCurrentPage('instructors')
+  }
+
+  const openStaffForm = (staff = null) => {
+    setStaffFormStaff(staff)
+    setCurrentPage('staffForm')
+  }
+
+  const handleStaffFormSaved = () => {
+    setStaffRefreshKey((prev) => prev + 1)
+    setStaffFormStaff(null)
+    setCurrentPage('staff')
+  }
+
+  const handleStaffFormCancel = () => {
+    setStaffFormStaff(null)
+    setCurrentPage('staff')
+  }
+
+  const openStaffDetail = (staff) => {
+    setStaffDetailId(staff.id)
+    setCurrentPage('staffDetail')
+  }
+
+  const handleStaffDetailBack = () => {
+    setStaffDetailId(null)
+    setCurrentPage('staff')
+  }
+
+  const handleStaffDetailEdit = (staff) => {
+    setStaffFormStaff(staff)
+    setStaffDetailId(null)
+    setCurrentPage('staffForm')
+  }
+
+  const handleStaffDetailDelete = () => {
+    setStaffRefreshKey((prev) => prev + 1)
+    setStaffDetailId(null)
+    setCurrentPage('staff')
   }
 
   const openServiceForm = (serviceData = null) => {
@@ -519,6 +564,16 @@ function App() {
         return <DashboardFinancial onViewCustomer={(customer) => openCustomerDetail(customer)} onNavigate={(page) => setCurrentPage(page)} />
       case 'dashboardManagement':
         return <DashboardManagement onEditOrder={(order) => openOrderForm(order)} onViewCustomer={(customer) => openCustomerDetail(customer)} onNavigate={(page) => setCurrentPage(page)} />
+      case 'dashboardPartners':
+        return (
+          <DashboardPartners
+            onViewAgency={(agency) => openAgencyDetail(agency)}
+            onViewThirdParty={(thirdParty) => openThirdPartyDetail(thirdParty)}
+            onViewStaff={(staff) => openStaffDetail(staff)}
+            onViewInstructor={(instructor) => openInstructorDetail(instructor)}
+            onNavigate={(page) => setCurrentPage(page)}
+          />
+        )
       case 'customers':
         return (
           <Customers
@@ -617,6 +672,16 @@ function App() {
             onViewInstructor={(instructor) => openInstructorDetail(instructor)}
           />
         )
+      case 'staff':
+        return (
+          <Staff
+            refreshKey={staffRefreshKey}
+            user={user}
+            onAddStaff={() => openStaffForm(null)}
+            onEditStaff={(staff) => openStaffForm(staff)}
+            onViewStaff={(staff) => openStaffDetail(staff)}
+          />
+        )
       case 'customerDetail':
         return (
           <CustomerDetail
@@ -686,6 +751,24 @@ function App() {
             instructorId={instructorDetailId}
             onBack={handleInstructorDetailBack}
             onEdit={(instructor) => openInstructorForm(instructor)}
+            user={user}
+          />
+        )
+      case 'staffForm':
+        return (
+          <StaffForm
+            staff={staffFormStaff}
+            onCancel={handleStaffFormCancel}
+            onSaved={handleStaffFormSaved}
+          />
+        )
+      case 'staffDetail':
+        return (
+          <StaffDetail
+            staffId={staffDetailId}
+            onBack={handleStaffDetailBack}
+            onEdit={(staff) => handleStaffDetailEdit(staff)}
+            onDelete={handleStaffDetailDelete}
             user={user}
           />
         )

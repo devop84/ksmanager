@@ -5,12 +5,12 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
   const { t } = useTranslation()
   const [dashboardsOpen, setDashboardsOpen] = useState(() => {
     // Open if any dashboard is active
-    return ['dashboardOperations', 'dashboardFinancial', 'dashboardManagement'].includes(currentPage)
+    return ['dashboardOperations', 'dashboardFinancial', 'dashboardManagement', 'dashboardPartners'].includes(currentPage)
   })
 
   // Keep submenu open when a dashboard page is active
   useEffect(() => {
-    if (['dashboardOperations', 'dashboardFinancial', 'dashboardManagement'].includes(currentPage)) {
+    if (['dashboardOperations', 'dashboardFinancial', 'dashboardManagement', 'dashboardPartners'].includes(currentPage)) {
       setDashboardsOpen(true)
     }
   }, [currentPage])
@@ -22,12 +22,13 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
     }
   }
 
-  const isDashboardActive = ['dashboardOperations', 'dashboardFinancial', 'dashboardManagement'].includes(currentPage)
+  const isDashboardActive = ['dashboardOperations', 'dashboardFinancial', 'dashboardManagement', 'dashboardPartners'].includes(currentPage)
 
   const dashboardItems = [
     { key: 'dashboardManagement', label: t('nav.dashboardManagement', 'Management') },
     { key: 'dashboardOperations', label: t('nav.dashboardOperations', 'Operations') },
     { key: 'dashboardFinancial', label: t('nav.dashboardFinancial', 'Financial') },
+    { key: 'dashboardPartners', label: t('nav.dashboardPartners', 'Partners & Salaries') },
   ]
 
   const navItems = [
@@ -36,6 +37,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
     { key: 'transactions', label: t('nav.transactions', 'Transactions') },
     { key: 'companyAccounts', label: t('nav.companyAccounts', 'Company Accounts') },
     { key: 'instructors', label: t('nav.instructors', 'Instructors') },
+    { key: 'staff', label: t('nav.staff', 'Staff') },
     { key: 'services', label: t('nav.services', 'Services') },
     { key: 'agencies', label: t('nav.agencies', 'Agencies') },
     { key: 'thirdParties', label: t('nav.thirdParties', 'Third Parties') },
