@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 
 const initialFormState = {
@@ -11,6 +12,7 @@ const initialFormState = {
 
 function AgencyForm({ agency, onCancel, onSaved }) {
   const isEditing = Boolean(agency?.id)
+  const { t } = useTranslation()
   const [formData, setFormData] = useState(initialFormState)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -63,7 +65,7 @@ function AgencyForm({ agency, onCancel, onSaved }) {
       onSaved?.()
     } catch (err) {
       console.error('Failed to save agency:', err)
-      setError('Unable to save agency. Please check the details and try again.')
+      setError(t('agencyForm.errors.save'))
     } finally {
       setSaving(false)
     }
@@ -74,23 +76,25 @@ function AgencyForm({ agency, onCancel, onSaved }) {
       <div className="mx-auto max-w-3xl rounded-xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{isEditing ? 'Edit Agency' : 'Add Agency'}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditing ? t('agencyForm.title.edit') : t('agencyForm.title.new')}
+            </h1>
             <p className="text-gray-500 text-sm">
-              {isEditing ? 'Update agency details and commission.' : 'Provide the information to register a new agency.'}
+              {isEditing ? t('agencyForm.subtitle.edit') : t('agencyForm.subtitle.new')}
             </p>
           </div>
           <button
             onClick={onCancel}
             className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {t('agencyForm.buttons.cancel')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="name">
-              Agency name *
+              {t('agencyForm.fields.name')}
             </label>
             <input
               id="name"
@@ -105,7 +109,7 @@ function AgencyForm({ agency, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="phone">
-              Phone
+              {t('agencyForm.fields.phone')}
             </label>
             <input
               id="phone"
@@ -119,7 +123,7 @@ function AgencyForm({ agency, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="email">
-              Email
+              {t('agencyForm.fields.email')}
             </label>
             <input
               id="email"
@@ -133,7 +137,7 @@ function AgencyForm({ agency, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="commission">
-              Commission (%)
+              {t('agencyForm.fields.commission')}
             </label>
             <input
               id="commission"
@@ -149,7 +153,7 @@ function AgencyForm({ agency, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="note">
-              Note
+              {t('agencyForm.fields.note')}
             </label>
             <textarea
               id="note"
@@ -173,14 +177,18 @@ function AgencyForm({ agency, onCancel, onSaved }) {
               onClick={onCancel}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('agencyForm.buttons.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving...' : isEditing ? 'Save changes' : 'Create agency'}
+              {saving
+                ? t('agencyForm.buttons.saving')
+                : isEditing
+                  ? t('agencyForm.buttons.saveChanges')
+                  : t('agencyForm.buttons.create')}
             </button>
           </div>
         </form>

@@ -1,10 +1,28 @@
+import { useTranslation } from 'react-i18next'
+
 function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClose }) {
+  const { t } = useTranslation()
   const handleNavigateClick = (page) => {
     onNavigate(page)
     if (onClose) {
       onClose()
     }
   }
+
+  const navItems = [
+    { key: 'dashboard', label: t('nav.dashboard', 'Dashboard') },
+    { key: 'orders', label: t('nav.orders', 'Orders') },
+    { key: 'customers', label: t('nav.customers', 'Customers') },
+    { key: 'transactions', label: t('nav.transactions', 'Transactions') },
+    { key: 'companyAccounts', label: t('nav.companyAccounts', 'Company Accounts') },
+    { key: 'instructors', label: t('nav.instructors', 'Instructors') },
+    { key: 'services', label: t('nav.services', 'Services') },
+    { key: 'agencies', label: t('nav.agencies', 'Agencies') },
+    { key: 'thirdParties', label: t('nav.thirdParties', 'Third Parties') },
+    { key: 'equipment', label: t('nav.equipment', 'Equipment') },
+    { key: 'hotels', label: t('nav.hotels', 'Hotels') },
+    { key: 'settings', label: t('nav.settings', 'Settings') },
+  ]
 
   return (
     <>
@@ -58,15 +76,22 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
       {/* User Info */}
       {user && (
         <div className="p-4 border-b border-gray-800">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-sm font-medium truncate flex-1">
-              {user.name || user.email}
-            </p>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium truncate">
+                {user.name || user.email}
+              </p>
+              <p className="text-xs text-gray-400 truncate mt-0.5">
+                {user.role === 'admin' 
+                  ? t('user.role.admin')
+                  : t('user.role.viewOnly')}
+              </p>
+            </div>
             <button
               onClick={onLogout}
-              className="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 whitespace-nowrap"
+              className="px-3 py-1.5 text-xs font-medium rounded-md bg-gray-800 text-gray-300 hover:bg-gray-700 hover:text-white transition-colors duration-200 whitespace-nowrap flex-shrink-0"
             >
-              Logout
+              {t('user.logout')}
             </button>
           </div>
         </div>
@@ -75,138 +100,20 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
       {/* Navigation Menu */}
       <nav className="flex-1 p-4">
         <ul className="space-y-2">
-          <li>
-            <button
-              onClick={() => handleNavigateClick('dashboard')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-                currentPage === 'dashboard'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              Dashboard
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => handleNavigateClick('orders')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-                currentPage === 'orders'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              Orders
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => handleNavigateClick('customers')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-                currentPage === 'customers'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              Customers
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => handleNavigateClick('transactions')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-                currentPage === 'transactions'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              Transactions
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => handleNavigateClick('companyAccounts')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-                currentPage === 'companyAccounts'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              Company Accounts
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => handleNavigateClick('instructors')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-                currentPage === 'instructors'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              Instructors
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => handleNavigateClick('services')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-                currentPage === 'services'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              Services
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => handleNavigateClick('agencies')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-                currentPage === 'agencies'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              Agencies
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => handleNavigateClick('thirdParties')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-                currentPage === 'thirdParties'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              Third Parties
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => handleNavigateClick('equipment')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-                currentPage === 'equipment'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              Equipment
-            </button>
-          </li>
-          <li>
-            <button
-              onClick={() => handleNavigateClick('hotels')}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
-                currentPage === 'hotels'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              Hotels
-            </button>
-          </li>
+          {navItems.map((item) => (
+            <li key={item.key}>
+              <button
+                onClick={() => handleNavigateClick(item.key)}
+                className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 ${
+                  currentPage === item.key
+                    ? 'bg-indigo-600 text-white'
+                    : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+                }`}
+              >
+                {item.label}
+              </button>
+            </li>
+          ))}
         </ul>
       </nav>
     </div>

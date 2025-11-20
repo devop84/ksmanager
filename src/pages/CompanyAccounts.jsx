@@ -1,22 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import Pagination from '../components/Pagination'
 
 const PAGE_SIZE = 25
 
-const columns = [
-  { key: 'name', label: 'Name' },
-  { key: 'details', label: 'Details' },
-  { key: 'note', label: 'Note' }
-]
-
 function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccount = () => {}, onViewAccount = () => {}, user = null }) {
+  const { t } = useTranslation()
   const [accounts, setAccounts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' })
   const [currentPage, setCurrentPage] = useState(1)
+
+  const columns = useMemo(
+    () => [
+      { key: 'name', label: t('companyAccounts.table.name') },
+      { key: 'details', label: t('companyAccounts.table.details') },
+      { key: 'note', label: t('companyAccounts.table.note') },
+    ],
+    [t],
+  )
 
   useEffect(() => {
     const fetchAccounts = async () => {
@@ -31,14 +37,14 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
         setAccounts(result || [])
       } catch (err) {
         console.error('Failed to load company accounts:', err)
-        setError('Unable to load company accounts. Please try again later.')
+        setError(t('companyAccounts.error.load'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchAccounts()
-  }, [refreshKey])
+  }, [refreshKey, t])
 
   const filteredAccounts = useMemo(() => {
     if (!searchTerm.trim()) return accounts
@@ -87,40 +93,16 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
   }
 
   const handlePageChange = (newPage) => {
-    setCurrentPage((prev) => Math.min(Math.max(newPage, 1), totalPages))
+    setCurrentPage(newPage)
   }
-
-  const renderPagination = () => (
-    <div className="flex items-center justify-between text-sm text-gray-600">
-      <span>
-        Page {currentPage} of {totalPages} • Showing {paginatedAccounts.length} of {sortedAccounts.length} accounts
-      </span>
-      <div className="space-x-2">
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Previous
-        </button>
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  )
 
   return (
     <div className="px-4 py-6 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Company Accounts</h1>
-            <p className="text-gray-500 text-sm">Track bank accounts, treasury notes, and internal account details.</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('companyAccounts.title')}</h1>
+            <p className="text-gray-500 text-sm">{t('companyAccounts.description')}</p>
           </div>
           <button
             onClick={onAddAccount}
@@ -136,7 +118,7 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add account
+            {t('companyAccounts.add')}
           </button>
         </div>
 
@@ -146,16 +128,23 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search accounts by name or description..."
+              placeholder={t('companyAccounts.search')}
               className="w-full md:w-1/2 rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-shadow"
             />
           </div>
 
-          {loading && <div className="text-gray-600 text-sm">Loading company accounts...</div>}
+          {loading && <div className="text-gray-600 text-sm">{t('companyAccounts.loading')}</div>}
           {error && <div className="text-red-600 text-sm">{error}</div>}
           {!loading && !error && (
             <div className="flex flex-col gap-4">
-              {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedAccounts.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                summaryKey="companyAccounts.pagination.summary"
+              />
               <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -184,7 +173,7 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
                     {paginatedAccounts.length === 0 ? (
                       <tr>
                         <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-gray-500">
-                          No company accounts found. Try adjusting your search or filters.
+                          {t('companyAccounts.table.empty')}
                         </td>
                       </tr>
                     ) : (
@@ -207,7 +196,7 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
               <div className="md:hidden space-y-3">
                 {paginatedAccounts.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    No company accounts found. Try adjusting your search or filters.
+                    {t('companyAccounts.table.empty')}
                   </div>
                 ) : (
                   paginatedAccounts.map((account) => (
@@ -224,11 +213,11 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
                       </div>
                       <dl className="mt-4 space-y-3 text-sm text-gray-600">
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Details</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('companyAccounts.mobile.details')}</dt>
                           <dd>{account.details || '—'}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Note</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('companyAccounts.mobile.note')}</dt>
                           <dd>{account.note || '—'}</dd>
                         </div>
                       </dl>
@@ -237,7 +226,14 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
                 )}
               </div>
 
-              {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedAccounts.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                summaryKey="companyAccounts.pagination.summary"
+              />
             </div>
           )}
         </div>

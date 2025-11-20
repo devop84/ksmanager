@@ -1,20 +1,11 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import { useSettings } from '../context/SettingsContext'
+import Pagination from '../components/Pagination'
 
 const PAGE_SIZE = 25
-
-const columns = [
-  { key: 'fullname', label: 'Full Name' },
-  { key: 'phone', label: 'Phone' },
-  { key: 'email', label: 'Email' },
-  { key: 'doc', label: 'Document' },
-  { key: 'country', label: 'Country' },
-  { key: 'birthdate', label: 'Birthdate' },
-  { key: 'hotel_name', label: 'Hotel' },
-  { key: 'agency_name', label: 'Agency' },
-  { key: 'note', label: 'Note' }
-]
 
 function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onViewCustomer = () => {}, refreshKey = 0, user = null }) {
   const [customers, setCustomers] = useState([])
@@ -24,6 +15,23 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
   const [sortConfig, setSortConfig] = useState({ key: 'fullname', direction: 'asc' })
   const [currentPage, setCurrentPage] = useState(1)
   const [deletingId, setDeletingId] = useState(null)
+  const { formatDate } = useSettings()
+  const { t } = useTranslation()
+
+  const columns = useMemo(
+    () => [
+      { key: 'fullname', label: t('customers.table.fullname', 'Full Name') },
+      { key: 'phone', label: t('customers.table.phone', 'Phone') },
+      { key: 'email', label: t('customers.table.email', 'Email') },
+      { key: 'doc', label: t('customers.table.document', 'Document') },
+      { key: 'country', label: t('customers.table.country', 'Country') },
+      { key: 'birthdate', label: t('customers.table.birthdate', 'Birthdate') },
+      { key: 'hotel_name', label: t('customers.table.hotel', 'Hotel') },
+      { key: 'agency_name', label: t('customers.table.agency', 'Agency') },
+      { key: 'note', label: t('customers.table.note', 'Note') },
+    ],
+    [t],
+  )
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -119,7 +127,7 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
   }
 
   const handlePageChange = (newPage) => {
-    setCurrentPage((prev) => Math.min(Math.max(newPage, 1), totalPages))
+    setCurrentPage(newPage)
   }
 
   const handleDelete = async (customerId) => {
@@ -136,46 +144,21 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
     }
   }
 
-  const formatDate = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return value
-    return date.toLocaleDateString()
-  }
-
-  const renderPagination = () => (
-    <div className="flex items-center justify-between text-sm text-gray-600">
-      <span>
-        Page {currentPage} of {totalPages} • Showing {paginatedCustomers.length} of {sortedCustomers.length}{' '}
-        customers
-      </span>
-      <div className="space-x-2">
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Previous
-        </button>
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  )
+  const formatBirthdate = (value) =>
+    formatDate(value, {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+    })
 
   return (
     <div className="px-4 py-6 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Customers</h1>
+            <h1 className="text-3xl font-bold text-gray-900">{t('customers.title', 'Customers')}</h1>
             <p className="text-gray-500 text-sm">
-              Manage customer records with quick search, sorting, and pagination controls.
+              {t('customers.description', 'Manage customer records with quick search, sorting, and pagination controls.')}
             </p>
           </div>
           <button
@@ -192,7 +175,7 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add customer
+            {t('customers.add', 'Add customer')}
           </button>
         </div>
 
@@ -202,16 +185,23 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search customers by name, contact, document, or country..."
+              placeholder={t('customers.search', 'Search customers by name, contact, document, or country...')}
               className="w-full md:w-1/2 rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-shadow"
             />
           </div>
 
-          {loading && <div className="text-gray-600 text-sm">Loading customers...</div>}
+          {loading && <div className="text-gray-600 text-sm">{t('customers.loading', 'Loading customers...')}</div>}
           {error && <div className="text-red-600 text-sm">{error}</div>}
           {!loading && !error && (
             <div className="flex flex-col gap-4">
-              {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedCustomers.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                itemName={t('common.items.customers', 'customers')}
+              />
               <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -242,7 +232,7 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
                     {paginatedCustomers.length === 0 ? (
                       <tr>
                         <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-gray-500">
-                          No customers found. Try adjusting your search or filters.
+                          {t('customers.empty', 'No customers found. Try adjusting your search or filters.')}
                         </td>
                       </tr>
                     ) : (
@@ -257,7 +247,7 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.email || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.doc || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.country || '—'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{formatDate(customer.birthdate)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{formatBirthdate(customer.birthdate)}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.hotel_name || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.agency_name || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{customer.note || '—'}</td>
@@ -271,7 +261,7 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
               <div className="md:hidden space-y-3">
                 {paginatedCustomers.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    No customers found. Try adjusting your search or filters.
+                    {t('customers.empty', 'No customers found. Try adjusting your search or filters.')}
                   </div>
                 ) : (
                   paginatedCustomers.map((customer) => (
@@ -286,36 +276,42 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
                           <p className="text-sm text-gray-500">{customer.email || customer.phone || '—'}</p>
                         </div>
                         <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
-                          {customer.agency_name || 'Direct'}
+                          {customer.agency_name || t('common.direct', 'Direct')}
                         </span>
                       </div>
                       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-600">
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Phone</dt>
+                          <dt className="text-gray-400 text-xs uppercase">
+                            {t('customers.mobile.phone', 'Phone')}
+                          </dt>
                           <dd>{customer.phone || '—'}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Document</dt>
+                          <dt className="text-gray-400 text-xs uppercase">
+                            {t('customers.mobile.document', 'Document')}
+                          </dt>
                           <dd>{customer.doc || '—'}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Country</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('customers.mobile.country', 'Country')}</dt>
                           <dd>{customer.country || '—'}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Birthdate</dt>
-                          <dd>{formatDate(customer.birthdate)}</dd>
+                          <dt className="text-gray-400 text-xs uppercase">
+                            {t('customers.mobile.birthdate', 'Birthdate')}
+                          </dt>
+                          <dd>{formatBirthdate(customer.birthdate)}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Hotel</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('customers.mobile.hotel', 'Hotel')}</dt>
                           <dd>{customer.hotel_name || '—'}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Agency</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('customers.mobile.agency', 'Agency')}</dt>
                           <dd>{customer.agency_name || '—'}</dd>
                         </div>
                         <div className="md:col-span-2">
-                          <dt className="text-gray-400 text-xs uppercase">Note</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('customers.mobile.note', 'Note')}</dt>
                           <dd>{customer.note || '—'}</dd>
                         </div>
                       </dl>
@@ -323,7 +319,14 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
                   ))
                 )}
               </div>
-              {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedCustomers.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                itemName={t('common.items.customers', 'customers')}
+              />
             </div>
           )}
         </div>

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import { useSettings } from '../context/SettingsContext'
 
 const statusStyles = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -16,6 +18,34 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const { formatDate, formatDateTime } = useSettings()
+  const { t } = useTranslation()
+
+  const formatFullDate = (value) =>
+    formatDate(value, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    })
+
+  const formatDetailedDateTime = (value) =>
+    formatDateTime(value, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+
+  const formatDateRange = (start, end) => {
+    if (!start && !end) return '—'
+    const startStr = start ? formatDate(start, { month: 'short', day: 'numeric' }) : null
+    const endStr = end ? formatDate(end, { month: 'short', day: 'numeric' }) : null
+    if (startStr && endStr) return `${startStr} → ${endStr}`
+    if (startStr) return startStr
+    if (endStr) return endStr
+    return '—'
+  }
 
   useEffect(() => {
     if (!hotelId) return
@@ -85,7 +115,7 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
         ])
 
         if (!hotelRows?.length) {
-          setError('Hotel not found')
+          setError(t('hotelDetail.notFound', 'Hotel not found'))
           setHotel(null)
           setCustomers([])
           setOrders([])
@@ -109,14 +139,14 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
         setOrders(preparedOrders)
       } catch (err) {
         console.error('Failed to load hotel details:', err)
-        setError('Unable to load hotel details. Please try again later.')
+        setError(t('hotelDetail.error.load', 'Unable to load hotel details. Please try again later.'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [hotelId])
+  }, [hotelId, t])
 
   const summary = useMemo(() => {
     const totalCustomers = customers.length
@@ -131,7 +161,7 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
   }, [customers, orders])
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this hotel? This action cannot be undone.')) {
+    if (!window.confirm(t('hotelDetail.confirm.delete', 'Are you sure you want to delete this hotel? This action cannot be undone.'))) {
       return
     }
     try {
@@ -144,7 +174,7 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
       }
     } catch (err) {
       console.error('Failed to delete hotel:', err)
-      alert('Unable to delete hotel. Please try again.')
+      alert(t('hotelDetail.error.delete', 'Unable to delete hotel. Please try again.'))
     } finally {
       setDeleting(false)
     }
@@ -164,10 +194,7 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
 
   const renderStatusBadge = (status) => {
     const classes = statusStyles[status] || 'bg-gray-100 text-gray-700'
-    const label =
-      status === 'in_progress'
-        ? 'In Progress'
-        : status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
+    const label = t(`common.status.${status}`, status.replace('_', ' '))
 
     return (
       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${classes}`}>
@@ -176,51 +203,11 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
     )
   }
 
-  const formatDate = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
-
-  const formatDateTime = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    })
-  }
-
-  const formatDateRange = (start, end) => {
-    if (!start && !end) return '—'
-    const startDate = start ? new Date(start) : null
-    const endDate = end ? new Date(end) : null
-
-    const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
-
-    if (startDate && endDate) {
-      return `${formatter.format(startDate)} → ${formatter.format(endDate)}`
-    }
-
-    if (startDate) return formatter.format(startDate)
-    if (endDate) return formatter.format(endDate)
-    return '—'
-  }
-
   if (loading) {
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-gray-600">Loading hotel details...</div>
+          <div className="text-gray-600">{t('hotelDetail.loading', 'Loading hotel details...')}</div>
         </div>
       </div>
     )
@@ -230,13 +217,13 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-red-600">{error || 'Hotel not found'}</div>
+          <div className="text-red-600">{error || t('hotelDetail.notFound', 'Hotel not found')}</div>
           {onBack && (
             <button
               onClick={onBack}
               className="mt-4 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Back to Hotels
+              {t('hotelDetail.backToList', 'Back to Hotels')}
             </button>
           )}
         </div>
@@ -255,10 +242,12 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Hotels
+            {t('hotelDetail.backToList', 'Back to Hotels')}
           </button>
           <h1 className="text-3xl font-bold text-gray-900">{hotel.name}</h1>
-          <p className="text-gray-500 text-sm mt-1">Hotel information, guest customers, and booking history.</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {t('hotelDetail.subtitle', 'Hotel information, guest customers, and booking history.')}
+          </p>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
@@ -266,25 +255,38 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-4">
                 <div className="text-sm font-medium text-indigo-700 mb-1">Customers</div>
+                <div className="text-sm font-medium text-indigo-700 mb-1">
+                  {t('hotelDetail.summary.customers', 'Customers')}
+                </div>
                 <div className="text-2xl font-bold text-indigo-900">{summary.totalCustomers}</div>
               </div>
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-emerald-50 to-emerald-100 p-4">
-                <div className="text-sm font-medium text-emerald-700 mb-1">Orders Linked</div>
+                <div className="text-sm font-medium text-emerald-700 mb-1">
+                  {t('hotelDetail.summary.orders', 'Orders Linked')}
+                </div>
                 <div className="text-2xl font-bold text-emerald-900">{summary.totalOrders}</div>
               </div>
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-yellow-50 to-yellow-100 p-4">
-                <div className="text-sm font-medium text-yellow-700 mb-1">Active / Upcoming</div>
+                <div className="text-sm font-medium text-yellow-700 mb-1">
+                  {t('hotelDetail.summary.active', 'Active / Upcoming')}
+                </div>
                 <div className="text-2xl font-bold text-yellow-900">{summary.activeOrders}</div>
               </div>
             </div>
 
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Customers from this hotel</h2>
-                <p className="text-sm text-gray-500">{customers.length} active</p>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t('hotelDetail.customers.title', 'Customers from this hotel')}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {t('hotelDetail.customers.activeCount', '{{count}} active', { count: customers.length })}
+                </p>
               </div>
               {customers.length === 0 ? (
-                <div className="text-gray-600">No customers assigned to this hotel yet.</div>
+                <div className="text-gray-600">
+                  {t('hotelDetail.customers.empty', 'No customers assigned to this hotel yet.')}
+                </div>
               ) : (
                 <>
                   <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
@@ -292,19 +294,19 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Customer
+                            {t('hotelDetail.customers.table.customer', 'Customer')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Contact
+                            {t('hotelDetail.customers.table.contact', 'Contact')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Country
+                            {t('hotelDetail.customers.table.country', 'Country')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Orders
+                            {t('hotelDetail.customers.table.orders', 'Orders')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Last booking
+                            {t('hotelDetail.customers.table.lastBooking', 'Last booking')}
                           </th>
                         </tr>
                       </thead>
@@ -316,7 +318,7 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
                             <td className="px-4 py-3 text-sm text-gray-600">{customer.country || '—'}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">{customer.order_count}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">
-                              {customer.last_order_at ? formatDate(customer.last_order_at) : '—'}
+                              {customer.last_order_at ? formatFullDate(customer.last_order_at) : '—'}
                             </td>
                           </tr>
                         ))}
@@ -331,17 +333,23 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
                         <p className="text-sm text-gray-500">{customer.email || customer.phone || '—'}</p>
                         <dl className="mt-3 grid grid-cols-2 gap-3 text-xs text-gray-500">
                           <div>
-                            <dt className="uppercase">Country</dt>
+                            <dt className="uppercase">
+                              {t('hotelDetail.customers.mobile.country', 'Country')}
+                            </dt>
                             <dd className="text-gray-900 text-sm">{customer.country || '—'}</dd>
                           </div>
                           <div>
-                            <dt className="uppercase">Orders</dt>
+                            <dt className="uppercase">
+                              {t('hotelDetail.customers.mobile.orders', 'Orders')}
+                            </dt>
                             <dd className="text-gray-900 text-sm">{customer.order_count}</dd>
                           </div>
                           <div className="col-span-2">
-                            <dt className="uppercase">Last booking</dt>
+                            <dt className="uppercase">
+                              {t('hotelDetail.customers.mobile.lastBooking', 'Last booking')}
+                            </dt>
                             <dd className="text-gray-900 text-sm">
-                              {customer.last_order_at ? formatDate(customer.last_order_at) : '—'}
+                              {customer.last_order_at ? formatFullDate(customer.last_order_at) : '—'}
                             </dd>
                           </div>
                         </dl>
@@ -354,11 +362,17 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
 
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Recent Orders</h2>
-                <p className="text-sm text-gray-500">{orders.length} recent</p>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t('hotelDetail.orders.title', 'Recent Orders')}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  {t('hotelDetail.orders.recentCount', '{{count}} recent', { count: orders.length })}
+                </p>
               </div>
               {orders.length === 0 ? (
-                <div className="text-gray-600">No orders recorded for customers from this hotel.</div>
+                <div className="text-gray-600">
+                  {t('hotelDetail.orders.empty', 'No orders recorded for customers from this hotel.')}
+                </div>
               ) : (
                 <>
                   <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
@@ -366,22 +380,22 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Order
+                            {t('hotelDetail.orders.table.order', 'Order')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Customer
+                            {t('hotelDetail.orders.table.customer', 'Customer')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Service
+                            {t('hotelDetail.orders.table.service', 'Service')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Type
+                            {t('hotelDetail.orders.table.type', 'Type')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Date Range
+                            {t('hotelDetail.orders.table.dateRange', 'Date Range')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Status
+                            {t('hotelDetail.orders.table.status', 'Status')}
                           </th>
                         </tr>
                       </thead>
@@ -405,18 +419,22 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
                       <div key={order.id} className="rounded-lg border border-gray-200 p-4">
                         <div className="flex items-start justify-between mb-2">
                           <div>
-                            <p className="text-sm font-semibold text-gray-900">#{order.id} · {order.service_name}</p>
+                            <p className="text-sm font-semibold text-gray-900">
+                              #{order.id} · {order.service_name}
+                            </p>
                             <p className="text-xs text-gray-500">{order.customer_name}</p>
                           </div>
                           {renderStatusBadge(order.status)}
                         </div>
                         <dl className="mt-3 grid grid-cols-2 gap-3 text-xs text-gray-500">
                           <div>
-                            <dt className="uppercase">Type</dt>
+                            <dt className="uppercase">{t('hotelDetail.orders.mobile.type', 'Type')}</dt>
                             <dd className="text-gray-900 text-sm capitalize">{order.order_type || '—'}</dd>
                           </div>
                           <div>
-                            <dt className="uppercase">Date Range</dt>
+                            <dt className="uppercase">
+                              {t('hotelDetail.orders.mobile.dateRange', 'Date Range')}
+                            </dt>
                             <dd className="text-gray-900 text-sm">{formatDateRange(order.starting, order.ending)}</dd>
                           </div>
                         </dl>
@@ -432,13 +450,15 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm sticky top-6 space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Hotel Info</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    {t('hotelDetail.info.title', 'Hotel Info')}
+                  </h2>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onEdit?.(hotel)}
                       disabled={!canModify(user)}
                       className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-                      title="Edit hotel"
+                      title={t('hotelDetail.actions.edit', 'Edit hotel')}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z" />
@@ -448,7 +468,7 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
                       onClick={handleDelete}
                       disabled={deleting || !canModify(user)}
                       className="inline-flex items-center justify-center p-2 rounded-lg border border-red-300 bg-white text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-                      title="Delete hotel"
+                      title={t('hotelDetail.actions.delete', 'Delete hotel')}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -458,25 +478,35 @@ function HotelDetail({ hotelId, onBack, onEdit, onDelete, user = null }) {
                 </div>
                 <dl className="space-y-4 text-sm">
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Phone</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">
+                      {t('hotelDetail.info.phone', 'Phone')}
+                    </dt>
                     <dd className="mt-1 text-gray-900">{hotel.phone || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Address</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">
+                      {t('hotelDetail.info.address', 'Address')}
+                    </dt>
                     <dd className="mt-1 text-gray-900 whitespace-pre-wrap">{hotel.address || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Note</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">
+                      {t('hotelDetail.info.note', 'Note')}
+                    </dt>
                     <dd className="mt-1 text-gray-900 whitespace-pre-wrap">{hotel.note || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Created</dt>
-                    <dd className="mt-1 text-gray-900">{formatDateTime(hotel.created_at)}</dd>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">
+                      {t('hotelDetail.info.created', 'Created')}
+                    </dt>
+                    <dd className="mt-1 text-gray-900">{formatDetailedDateTime(hotel.created_at)}</dd>
                   </div>
                   {hotel.updated_at && (
                     <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase">Last Update</dt>
-                      <dd className="mt-1 text-gray-900">{formatDateTime(hotel.updated_at)}</dd>
+                      <dt className="text-xs font-medium text-gray-500 uppercase">
+                        {t('hotelDetail.info.updated', 'Last update')}
+                      </dt>
+                      <dd className="mt-1 text-gray-900">{formatDetailedDateTime(hotel.updated_at)}</dd>
                     </div>
                   )}
                 </dl>

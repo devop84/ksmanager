@@ -1,23 +1,29 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import Pagination from '../components/Pagination'
 
 const PAGE_SIZE = 25
 
-const columns = [
-  { key: 'name', label: 'Service' },
-  { key: 'category_name', label: 'Category' },
-  { key: 'description', label: 'Description' },
-  { key: 'active', label: 'Status' }
-]
-
 function Services({ refreshKey = 0, onAddService = () => {}, onViewService = () => {}, user = null }) {
+  const { t } = useTranslation()
   const [services, setServices] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' })
   const [currentPage, setCurrentPage] = useState(1)
+
+  const columns = useMemo(
+    () => [
+      { key: 'name', label: t('services.table.name') },
+      { key: 'category_name', label: t('services.table.category') },
+      { key: 'description', label: t('services.table.description') },
+      { key: 'active', label: t('services.table.status') }
+    ],
+    [t]
+  )
 
   useEffect(() => {
     const fetchServices = async () => {
@@ -38,14 +44,14 @@ function Services({ refreshKey = 0, onAddService = () => {}, onViewService = () 
         setServices(result || [])
       } catch (err) {
         console.error('Failed to load services:', err)
-        setError('Unable to load services. Please try again later.')
+        setError(t('services.error.load'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchServices()
-  }, [refreshKey])
+  }, [refreshKey, t])
 
   const filteredServices = useMemo(() => {
     if (!searchTerm.trim()) return services
@@ -94,42 +100,16 @@ function Services({ refreshKey = 0, onAddService = () => {}, onViewService = () 
   }
 
   const handlePageChange = (newPage) => {
-    setCurrentPage((prev) => Math.min(Math.max(newPage, 1), totalPages))
+    setCurrentPage(newPage)
   }
-
-  const renderPagination = () => (
-    <div className="flex items-center justify-between text-sm text-gray-600">
-      <span>
-        Page {currentPage} of {totalPages} • Showing {paginatedServices.length} of {sortedServices.length} services
-      </span>
-      <div className="space-x-2">
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Previous
-        </button>
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  )
 
   return (
     <div className="px-4 py-6 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Services</h1>
-            <p className="text-gray-500 text-sm">
-              Overview of all service offerings grouped by category.
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('services.title')}</h1>
+            <p className="text-gray-500 text-sm">{t('services.description')}</p>
           </div>
           <button
             onClick={onAddService}
@@ -145,7 +125,7 @@ function Services({ refreshKey = 0, onAddService = () => {}, onViewService = () 
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add service
+            {t('services.add')}
           </button>
         </div>
 
@@ -155,17 +135,24 @@ function Services({ refreshKey = 0, onAddService = () => {}, onViewService = () 
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search services by name, category, or description..."
+              placeholder={t('services.search')}
               className="w-full md:w-1/2 rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-shadow"
             />
           </div>
 
-          {loading && <div className="text-gray-600 text-sm">Loading services...</div>}
+          {loading && <div className="text-gray-600 text-sm">{t('services.loading')}</div>}
           {error && <div className="text-red-600 text-sm">{error}</div>}
 
           {!loading && !error && (
             <div className="flex flex-col gap-4">
-              {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedServices.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                summaryKey="services.pagination.summary"
+              />
 
               <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -195,7 +182,7 @@ function Services({ refreshKey = 0, onAddService = () => {}, onViewService = () 
                     {paginatedServices.length === 0 ? (
                       <tr>
                         <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-gray-500">
-                          No services found. Try adjusting your search.
+                          {t('services.table.empty')}
                         </td>
                       </tr>
                     ) : (
@@ -211,11 +198,11 @@ function Services({ refreshKey = 0, onAddService = () => {}, onViewService = () 
                           <td className="px-4 py-3 text-sm text-gray-600">
                             {service.active ? (
                               <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-semibold text-green-700">
-                                Active
+                                {t('services.status.active')}
                               </span>
                             ) : (
                               <span className="inline-flex items-center rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-semibold text-gray-600">
-                                Inactive
+                                {t('services.status.inactive')}
                               </span>
                             )}
                           </td>
@@ -229,7 +216,7 @@ function Services({ refreshKey = 0, onAddService = () => {}, onViewService = () 
               <div className="md:hidden space-y-3">
                 {paginatedServices.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    No services found. Try adjusting your search.
+                    {t('services.table.empty')}
                   </div>
                 ) : (
                   paginatedServices.map((service) => (
@@ -243,12 +230,8 @@ function Services({ refreshKey = 0, onAddService = () => {}, onViewService = () 
                           <p className="text-base font-semibold text-gray-900">{service.name}</p>
                           <p className="text-sm text-gray-500">{service.category_name}</p>
                         </div>
-                        <span
-                          className={`text-xs font-semibold ${
-                            service.active ? 'text-green-600' : 'text-gray-500'
-                          }`}
-                        >
-                          {service.active ? 'Active' : 'Inactive'}
+                        <span className={`text-xs font-semibold ${service.active ? 'text-green-600' : 'text-gray-500'}`}>
+                          {service.active ? t('services.status.active') : t('services.status.inactive')}
                         </span>
                       </div>
                       {service.description && (
@@ -259,7 +242,14 @@ function Services({ refreshKey = 0, onAddService = () => {}, onViewService = () 
                 )}
               </div>
 
-              {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedServices.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                summaryKey="services.pagination.summary"
+              />
             </div>
           )}
         </div>

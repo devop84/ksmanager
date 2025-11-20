@@ -1,19 +1,48 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
+import { useSettings } from '../context/SettingsContext'
 
-const STORAGE_BILLING_OPTIONS = [
-  { key: 'daily', label: 'By day', description: 'Charge per day of storage' },
-  { key: 'weekly', label: 'By week', description: 'Charge per 7-day block' },
-  { key: 'monthly', label: 'By month', description: 'Charge per calendar month' }
+const STORAGE_BILLING_BLUEPRINT = [
+  {
+    key: 'daily',
+    labelKey: 'orderForm.storage.billing.daily.label',
+    descriptionKey: 'orderForm.storage.billing.daily.description',
+    fallbackLabel: 'By day',
+    fallbackDescription: 'Charge per day of storage',
+  },
+  {
+    key: 'weekly',
+    labelKey: 'orderForm.storage.billing.weekly.label',
+    descriptionKey: 'orderForm.storage.billing.weekly.description',
+    fallbackLabel: 'By week',
+    fallbackDescription: 'Charge per 7-day block',
+  },
+  {
+    key: 'monthly',
+    labelKey: 'orderForm.storage.billing.monthly.label',
+    descriptionKey: 'orderForm.storage.billing.monthly.description',
+    fallbackLabel: 'By month',
+    fallbackDescription: 'Charge per calendar month',
+  },
 ]
 
-const RENTAL_BILLING_OPTIONS = [
-  { key: 'hourly', label: 'By hour', description: 'Charge per hour of rental time', threshold: 24 },
-  { key: 'daily', label: 'By day', description: 'Charge per 24-hour period', threshold: Infinity }
+const RENTAL_BILLING_BLUEPRINT = [
+  {
+    key: 'hourly',
+    labelKey: 'orderForm.rental.billing.hourly.label',
+    descriptionKey: 'orderForm.rental.billing.hourly.description',
+    fallbackLabel: 'By hour',
+    fallbackDescription: 'Charge per hour of rental time',
+  },
+  {
+    key: 'daily',
+    labelKey: 'orderForm.rental.billing.daily.label',
+    descriptionKey: 'orderForm.rental.billing.daily.description',
+    fallbackLabel: 'By day',
+    fallbackDescription: 'Charge per 24-hour period',
+  },
 ]
-
-const getStorageOptionLabel = (mode) => STORAGE_BILLING_OPTIONS.find((option) => option.key === mode)?.label || mode
-const getRentalOptionLabel = (mode) => RENTAL_BILLING_OPTIONS.find((option) => option.key === mode)?.label || mode
 
 const baseState = {
   id: null,
@@ -63,6 +92,33 @@ function OrderForm({ order = null, onCancel, onSaved }) {
   const [error, setError] = useState(null)
   const [storageDurationInfo, setStorageDurationInfo] = useState(null)
   const [rentalDurationInfo, setRentalDurationInfo] = useState(null)
+  const { formatTime } = useSettings()
+  const { t } = useTranslation()
+
+  const storageBillingOptions = useMemo(
+    () =>
+      STORAGE_BILLING_BLUEPRINT.map((option) => ({
+        ...option,
+        label: t(option.labelKey, option.fallbackLabel),
+        description: t(option.descriptionKey, option.fallbackDescription),
+      })),
+    [t],
+  )
+
+  const rentalBillingOptions = useMemo(
+    () =>
+      RENTAL_BILLING_BLUEPRINT.map((option) => ({
+        ...option,
+        label: t(option.labelKey, option.fallbackLabel),
+        description: t(option.descriptionKey, option.fallbackDescription),
+      })),
+    [t],
+  )
+
+  const getStorageOptionLabel = (mode) =>
+    storageBillingOptions.find((option) => option.key === mode)?.label || mode
+  const getRentalOptionLabel = (mode) =>
+    rentalBillingOptions.find((option) => option.key === mode)?.label || mode
 
   useEffect(() => {
     const loadForm = async () => {
@@ -179,14 +235,14 @@ function OrderForm({ order = null, onCancel, onSaved }) {
         }
       } catch (err) {
         console.error('Failed to load order form data:', err)
-        setError('Unable to load order data. Please try again.')
+        setError(t('orderForm.errors.load', 'Unable to load order data. Please try again.'))
       } finally {
         setLoading(false)
       }
     }
 
     loadForm()
-  }, [order, isEditing])
+  }, [order, isEditing, t])
 
   const selectedService = useMemo(
     () => services.find((service) => service.id === Number(formData.service_id)),
@@ -363,12 +419,12 @@ const ensureDate = (value, fallbackTime = null) => {
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (!formData.service_id || !formData.customer_id) {
-      setError('Service and customer are required.')
+      setError(t('orderForm.validation.serviceCustomer', 'Service and customer are required.'))
       return
     }
     if (categoryName === 'lessons') {
       if (!formData.lesson_day || !formData.lesson_start_time || !formData.lesson_end_time) {
-        setError('Please provide day, start time, and end time.')
+        setError(t('orderForm.validation.lessonFields', 'Please provide day, start time, and end time.'))
         return
       }
       
@@ -408,17 +464,18 @@ const ensureDate = (value, fallbackTime = null) => {
             
             if (overlappingLessons && overlappingLessons.length > 0) {
               const conflict = overlappingLessons[0]
-              const conflictStart = new Date(conflict.starting).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-              })
-              const conflictEnd = new Date(conflict.ending).toLocaleTimeString('en-US', {
-                hour: 'numeric',
-                minute: '2-digit',
-                hour12: true
-              })
-              setError(`This instructor already has a lesson scheduled at ${conflictStart} - ${conflictEnd}${conflict.student_name ? ` with ${conflict.student_name}` : ''}. Please choose a different time or instructor.`)
+              const conflictStart = formatTime(conflict.starting)
+              const conflictEnd = formatTime(conflict.ending)
+              const conflictKey = conflict.student_name
+                ? 'orderForm.validation.lessonConflictWithStudent'
+                : 'orderForm.validation.lessonConflict'
+              setError(
+                t(conflictKey, {
+                  start: conflictStart,
+                  end: conflictEnd,
+                  student: conflict.student_name,
+                }),
+              )
               setSaving(false)
               return
             }
@@ -430,11 +487,11 @@ const ensureDate = (value, fallbackTime = null) => {
       }
     } else if (categoryName === 'storage') {
       if (!formData.check_in || !formData.check_out) {
-        setError('Please provide check-in and check-out dates.')
+        setError(t('orderForm.validation.storageDates', 'Please provide check-in and check-out dates.'))
         return
       }
     } else if (!formData.starting || !formData.ending) {
-      setError('Please provide a start and end time.')
+      setError(t('orderForm.validation.rentalTimes', 'Please provide a start and end time.'))
       return
     }
 
@@ -553,7 +610,7 @@ const ensureDate = (value, fallbackTime = null) => {
       onSaved?.()
     } catch (err) {
       console.error('Failed to save order:', err)
-      setError(err.message || 'Unable to save order. Please try again.')
+      setError(err.message || t('orderForm.errors.save', 'Unable to save order. Please try again.'))
     } finally {
       setSaving(false)
     }
@@ -562,7 +619,7 @@ const ensureDate = (value, fallbackTime = null) => {
   if (loading) {
     return (
       <div className="p-8">
-        <div className="text-gray-600">Loading order data...</div>
+        <div className="text-gray-600">{t('orderForm.loading', 'Loading order data...')}</div>
       </div>
     )
   }
@@ -572,21 +629,23 @@ const ensureDate = (value, fallbackTime = null) => {
       <div className="mx-auto max-w-4xl rounded-xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{isEditing ? 'Edit Order' : 'Add Order'}</h1>
-            <p className="text-gray-500 text-sm">Configure customer bookings, rentals, or storage.</p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditing ? t('orderForm.title.edit', 'Edit Order') : t('orderForm.title.new', 'Add Order')}
+            </h1>
+            <p className="text-gray-500 text-sm">{t('orderForm.subtitle', 'Configure customer bookings, rentals, or storage.')}</p>
           </div>
           <button
             onClick={onCancel}
             className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {t('orderForm.buttons.cancel', 'Cancel')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="service_id">
-              Service
+              {t('orderForm.fields.service', 'Service')}
             </label>
             <select
               id="service_id"
@@ -605,7 +664,7 @@ const ensureDate = (value, fallbackTime = null) => {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="customer_id">
-              Customer
+              {t('orderForm.fields.customer', 'Customer')}
             </label>
             <select
               id="customer_id"
@@ -625,7 +684,7 @@ const ensureDate = (value, fallbackTime = null) => {
 
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="note">
-              Notes
+              {t('orderForm.fields.notes', 'Notes')}
             </label>
             <textarea
               id="note"
@@ -634,7 +693,7 @@ const ensureDate = (value, fallbackTime = null) => {
               value={formData.note}
               onChange={handleChange}
               className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-              placeholder="Add reminders, logistics, or equipment info."
+              placeholder={t('orderForm.fields.notes.placeholder', 'Add reminders, logistics, or equipment info.')}
             />
           </div>
 
@@ -642,7 +701,7 @@ const ensureDate = (value, fallbackTime = null) => {
             <>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="student_id">
-                  Student
+                  {t('orderForm.fields.student', 'Student')}
                 </label>
                 <select
                   id="student_id"
@@ -660,7 +719,7 @@ const ensureDate = (value, fallbackTime = null) => {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="instructor_id">
-                  Instructor
+                  {t('orderForm.fields.instructor', 'Instructor')}
                 </label>
                 <select
                   id="instructor_id"
@@ -669,7 +728,7 @@ const ensureDate = (value, fallbackTime = null) => {
                   onChange={handleChange}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                 >
-                  <option value="">Select instructor</option>
+                  <option value="">{t('orderForm.fields.instructor.placeholder', 'Select instructor')}</option>
                   {instructors.map((instructor) => (
                     <option key={instructor.id} value={instructor.id}>
                       {instructor.fullname}
@@ -680,9 +739,9 @@ const ensureDate = (value, fallbackTime = null) => {
 
               <div className="md:col-span-2 grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="lesson_day">
-                    Day
-                  </label>
+                <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="lesson_day">
+                  {t('orderForm.fields.day', 'Day')}
+                </label>
                   <input
                     id="lesson_day"
                     name="lesson_day"
@@ -694,9 +753,9 @@ const ensureDate = (value, fallbackTime = null) => {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="lesson_start_time">
-                    Start time
-                  </label>
+                <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="lesson_start_time">
+                  {t('orderForm.fields.startTime', 'Start time')}
+                </label>
                   <input
                     id="lesson_start_time"
                     name="lesson_start_time"
@@ -708,9 +767,9 @@ const ensureDate = (value, fallbackTime = null) => {
                 </div>
 
                 <div>
-                  <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="lesson_end_time">
-                    End time
-                  </label>
+                <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="lesson_end_time">
+                  {t('orderForm.fields.endTime', 'End time')}
+                </label>
                   <input
                     id="lesson_end_time"
                     name="lesson_end_time"
@@ -728,7 +787,7 @@ const ensureDate = (value, fallbackTime = null) => {
           {categoryName === 'rentals' && (
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="equipment_id">
-                Equipment
+                {t('orderForm.fields.equipment', 'Equipment')}
               </label>
               <select
                 id="equipment_id"
@@ -737,7 +796,7 @@ const ensureDate = (value, fallbackTime = null) => {
                 onChange={handleChange}
                 className="w-full rounded-lg border border-gray-300 px-4 py-2 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
               >
-                <option value="">Select equipment</option>
+                <option value="">{t('orderForm.fields.equipment.placeholder', 'Select equipment')}</option>
                 {equipment.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name}
@@ -755,7 +814,7 @@ const ensureDate = (value, fallbackTime = null) => {
             >
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="starting">
-                  Start time
+                  {t('orderForm.fields.startTime', 'Start time')}
                 </label>
                 <input
                   id="starting"
@@ -769,7 +828,7 @@ const ensureDate = (value, fallbackTime = null) => {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="ending">
-                  End time
+                  {t('orderForm.fields.endTime', 'End time')}
                 </label>
                 <input
                   id="ending"
@@ -785,13 +844,13 @@ const ensureDate = (value, fallbackTime = null) => {
 
           {categoryName === 'rentals' && rentalDurationInfo && (
             <div className="md:col-span-2 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
-              Rental duration:{' '}
+              {t('orderForm.rental.duration', 'Rental duration:')}{' '}
               <span className="font-semibold">
                 {rentalDurationInfo.hours < 24
-                  ? `${rentalDurationInfo.hours.toFixed(1)} hours`
-                  : `${rentalDurationInfo.days.toFixed(2)} days`}
+                  ? t('orderForm.rental.durationHours', { value: rentalDurationInfo.hours.toFixed(1) })
+                  : t('orderForm.rental.durationDays', { value: rentalDurationInfo.days.toFixed(2) })}
               </span>{' '}
-              • Suggested billing:{' '}
+              • {t('orderForm.rental.suggested', 'Suggested billing:')}{' '}
               <span className="font-semibold">
                 {rentalDurationInfo.hours < 24 ? getRentalOptionLabel('hourly') : getRentalOptionLabel('daily')}
               </span>
@@ -800,9 +859,11 @@ const ensureDate = (value, fallbackTime = null) => {
 
           {categoryName === 'rentals' && (
             <div className="md:col-span-2">
-              <p className="mb-2 text-sm font-medium text-gray-700">Billing cadence</p>
+              <p className="mb-2 text-sm font-medium text-gray-700">
+                {t('orderForm.section.billingCadence', 'Billing cadence')}
+              </p>
               <div className="grid gap-3 md:grid-cols-3">
-                {RENTAL_BILLING_OPTIONS.map((option) => {
+                {rentalBillingOptions.map((option) => {
                   const isActive = rentalBillingMode === option.key
                   const isSuggested =
                     rentalDurationInfo &&
@@ -821,7 +882,11 @@ const ensureDate = (value, fallbackTime = null) => {
                     >
                       <span className="flex items-center gap-2 text-sm font-semibold">
                         {option.label}
-                        {isSuggested && <span className="text-xs font-semibold text-indigo-600">(Suggested)</span>}
+                        {isSuggested && (
+                          <span className="text-xs font-semibold text-indigo-600">
+                            {t('orderForm.rental.billing.suggested', '(Suggested)')}
+                          </span>
+                        )}
                       </span>
                       <span className="mt-1 block text-xs text-gray-500">{option.description}</span>
                     </button>
@@ -835,7 +900,7 @@ const ensureDate = (value, fallbackTime = null) => {
             <>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="check_in">
-                  Check-in date
+                  {t('orderForm.fields.checkIn', 'Check-in date')}
                 </label>
                 <input
                   id="check_in"
@@ -849,7 +914,7 @@ const ensureDate = (value, fallbackTime = null) => {
 
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="check_out">
-                  Check-out date
+                  {t('orderForm.fields.checkOut', 'Check-out date')}
                 </label>
                 <input
                   id="check_out"
@@ -863,19 +928,21 @@ const ensureDate = (value, fallbackTime = null) => {
 
               {storageDurationInfo && (
                 <div className="md:col-span-2 rounded-xl border border-indigo-100 bg-indigo-50 px-4 py-3 text-sm text-indigo-900">
-                  Storage duration:{' '}
+                  {t('orderForm.storage.duration', 'Storage duration:')}{' '}
                   <span className="font-semibold">
-                    {storageDurationInfo.days} {storageDurationInfo.days === 1 ? 'day' : 'days'}
+                    {t('orderForm.storage.durationLabel', { count: storageDurationInfo.days })}
                   </span>{' '}
-                  • Suggested billing:{' '}
+                  • {t('orderForm.storage.suggested', 'Suggested billing:')}{' '}
                   <span className="font-semibold">{getStorageOptionLabel(storageDurationInfo.mode)}</span>
                 </div>
               )}
 
               <div className="md:col-span-2">
-                <p className="mb-2 text-sm font-medium text-gray-700">Billing cadence</p>
+                <p className="mb-2 text-sm font-medium text-gray-700">
+                  {t('orderForm.section.billingCadence', 'Billing cadence')}
+                </p>
                 <div className="grid gap-3 md:grid-cols-3">
-                  {STORAGE_BILLING_OPTIONS.map((option) => {
+                  {storageBillingOptions.map((option) => {
                     const isActive = storageBillingMode === option.key
                     return (
                       <button
@@ -910,14 +977,18 @@ const ensureDate = (value, fallbackTime = null) => {
               onClick={onCancel}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('orderForm.buttons.cancel', 'Cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving...' : isEditing ? 'Save changes' : 'Create order'}
+              {saving
+                ? t('orderForm.buttons.saving', 'Saving...')
+                : isEditing
+                ? t('orderForm.buttons.saveChanges', 'Save changes')
+                : t('orderForm.buttons.create', 'Create order')}
             </button>
           </div>
         </form>

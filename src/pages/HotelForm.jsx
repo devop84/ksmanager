@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 
 const initialFormState = {
@@ -13,6 +14,7 @@ function HotelForm({ hotel, onCancel, onSaved }) {
   const [formData, setFormData] = useState(initialFormState)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (hotel) {
@@ -58,7 +60,7 @@ function HotelForm({ hotel, onCancel, onSaved }) {
       onSaved?.()
     } catch (err) {
       console.error('Failed to save hotel:', err)
-      setError('Unable to save hotel. Please check the details and try again.')
+      setError(t('hotelForm.error.save', 'Unable to save hotel. Please check the details and try again.'))
     } finally {
       setSaving(false)
     }
@@ -69,23 +71,27 @@ function HotelForm({ hotel, onCancel, onSaved }) {
       <div className="mx-auto max-w-3xl rounded-xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{isEditing ? 'Edit Hotel' : 'Add Hotel'}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditing ? t('hotelForm.title.edit', 'Edit Hotel') : t('hotelForm.title.new', 'Add Hotel')}
+            </h1>
             <p className="text-gray-500 text-sm">
-              {isEditing ? 'Update hotel information and save changes.' : 'Fill out the details to add a new hotel.'}
+              {isEditing
+                ? t('hotelForm.subtitle.edit', 'Update hotel information and save changes.')
+                : t('hotelForm.subtitle.new', 'Fill out the details to add a new hotel.')}
             </p>
           </div>
           <button
             onClick={onCancel}
             className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {t('hotelForm.cancel', 'Cancel')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="name">
-              Hotel name *
+              {t('hotelForm.name', 'Hotel name *')}
             </label>
             <input
               id="name"
@@ -100,7 +106,7 @@ function HotelForm({ hotel, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="phone">
-              Phone
+              {t('hotelForm.phone', 'Phone')}
             </label>
             <input
               id="phone"
@@ -114,7 +120,7 @@ function HotelForm({ hotel, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="address">
-              Address
+              {t('hotelForm.address', 'Address')}
             </label>
             <textarea
               id="address"
@@ -128,7 +134,7 @@ function HotelForm({ hotel, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="note">
-              Note
+              {t('hotelForm.note', 'Note')}
             </label>
             <textarea
               id="note"
@@ -152,14 +158,18 @@ function HotelForm({ hotel, onCancel, onSaved }) {
               onClick={onCancel}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('hotelForm.cancel', 'Cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving...' : isEditing ? 'Save changes' : 'Create hotel'}
+              {saving
+                ? t('hotelForm.saving', 'Saving...')
+                : isEditing
+                ? t('hotelForm.saveChanges', 'Save changes')
+                : t('hotelForm.create', 'Create hotel')}
             </button>
           </div>
         </form>

@@ -1,0 +1,28 @@
+import i18n from 'i18next'
+import { initReactI18next } from 'react-i18next'
+
+import enCommon from '../locales/en/common.json'
+import ptBRCommon from '../locales/pt-BR/common.json'
+
+const resources = {
+  'en-US': {
+    translation: enCommon,
+  },
+  'pt-BR': {
+    translation: ptBRCommon,
+  },
+}
+
+i18n.use(initReactI18next).init({
+  resources,
+  lng: 'en-US',
+  fallbackLng: 'en-US',
+  interpolation: {
+    escapeValue: false,
+  },
+  defaultNS: 'translation',
+  ns: ['translation'],
+})
+
+export default i18n
+

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 
 const initialFormState = {
@@ -21,6 +22,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
   const [error, setError] = useState(null)
   const [hotels, setHotels] = useState([])
   const [agencies, setAgencies] = useState([])
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (customer) {
@@ -133,7 +135,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
       onSaved?.()
     } catch (err) {
       console.error('Failed to save customer:', err)
-      setError('Unable to save customer. Please check the data and try again.')
+      setError(t('customerForm.errors.save', 'Unable to save customer. Please check the data and try again.'))
     } finally {
       setSaving(false)
     }
@@ -144,23 +146,27 @@ function CustomerForm({ customer, onCancel, onSaved }) {
       <div className="mx-auto max-w-4xl rounded-xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{isEditing ? 'Edit Customer' : 'Add Customer'}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditing ? t('customerForm.title.edit', 'Edit Customer') : t('customerForm.title.new', 'Add Customer')}
+            </h1>
             <p className="text-gray-500 text-sm">
-              {isEditing ? 'Update customer details and save changes.' : 'Fill in the details to create a new customer.'}
+              {isEditing
+                ? t('customerForm.subtitle.edit', 'Update customer details and save changes.')
+                : t('customerForm.subtitle.new', 'Fill in the details to create a new customer.')}
             </p>
           </div>
           <button
             onClick={onCancel}
             className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {t('customerForm.buttons.cancel', 'Cancel')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="fullname">
-              Full Name *
+              {t('customerForm.fields.fullname', 'Full Name *')}
             </label>
             <input
               id="fullname"
@@ -175,7 +181,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="phone">
-              Phone
+              {t('customerForm.fields.phone', 'Phone')}
             </label>
             <input
               id="phone"
@@ -189,7 +195,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="email">
-              Email
+              {t('customerForm.fields.email', 'Email')}
             </label>
             <input
               id="email"
@@ -203,7 +209,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="doctype">
-              Document Type
+              {t('customerForm.fields.doctype', 'Document Type')}
             </label>
             <input
               id="doctype"
@@ -217,7 +223,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="doc">
-              Document Number
+              {t('customerForm.fields.doc', 'Document Number')}
             </label>
             <input
               id="doc"
@@ -231,7 +237,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="country">
-              Country
+              {t('customerForm.fields.country', 'Country')}
             </label>
             <input
               id="country"
@@ -245,7 +251,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="birthdate">
-              Birthdate
+              {t('customerForm.fields.birthdate', 'Birthdate')}
             </label>
             <input
               id="birthdate"
@@ -259,7 +265,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
 
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="note">
-              Note
+              {t('customerForm.fields.note', 'Note')}
             </label>
             <textarea
               id="note"
@@ -273,7 +279,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="hotel_id">
-              Hotel
+              {t('customerForm.fields.hotel', 'Hotel')}
             </label>
             <select
               id="hotel_id"
@@ -282,7 +288,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
               onChange={handleChange}
               className="w-full rounded-lg border border-gray-300 px-4 py-2 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             >
-              <option value="">Select a hotel</option>
+              <option value="">{t('customerForm.fields.hotel.placeholder', 'Select a hotel')}</option>
               {hotels.map((hotel) => (
                 <option key={hotel.id} value={hotel.id}>
                   {hotel.name}
@@ -293,7 +299,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="agency_id">
-              Agency
+              {t('customerForm.fields.agency', 'Agency')}
             </label>
             <select
               id="agency_id"
@@ -302,7 +308,7 @@ function CustomerForm({ customer, onCancel, onSaved }) {
               onChange={handleChange}
               className="w-full rounded-lg border border-gray-300 px-4 py-2 bg-white focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             >
-              <option value="">Select an agency</option>
+              <option value="">{t('customerForm.fields.agency.placeholder', 'Select an agency')}</option>
               {agencies.map((agency) => (
                 <option key={agency.id} value={agency.id}>
                   {agency.name}
@@ -323,14 +329,18 @@ function CustomerForm({ customer, onCancel, onSaved }) {
               onClick={onCancel}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('customerForm.buttons.cancel', 'Cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving...' : isEditing ? 'Save changes' : 'Create customer'}
+              {saving
+                ? t('customerForm.buttons.saving', 'Saving...')
+                : isEditing
+                ? t('customerForm.buttons.saveChanges', 'Save changes')
+                : t('customerForm.buttons.create', 'Create customer')}
             </button>
           </div>
         </form>

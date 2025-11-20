@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import { useSettings } from '../context/SettingsContext'
 
 const statusStyles = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -17,6 +19,8 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const { formatCurrency, formatDate, formatDateTime, formatNumber } = useSettings()
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (!agencyId) return
@@ -107,7 +111,7 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
         ])
 
         if (!agencyRows?.length) {
-          setError('Agency not found')
+          setError(t('agencyDetail.notFound'))
           setAgency(null)
           setCustomers([])
           setOrders([])
@@ -139,14 +143,14 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
         setTransactions(preparedTransactions)
       } catch (err) {
         console.error('Failed to load agency details:', err)
-        setError('Unable to load agency details. Please try again later.')
+        setError(t('agencyDetail.error.load'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [agencyId])
+  }, [agencyId, t])
 
   const summary = useMemo(() => {
     const totalCustomers = customers.length
@@ -183,7 +187,7 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
   }, [customers, orders, transactions])
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this agency? This action cannot be undone.')) {
+    if (!window.confirm(t('agencyDetail.confirm.delete'))) {
       return
     }
     try {
@@ -196,7 +200,7 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
       }
     } catch (err) {
       console.error('Failed to delete agency:', err)
-      alert('Unable to delete agency. Please try again.')
+      alert(t('agencyDetail.error.delete'))
     } finally {
       setDeleting(false)
     }
@@ -218,8 +222,8 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
     const classes = statusStyles[status] || 'bg-gray-100 text-gray-700'
     const label =
       status === 'in_progress'
-        ? 'In Progress'
-        : status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
+        ? t('common.status.in_progress', 'In Progress')
+        : t(`common.status.${status}`, status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '))
 
     return (
       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${classes}`}>
@@ -228,51 +232,49 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
     )
   }
 
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0))
-
   const formatPercent = (value) => {
     if (value === null || value === undefined) return '—'
-    return `${Number(value).toFixed(1)}%`
+    const formatted = formatNumber(Number(value), { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    return t('agencyDetail.commissionValue', { value: formatted })
   }
 
-  const formatDate = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleDateString('en-US', {
+  const formatLongDate = (value) =>
+    formatDate(value, {
       year: 'numeric',
       month: 'long',
-      day: 'numeric'
+      day: 'numeric',
     })
-  }
 
-  const formatDateTime = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleString('en-US', {
+  const formatDetailedDateTime = (value) =>
+    formatDateTime(value, {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
       hour: 'numeric',
-      minute: '2-digit'
+      minute: '2-digit',
     })
+
+  const formatShortDate = (value) =>
+    formatDate(value, {
+      month: 'short',
+      day: 'numeric',
+    })
+
+  const getOrderTypeLabel = (type) => {
+    const key = `agencyDetail.orders.type.${type || 'other'}`
+    return t(key, { defaultValue: type || 'order' })
   }
 
   const formatDateRange = (start, end) => {
     if (!start && !end) return '—'
-    const startDate = start ? new Date(start) : null
-    const endDate = end ? new Date(end) : null
-
-    const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
-
+    const startDate = start ? formatShortDate(start) : null
+    const endDate = end ? formatShortDate(end) : null
     if (startDate && endDate) {
-      return `${formatter.format(startDate)} → ${formatter.format(endDate)}`
+      return `${startDate} → ${endDate}`
     }
 
-    if (startDate) return formatter.format(startDate)
-    if (endDate) return formatter.format(endDate)
+    if (startDate) return startDate
+    if (endDate) return endDate
     return '—'
   }
 
@@ -280,7 +282,7 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-gray-600">Loading agency details...</div>
+          <div className="text-gray-600">{t('common.loading')}</div>
         </div>
       </div>
     )
@@ -290,13 +292,13 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-red-600">{error || 'Agency not found'}</div>
+          <div className="text-red-600">{error || t('agencyDetail.notFound')}</div>
           {onBack && (
             <button
               onClick={onBack}
               className="mt-4 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Back to Agencies
+              {t('agencyDetail.back')}
             </button>
           )}
         </div>
@@ -315,40 +317,42 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Agencies
+            {t('agencyDetail.back')}
           </button>
           <h1 className="text-3xl font-bold text-gray-900">{agency.name}</h1>
-          <p className="text-gray-500 text-sm mt-1">Agency contacts, assigned customers, and commission payouts.</p>
+          <p className="text-gray-500 text-sm mt-1">{t('agencyDetail.description')}</p>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           <div className="xl:col-span-3 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-indigo-50 to-indigo-100 p-4">
-                <div className="text-sm font-medium text-indigo-700 mb-1">Customers</div>
+                <div className="text-sm font-medium text-indigo-700 mb-1">{t('agencyDetail.summary.customers')}</div>
                 <div className="text-2xl font-bold text-indigo-900">{summary.totalCustomers}</div>
               </div>
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-emerald-50 to-emerald-100 p-4">
-                <div className="text-sm font-medium text-emerald-700 mb-1">Orders Linked</div>
+                <div className="text-sm font-medium text-emerald-700 mb-1">{t('agencyDetail.summary.orders')}</div>
                 <div className="text-2xl font-bold text-emerald-900">{summary.totalOrders}</div>
               </div>
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-yellow-50 to-yellow-100 p-4">
-                <div className="text-sm font-medium text-yellow-700 mb-1">Active / Upcoming</div>
+                <div className="text-sm font-medium text-yellow-700 mb-1">{t('agencyDetail.summary.active')}</div>
                 <div className="text-2xl font-bold text-yellow-900">{summary.activeOrders}</div>
               </div>
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-purple-50 to-purple-100 p-4">
-                <div className="text-sm font-medium text-purple-700 mb-1">Commission Paid</div>
+                <div className="text-sm font-medium text-purple-700 mb-1">{t('agencyDetail.summary.commission')}</div>
                 <div className="text-2xl font-bold text-purple-900">{formatCurrency(summary.commissionPaid)}</div>
               </div>
             </div>
 
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Customers from this agency</h2>
-                <p className="text-sm text-gray-500">{customers.length} active</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('agencyDetail.customers.title')}</h2>
+                <p className="text-sm text-gray-500">
+                  {t('agencyDetail.customers.count', { count: customers.length })}
+                </p>
               </div>
               {customers.length === 0 ? (
-                <div className="text-gray-600">No customers assigned to this agency yet.</div>
+                <div className="text-gray-600">{t('agencyDetail.customers.empty')}</div>
               ) : (
                 <>
                   <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
@@ -356,19 +360,19 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Customer
+                            {t('agencyDetail.customers.table.customer')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Contact
+                            {t('agencyDetail.customers.table.contact')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Country
+                            {t('agencyDetail.customers.table.country')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Orders
+                            {t('agencyDetail.customers.table.orders')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Last booking
+                            {t('agencyDetail.customers.table.lastBooking')}
                           </th>
                         </tr>
                       </thead>
@@ -380,7 +384,7 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
                             <td className="px-4 py-3 text-sm text-gray-600">{customer.country || '—'}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">{customer.order_count}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">
-                              {customer.last_order_at ? formatDate(customer.last_order_at) : '—'}
+                              {customer.last_order_at ? formatLongDate(customer.last_order_at) : '—'}
                             </td>
                           </tr>
                         ))}
@@ -395,17 +399,17 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
                         <p className="text-sm text-gray-500">{customer.email || customer.phone || '—'}</p>
                         <dl className="mt-3 grid grid-cols-2 gap-3 text-xs text-gray-500">
                           <div>
-                            <dt className="uppercase">Country</dt>
+                            <dt className="uppercase">{t('agencyDetail.customers.table.country')}</dt>
                             <dd className="text-gray-900 text-sm">{customer.country || '—'}</dd>
                           </div>
                           <div>
-                            <dt className="uppercase">Orders</dt>
+                            <dt className="uppercase">{t('agencyDetail.customers.table.orders')}</dt>
                             <dd className="text-gray-900 text-sm">{customer.order_count}</dd>
                           </div>
                           <div className="col-span-2">
-                            <dt className="uppercase">Last booking</dt>
+                            <dt className="uppercase">{t('agencyDetail.customers.table.lastBooking')}</dt>
                             <dd className="text-gray-900 text-sm">
-                              {customer.last_order_at ? formatDate(customer.last_order_at) : '—'}
+                              {customer.last_order_at ? formatLongDate(customer.last_order_at) : '—'}
                             </dd>
                           </div>
                         </dl>
@@ -418,11 +422,11 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
 
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Recent orders</h2>
-                <p className="text-sm text-gray-500">{orders.length} linked</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('agencyDetail.orders.title')}</h2>
+                <p className="text-sm text-gray-500">{t('agencyDetail.orders.count', { count: orders.length })}</p>
               </div>
               {orders.length === 0 ? (
-                <div className="text-gray-600">No orders have been attributed to this agency yet.</div>
+                <div className="text-gray-600">{t('agencyDetail.orders.empty')}</div>
               ) : (
                 <>
                   <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
@@ -430,19 +434,19 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Order
+                            {t('agencyDetail.orders.table.order')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Customer
+                            {t('agencyDetail.orders.table.customer')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Service
+                            {t('agencyDetail.orders.table.service')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Window
+                            {t('agencyDetail.orders.table.window')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Status
+                            {t('agencyDetail.orders.table.status')}
                           </th>
                         </tr>
                       </thead>
@@ -451,7 +455,9 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
                           <tr key={order.id} className="hover:bg-gray-50">
                             <td className="px-4 py-3 text-sm text-gray-900 font-medium">
                               #{order.id}{' '}
-                              <span className="text-xs uppercase text-gray-400">· {order.order_type || 'order'}</span>
+                              <span className="text-xs uppercase text-gray-400">
+                                · {getOrderTypeLabel(order.order_type)}
+                              </span>
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-600">{order.customer_name || '—'}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">{order.service_name || '—'}</td>
@@ -473,7 +479,9 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
                           {renderStatusBadge(order.status)}
                         </div>
                         <p className="text-sm text-gray-500 mt-1">{order.customer_name || '—'}</p>
-                        <p className="text-sm text-gray-500">{order.service_name || '—'}</p>
+                        <p className="text-sm text-gray-500">
+                          {order.service_name || '—'} · {getOrderTypeLabel(order.order_type)}
+                        </p>
                         <p className="text-xs text-gray-400 mt-2">{formatDateRange(order.starting, order.ending)}</p>
                       </div>
                     ))}
@@ -484,11 +492,13 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
 
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Commission transactions</h2>
-                <p className="text-sm text-gray-500">{transactions.length} transaction{transactions.length !== 1 ? 's' : ''}</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('agencyDetail.transactions.title')}</h2>
+                <p className="text-sm text-gray-500">
+                  {t('agencyDetail.transactions.count', { count: transactions.length })}
+                </p>
               </div>
               {transactions.length === 0 ? (
-                <div className="text-gray-600">No transactions have been recorded for this agency.</div>
+                <div className="text-gray-600">{t('agencyDetail.transactions.empty')}</div>
               ) : (
                 <div className="space-y-3">
                   <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
@@ -496,23 +506,23 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Date
+                            {t('agencyDetail.transactions.table.date')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Type
+                            {t('agencyDetail.transactions.table.type')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Method
+                            {t('agencyDetail.transactions.table.method')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Amount
+                            {t('agencyDetail.transactions.table.amount')}
                           </th>
                         </tr>
                       </thead>
                       <tbody className="bg-white divide-y divide-gray-100">
                         {transactions.map((txn) => (
                           <tr key={txn.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 text-sm text-gray-600">{formatDateTime(txn.occurred_at)}</td>
+                            <td className="px-4 py-3 text-sm text-gray-600">{formatDetailedDateTime(txn.occurred_at)}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">{txn.type_label}</td>
                             <td className="px-4 py-3 text-sm text-gray-600">{txn.payment_method || '—'}</td>
                             <td
@@ -551,7 +561,7 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
                             {formatCurrency(Math.abs(txn.amount))}
                           </span>
                         </div>
-                        <p className="text-xs text-gray-500 mt-1">{formatDateTime(txn.occurred_at)}</p>
+                        <p className="text-xs text-gray-500 mt-1">{formatDetailedDateTime(txn.occurred_at)}</p>
                         <p className="text-xs text-gray-500">{txn.payment_method || '—'}</p>
                       </div>
                     ))}
@@ -565,13 +575,13 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm sticky top-6 space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Agency info</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">{t('agencyDetail.info.title')}</h2>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onEdit?.(agency)}
                       disabled={!canModify(user)}
                       className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-                      title="Edit agency"
+                      title={t('agencyDetail.actions.edit')}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z" />
@@ -581,7 +591,7 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
                       onClick={handleDelete}
                       disabled={deleting || !canModify(user)}
                       className="inline-flex items-center justify-center p-2 rounded-lg border border-red-300 bg-white text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-                      title="Delete agency"
+                      title={t('agencyDetail.actions.delete')}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -591,29 +601,29 @@ function AgencyDetail({ agencyId, onBack, onEdit, onDelete, user = null }) {
                 </div>
                 <dl className="space-y-4 text-sm">
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Phone</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('agencyDetail.info.phone')}</dt>
                     <dd className="mt-1 text-gray-900">{agency.phone || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Email</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('agencyDetail.info.email')}</dt>
                     <dd className="mt-1 text-gray-900">{agency.email || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Commission</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('agencyDetail.info.commission')}</dt>
                     <dd className="mt-1 text-gray-900">{formatPercent(agency.commission)}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Note</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('agencyDetail.info.note')}</dt>
                     <dd className="mt-1 text-gray-900 whitespace-pre-wrap">{agency.note || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Created</dt>
-                    <dd className="mt-1 text-gray-900">{formatDateTime(agency.created_at)}</dd>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('agencyDetail.info.created')}</dt>
+                    <dd className="mt-1 text-gray-900">{formatDetailedDateTime(agency.created_at)}</dd>
                   </div>
                   {agency.updated_at && (
                     <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase">Last update</dt>
-                      <dd className="mt-1 text-gray-900">{formatDateTime(agency.updated_at)}</dd>
+                      <dt className="text-xs font-medium text-gray-500 uppercase">{t('agencyDetail.info.updated')}</dt>
+                      <dd className="mt-1 text-gray-900">{formatDetailedDateTime(agency.updated_at)}</dd>
                     </div>
                   )}
                 </dl>

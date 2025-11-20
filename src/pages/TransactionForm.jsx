@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 
-const ENTITY_TYPES = [
-  { value: 'company_account', label: 'Company Account' },
-  { value: 'customer', label: 'Customer' },
-  { value: 'agency', label: 'Agency' },
-  { value: 'instructor', label: 'Instructor' },
-  { value: 'third_party', label: 'Third Party' }
+const ENTITY_TYPES_BLUEPRINT = [
+  { value: 'company_account', labelKey: 'transactions.entity.company_account', fallback: 'Company Account' },
+  { value: 'customer', labelKey: 'transactions.entity.customer', fallback: 'Customer' },
+  { value: 'agency', labelKey: 'transactions.entity.agency', fallback: 'Agency' },
+  { value: 'instructor', labelKey: 'transactions.entity.instructor', fallback: 'Instructor' },
+  { value: 'third_party', labelKey: 'transactions.entity.third_party', fallback: 'Third Party' }
 ]
 
 const initialFormState = {
@@ -38,6 +39,16 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
     instructors: [],
     thirdParties: []
   })
+  const { t } = useTranslation()
+
+  const entityTypeOptions = useMemo(
+    () =>
+      ENTITY_TYPES_BLUEPRINT.map((type) => ({
+        ...type,
+        label: t(type.labelKey, type.fallback)
+      })),
+    [t]
+  )
 
   useEffect(() => {
     const fetchReferenceData = async () => {
@@ -72,14 +83,14 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
         })
       } catch (err) {
         console.error('Failed to load reference data:', err)
-        setError('Unable to load reference data. Please refresh and try again.')
+        setError(t('transactionForm.errors.referenceData', 'Unable to load reference data. Please refresh and try again.'))
       } finally {
         setLoadingReferenceData(false)
       }
     }
 
     fetchReferenceData()
-  }, [])
+  }, [t])
 
   useEffect(() => {
     if (transaction) {
@@ -127,7 +138,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
     const selectedType = referenceData.transactionTypes.find((type) => String(type.id) === formData.type_id)
 
     if (!selectedType) {
-      setError('Transaction type is required.')
+      setError(t('transactionForm.validation.typeRequired', 'Transaction type is required.'))
       setSaving(false)
       return
     }
@@ -147,7 +158,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
     }
 
     if (!payload.amount || Number.isNaN(payload.amount) || payload.amount === 0) {
-      setError('Amount must be a non-zero number.')
+      setError(t('transactionForm.validation.amount', 'Amount must be a non-zero number.'))
       setSaving(false)
       return
     }
@@ -209,7 +220,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
       onSaved?.()
     } catch (err) {
       console.error('Failed to save transaction:', err)
-      setError('Unable to save transaction. Please check the details and try again.')
+      setError(t('transactionForm.errors.save', 'Unable to save transaction. Please check the details and try again.'))
     } finally {
       setSaving(false)
     }
@@ -219,11 +230,15 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
     const typeKey = formData[`${role}_entity_type`]
     const options = entityOptionsMap[typeKey] || []
     const fieldName = `${role}_entity_id`
+    const labelKey =
+      role === 'source' ? 'transactionForm.section.sourceEntity' : 'transactionForm.section.destinationEntity'
+    const placeholderKey =
+      role === 'source' ? 'transactionForm.section.selectSource' : 'transactionForm.section.selectDestination'
 
     return (
       <div>
         <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor={fieldName}>
-          {role === 'source' ? 'Source entity' : 'Destination entity'}
+          {t(labelKey, role === 'source' ? 'Source entity' : 'Destination entity')}
         </label>
         <select
           id={fieldName}
@@ -233,7 +248,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
           disabled={loadingReferenceData || options.length === 0}
           className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:bg-gray-100"
         >
-          <option value="">Select {role}...</option>
+          <option value="">{t(placeholderKey, role === 'source' ? 'Select source...' : 'Select destination...')}</option>
           {options.map((option) => (
             <option key={option.id} value={option.id}>
               {option.name}
@@ -249,13 +264,22 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
       <div className="mx-auto max-w-4xl rounded-xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{isEditing ? 'Edit Transaction' : 'Add Transaction'}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditing
+                ? t('transactionForm.title.edit', 'Edit Transaction')
+                : t('transactionForm.title.new', 'Add Transaction')}
+            </h1>
             <p className="text-gray-500 text-sm">
-              {isEditing ? 'Update the transaction details.' : 'Record a new transaction entry.'}
+              {isEditing
+                ? t('transactionForm.subtitle.edit', 'Update the transaction details.')
+                : t('transactionForm.subtitle.new', 'Record a new transaction entry.')}
             </p>
           </div>
-          <button onClick={onCancel} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors">
-            Cancel
+          <button
+            onClick={onCancel}
+            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+          >
+            {t('transactionForm.buttons.cancel', 'Cancel')}
           </button>
         </div>
 
@@ -263,7 +287,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="occurred_at">
-                Date & time *
+                {t('transactionForm.fields.occurredAt', 'Date & time *')}
               </label>
               <input
                 id="occurred_at"
@@ -277,7 +301,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="amount">
-                Amount *
+                {t('transactionForm.fields.amount', 'Amount *')}
               </label>
               <input
                 id="amount"
@@ -295,7 +319,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="type_id">
-                Transaction type *
+                {t('transactionForm.fields.type', 'Transaction type *')}
               </label>
               <select
                 id="type_id"
@@ -306,7 +330,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
                 disabled={loadingReferenceData}
                 className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:bg-gray-100"
               >
-                <option value="">Select type...</option>
+                <option value="">{t('transactionForm.fields.type.placeholder', 'Select type...')}</option>
                 {referenceData.transactionTypes.map((type) => (
                   <option key={type.id} value={type.id}>
                     {type.label}
@@ -316,7 +340,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="payment_method_id">
-                Payment method
+                {t('transactionForm.fields.paymentMethod', 'Payment method')}
               </label>
               <select
                 id="payment_method_id"
@@ -326,7 +350,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
                 disabled={loadingReferenceData}
                 className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:bg-gray-100"
               >
-                <option value="">None</option>
+                <option value="">{t('transactionForm.fields.paymentMethod.none', 'None')}</option>
                 {referenceData.paymentMethods.map((method) => (
                   <option key={method.id} value={method.id}>
                     {method.name}
@@ -338,10 +362,12 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
 
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-3">
-              <label className="text-sm font-semibold text-gray-800">Source</label>
+              <label className="text-sm font-semibold text-gray-800">
+                {t('transactionForm.section.source', 'Source')}
+              </label>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="source_entity_type">
-                  Source type *
+                  {t('transactionForm.section.sourceType', 'Source type *')}
                 </label>
                 <select
                   id="source_entity_type"
@@ -352,7 +378,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
                   }}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                 >
-                  {ENTITY_TYPES.map((entity) => (
+                  {entityTypeOptions.map((entity) => (
                     <option key={entity.value} value={entity.value}>
                       {entity.label}
                     </option>
@@ -363,10 +389,12 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
             </div>
 
             <div className="space-y-3">
-              <label className="text-sm font-semibold text-gray-800">Destination</label>
+              <label className="text-sm font-semibold text-gray-800">
+                {t('transactionForm.section.destination', 'Destination')}
+              </label>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="destination_entity_type">
-                  Destination type *
+                  {t('transactionForm.section.destinationType', 'Destination type *')}
                 </label>
                 <select
                   id="destination_entity_type"
@@ -377,7 +405,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
                   }}
                   className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                 >
-                  {ENTITY_TYPES.map((entity) => (
+                  {entityTypeOptions.map((entity) => (
                     <option key={entity.value} value={entity.value}>
                       {entity.label}
                     </option>
@@ -391,7 +419,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
           <div className="grid gap-4 md:grid-cols-2">
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="reference">
-                Reference
+                {t('transactionForm.fields.reference', 'Reference')}
               </label>
               <input
                 id="reference"
@@ -404,7 +432,7 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
             </div>
             <div>
               <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="note">
-                Note
+                {t('transactionForm.fields.note', 'Note')}
               </label>
               <input
                 id="note"
@@ -429,14 +457,18 @@ function TransactionForm({ transaction, onCancel, onSaved }) {
               onClick={onCancel}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('transactionForm.buttons.cancel', 'Cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving...' : isEditing ? 'Save changes' : 'Create transaction'}
+              {saving
+                ? t('transactionForm.buttons.saving', 'Saving...')
+                : isEditing
+                ? t('transactionForm.buttons.saveChanges', 'Save changes')
+                : t('transactionForm.buttons.create', 'Create transaction')}
             </button>
           </div>
         </form>

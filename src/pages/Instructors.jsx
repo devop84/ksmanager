@@ -1,21 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import { useSettings } from '../context/SettingsContext'
+import Pagination from '../components/Pagination'
 
 const PAGE_SIZE = 25
 
-const columns = [
-  { key: 'fullname', label: 'Full Name' },
-  { key: 'phone', label: 'Phone' },
-  { key: 'email', label: 'Email' },
-  { key: 'bankdetail', label: 'Bank Detail' },
-  { key: 'hourlyrate', label: 'Hourly Rate' },
-  { key: 'commission', label: 'Commission' },
-  { key: 'monthlyfix', label: 'Monthly Fix' },
-  { key: 'note', label: 'Note' }
-]
-
 function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, onViewInstructor = () => {}, refreshKey = 0, user = null }) {
+  const { t } = useTranslation()
+  const { formatCurrency, formatNumber } = useSettings()
   const [instructors, setInstructors] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -23,6 +17,20 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
   const [sortConfig, setSortConfig] = useState({ key: 'fullname', direction: 'asc' })
   const [currentPage, setCurrentPage] = useState(1)
   const [deletingId, setDeletingId] = useState(null)
+
+  const columns = useMemo(
+    () => [
+      { key: 'fullname', label: t('instructors.table.fullname') },
+      { key: 'phone', label: t('instructors.table.phone') },
+      { key: 'email', label: t('instructors.table.email') },
+      { key: 'bankdetail', label: t('instructors.table.bankdetail') },
+      { key: 'hourlyrate', label: t('instructors.table.hourly') },
+      { key: 'commission', label: t('instructors.table.commission') },
+      { key: 'monthlyfix', label: t('instructors.table.monthly') },
+      { key: 'note', label: t('instructors.table.note') }
+    ],
+    [t]
+  )
 
   useEffect(() => {
     const fetchInstructors = async () => {
@@ -37,14 +45,14 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
         setInstructors(result || [])
       } catch (err) {
         console.error('Failed to load instructors:', err)
-        setError('Unable to load instructors. Please try again later.')
+        setError(t('instructors.error.load'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchInstructors()
-  }, [refreshKey])
+  }, [refreshKey, t])
 
   const filteredInstructors = useMemo(() => {
     if (!searchTerm.trim()) return instructors
@@ -102,56 +110,32 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
   }
 
   const handlePageChange = (newPage) => {
-    setCurrentPage((prev) => Math.min(Math.max(newPage, 1), totalPages))
+    setCurrentPage(newPage)
   }
 
   const handleDelete = async (instructorId) => {
-    if (!window.confirm('Are you sure you want to delete this instructor?')) return
+    if (!window.confirm(t('instructors.confirm.delete'))) return
     try {
       setDeletingId(instructorId)
       await sql`DELETE FROM instructors WHERE id = ${instructorId}`
       setInstructors((prev) => prev.filter((instructor) => instructor.id !== instructorId))
     } catch (err) {
       console.error('Failed to delete instructor:', err)
-      alert('Unable to delete instructor. Please try again.')
+      alert(t('instructors.error.delete'))
     } finally {
       setDeletingId(null)
     }
   }
 
-  const renderPagination = () => (
-    <div className="flex items-center justify-between text-sm text-gray-600">
-      <span>
-        Page {currentPage} of {totalPages} • Showing {paginatedInstructors.length} of {sortedInstructors.length}{' '}
-        instructors
-      </span>
-      <div className="space-x-2">
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Previous
-        </button>
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  )
 
-  const formatCurrency = (value) => {
-    if (value === null || value === undefined) return '—'
-    return `$${Number(value).toFixed(2)}`
+  const displayCurrency = (value) => {
+    if (value === null || value === undefined || value === '') return '—'
+    return formatCurrency(value)
   }
 
   const formatPercent = (value) => {
-    if (value === null || value === undefined) return '—'
-    return `${Number(value).toFixed(1)}%`
+    if (value === null || value === undefined || value === '') return '—'
+    return `${formatNumber(Number(value), { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
   }
 
   return (
@@ -159,8 +143,8 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
       <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Instructors</h1>
-            <p className="text-gray-500 text-sm">Manage instructor roster, pay rates, and contact details.</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('instructors.title')}</h1>
+            <p className="text-gray-500 text-sm">{t('instructors.description')}</p>
           </div>
           <button
             onClick={onAddInstructor}
@@ -176,7 +160,7 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add instructor
+            {t('instructors.add')}
           </button>
         </div>
 
@@ -186,16 +170,23 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search instructors by name, contact, or rate..."
+              placeholder={t('instructors.search')}
               className="w-full md:w-1/2 rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-shadow"
             />
           </div>
 
-          {loading && <div className="text-gray-600 text-sm">Loading instructors...</div>}
+          {loading && <div className="text-gray-600 text-sm">{t('instructors.loading')}</div>}
           {error && <div className="text-red-600 text-sm">{error}</div>}
           {!loading && !error && (
             <div className="flex flex-col gap-4">
-              {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedInstructors.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                summaryKey="instructors.pagination.summary"
+              />
               <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -226,7 +217,7 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
                     {paginatedInstructors.length === 0 ? (
                       <tr>
                         <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-gray-500">
-                          No instructors found. Try adjusting your search or filters.
+                          {t('instructors.table.empty')}
                         </td>
                       </tr>
                     ) : (
@@ -240,9 +231,9 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
                           <td className="px-4 py-3 text-sm text-gray-600">{instructor.phone || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{instructor.email || '—'}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{instructor.bankdetail || '—'}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(instructor.hourlyrate)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{displayCurrency(instructor.hourlyrate)}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{formatPercent(instructor.commission)}</td>
-                          <td className="px-4 py-3 text-sm text-gray-600">{formatCurrency(instructor.monthlyfix)}</td>
+                          <td className="px-4 py-3 text-sm text-gray-600">{displayCurrency(instructor.monthlyfix)}</td>
                           <td className="px-4 py-3 text-sm text-gray-600">{instructor.note || '—'}</td>
                         </tr>
                       ))
@@ -254,7 +245,7 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
               <div className="md:hidden space-y-3">
                 {paginatedInstructors.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    No instructors found. Try adjusting your search or filters.
+                    {t('instructors.table.empty')}
                   </div>
                 ) : (
                   paginatedInstructors.map((instructor) => (
@@ -269,32 +260,32 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
                           <p className="text-sm text-gray-500">{instructor.email || instructor.phone || '—'}</p>
                         </div>
                         <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
-                          {formatCurrency(instructor.hourlyrate)}
+                          {displayCurrency(instructor.hourlyrate)}
                         </span>
                       </div>
                       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm text-gray-600">
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Phone</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.phone')}</dt>
                           <dd>{instructor.phone || '—'}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Bank Detail</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.bankdetail')}</dt>
                           <dd>{instructor.bankdetail || '—'}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Hourly</dt>
-                          <dd>{formatCurrency(instructor.hourlyrate)}</dd>
+                          <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.hourly')}</dt>
+                          <dd>{displayCurrency(instructor.hourlyrate)}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Commission</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.commission')}</dt>
                           <dd>{formatPercent(instructor.commission)}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Monthly Fix</dt>
-                          <dd>{formatCurrency(instructor.monthlyfix)}</dd>
+                          <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.monthly')}</dt>
+                          <dd>{displayCurrency(instructor.monthlyfix)}</dd>
                         </div>
                         <div className="md:col-span-2">
-                          <dt className="text-gray-400 text-xs uppercase">Note</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.note')}</dt>
                           <dd>{instructor.note || '—'}</dd>
                         </div>
                       </dl>
@@ -303,7 +294,14 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
                 )}
               </div>
 
-              {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedInstructors.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                summaryKey="instructors.pagination.summary"
+              />
             </div>
           )}
         </div>

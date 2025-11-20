@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import { useSettings } from '../context/SettingsContext'
+import Pagination from '../components/Pagination'
 
 const PAGE_SIZE = 25
 
@@ -8,14 +11,6 @@ const directionStyles = {
   income: 'text-emerald-700 bg-emerald-50 border-emerald-100',
   expense: 'text-rose-700 bg-rose-50 border-rose-100',
   transfer: 'text-slate-600 bg-slate-50 border-slate-100'
-}
-
-const entityTypeLabels = {
-  company_account: 'Company Account',
-  customer: 'Customer',
-  agency: 'Agency',
-  instructor: 'Instructor',
-  third_party: 'Third Party'
 }
 
 function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTransaction = () => {}, user = null }) {
@@ -29,6 +24,20 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
   const [currentPage, setCurrentPage] = useState(1)
   const [typeOptions, setTypeOptions] = useState([])
   const [paymentOptions, setPaymentOptions] = useState([])
+  const { formatCurrency, formatDateTime } = useSettings()
+  const { t } = useTranslation()
+
+  const entityTypeLabels = useMemo(
+    () => ({
+      company_account: t('transactions.entity.company_account', 'Company Account'),
+      customer: t('transactions.entity.customer', 'Customer'),
+      agency: t('transactions.entity.agency', 'Agency'),
+      instructor: t('transactions.entity.instructor', 'Instructor'),
+      third_party: t('transactions.entity.third_party', 'Third Party'),
+      order: t('transactions.entity.order', 'Order'),
+    }),
+    [t],
+  )
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -88,14 +97,14 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
         setPaymentOptions(paymentsResult || [])
       } catch (err) {
         console.error('Failed to load transactions:', err)
-        setError('Unable to load transactions. Please try again later.')
+        setError(t('transactions.error.load', 'Unable to load transactions. Please try again later.'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchTransactions()
-  }, [refreshKey])
+  }, [refreshKey, t])
 
   const formatEntityName = (transaction, role = 'source') => {
     const typeKey = role === 'source' ? transaction.source_entity_type : transaction.destination_entity_type
@@ -175,45 +184,27 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
   }, [searchTerm, typeFilter, directionFilter, paymentFilter])
 
   const handlePageChange = (nextPage) => {
-    setCurrentPage((prev) => Math.min(Math.max(nextPage, 1), totalPages))
+    setCurrentPage(nextPage)
   }
 
-  const renderPagination = () => (
-    <div className="flex items-center justify-between text-sm text-gray-600">
-      <span>
-        Page {currentPage} of {totalPages} • Showing {paginatedTransactions.length} of {filteredTransactions.length} entries
-      </span>
-      <div className="space-x-2">
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Previous
-        </button>
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  )
+  const formatAmount = (amount, options) =>
+    formatCurrency(Number(amount || 0), { minimumFractionDigits: 2, maximumFractionDigits: 2, ...options })
 
-const formatAmount = (amount) =>
-  new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(amount))
-
-  const formatDate = (value) => new Date(value).toLocaleString()
+  const formatDateLabel = (value) =>
+    formatDateTime(value, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
 
   return (
     <div className="px-4 py-6 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Transactions</h1>
-            <p className="text-gray-500 text-sm">Track all incoming and outgoing cash movement, including internal transfers.</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('transactions.title', 'Transactions')}</h1>
+            <p className="text-gray-500 text-sm">
+              {t(
+                'transactions.description',
+                'Track all incoming and outgoing cash movement, including internal transfers.',
+              )}
+            </p>
           </div>
           <button
             onClick={onAddTransaction}
@@ -223,25 +214,29 @@ const formatAmount = (amount) =>
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add transaction
+            {t('transactions.add', 'Add transaction')}
           </button>
         </div>
 
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-xl border border-emerald-100 bg-emerald-50/70 p-4">
-            <p className="text-sm font-medium text-emerald-700">Total Income</p>
+            <p className="text-sm font-medium text-emerald-700">
+              {t('transactions.summary.income', 'Total Income')}
+            </p>
             <p className="mt-2 text-2xl font-semibold text-emerald-800">
-              {formatAmount(Math.max(totals.income, 0))}
+              {formatAmount(Math.max(totals.income, 0), { signDisplay: 'never' })}
             </p>
           </div>
           <div className="rounded-xl border border-rose-100 bg-rose-50/70 p-4">
-            <p className="text-sm font-medium text-rose-700">Total Expense</p>
+            <p className="text-sm font-medium text-rose-700">
+              {t('transactions.summary.expense', 'Total Expense')}
+            </p>
             <p className="mt-2 text-2xl font-semibold text-rose-800">
-              {formatAmount(Math.abs(Math.min(totals.expense, 0)))}
+              {formatAmount(Math.abs(Math.min(totals.expense, 0)), { signDisplay: 'never' })}
             </p>
           </div>
           <div className="rounded-xl border border-slate-100 bg-slate-50 p-4">
-            <p className="text-sm font-medium text-slate-700">Net Result</p>
+            <p className="text-sm font-medium text-slate-700">{t('transactions.summary.net', 'Net Result')}</p>
             <p className="mt-2 text-2xl font-semibold text-slate-900">
               {formatAmount(totals.income + totals.expense)}
             </p>
@@ -254,7 +249,7 @@ const formatAmount = (amount) =>
               type="text"
               value={searchTerm}
               onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search reference, note, or counterparty..."
+              placeholder={t('transactions.search', 'Search reference, note, or counterparty...')}
               className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             />
             <select
@@ -262,7 +257,7 @@ const formatAmount = (amount) =>
               onChange={(event) => setTypeFilter(event.target.value)}
               className="rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             >
-              <option value="all">All types</option>
+              <option value="all">{t('transactions.filters.type.all', 'All types')}</option>
               {typeOptions.map((type) => (
                 <option key={type.id} value={type.code}>
                   {type.label}
@@ -274,17 +269,17 @@ const formatAmount = (amount) =>
               onChange={(event) => setDirectionFilter(event.target.value)}
               className="rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             >
-              <option value="all">All directions</option>
-              <option value="income">Income</option>
-              <option value="expense">Expense</option>
-              <option value="transfer">Transfer</option>
+              <option value="all">{t('transactions.filters.direction.all', 'All directions')}</option>
+              <option value="income">{t('transactions.filters.direction.income', 'Income')}</option>
+              <option value="expense">{t('transactions.filters.direction.expense', 'Expense')}</option>
+              <option value="transfer">{t('transactions.filters.direction.transfer', 'Transfer')}</option>
             </select>
             <select
               value={paymentFilter}
               onChange={(event) => setPaymentFilter(event.target.value)}
               className="rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
             >
-              <option value="all">All payment methods</option>
+              <option value="all">{t('transactions.filters.payment.all', 'All payment methods')}</option>
               {paymentOptions.map((method) => (
                 <option key={method.id} value={method.name}>
                   {method.name}
@@ -294,31 +289,54 @@ const formatAmount = (amount) =>
           </div>
         </div>
 
-        {loading && <div className="text-gray-600 text-sm">Loading transactions...</div>}
+        {loading && <div className="text-gray-600 text-sm">{t('common.loading')}</div>}
         {error && <div className="text-red-600 text-sm">{error}</div>}
         {!loading && !error && (
           <div className="flex flex-col gap-4">
-            {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredTransactions.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                itemName={t('common.items.transactions', 'transactions')}
+              />
 
             <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Source</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Destination</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Payment</th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Reference</th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Note</th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      {t('transactions.table.date', 'Date')}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      {t('transactions.table.type', 'Type')}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      {t('transactions.table.source', 'Source')}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      {t('transactions.table.destination', 'Destination')}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      {t('transactions.table.payment', 'Payment')}
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      {t('transactions.table.amount', 'Amount')}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      {t('transactions.table.reference', 'Reference')}
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      {t('transactions.table.note', 'Note')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
                   {paginatedTransactions.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-500">
-                        No transactions found. Try adjusting your filters.
+                        {t('transactions.empty', 'No transactions found. Try adjusting your filters.')}
                       </td>
                     </tr>
                   ) : (
@@ -328,7 +346,7 @@ const formatAmount = (amount) =>
                         className="hover:bg-gray-50 cursor-pointer"
                         onClick={() => onViewTransaction(transaction)}
                       >
-                        <td className="px-4 py-3 text-sm text-gray-600">{formatDate(transaction.occurred_at)}</td>
+                        <td className="px-4 py-3 text-sm text-gray-600">{formatDateLabel(transaction.occurred_at)}</td>
                         <td className="px-4 py-3 text-sm">
                           <span
                             className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${
@@ -372,11 +390,11 @@ const formatAmount = (amount) =>
             </div>
 
             <div className="md:hidden space-y-3">
-              {paginatedTransactions.length === 0 ? (
-                <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                  No transactions found. Try adjusting your filters.
-                </div>
-              ) : (
+                {paginatedTransactions.length === 0 ? (
+                  <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
+                    {t('transactions.empty', 'No transactions found. Try adjusting your filters.')}
+                  </div>
+                ) : (
                 paginatedTransactions.map((transaction) => (
                   <div
                     key={transaction.id}
@@ -386,7 +404,7 @@ const formatAmount = (amount) =>
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-base font-semibold text-gray-900">{transaction.type_label}</p>
-                        <p className="text-xs text-gray-500">{formatDate(transaction.occurred_at)}</p>
+                        <p className="text-xs text-gray-500">{formatDateLabel(transaction.occurred_at)}</p>
                       </div>
                         <div
                         className={`text-sm font-semibold ${
@@ -402,23 +420,23 @@ const formatAmount = (amount) =>
                     </div>
                     <div className="mt-4 grid gap-3 text-sm text-gray-700">
                       <div>
-                        <dt className="text-gray-400 text-xs uppercase">Source</dt>
+                        <dt className="text-gray-400 text-xs uppercase">{t('transactions.mobile.source', 'Source')}</dt>
                         <dd>{formatEntityName(transaction, 'source')}</dd>
                       </div>
                       <div>
-                        <dt className="text-gray-400 text-xs uppercase">Destination</dt>
+                        <dt className="text-gray-400 text-xs uppercase">{t('transactions.mobile.destination', 'Destination')}</dt>
                         <dd>{formatEntityName(transaction, 'destination')}</dd>
                       </div>
                       <div>
-                        <dt className="text-gray-400 text-xs uppercase">Payment</dt>
+                        <dt className="text-gray-400 text-xs uppercase">{t('transactions.mobile.payment', 'Payment')}</dt>
                         <dd>{transaction.payment_method_name || '—'}</dd>
                       </div>
                       <div>
-                        <dt className="text-gray-400 text-xs uppercase">Reference</dt>
+                        <dt className="text-gray-400 text-xs uppercase">{t('transactions.mobile.reference', 'Reference')}</dt>
                         <dd>{transaction.reference || '—'}</dd>
                       </div>
                       <div>
-                        <dt className="text-gray-400 text-xs uppercase">Note</dt>
+                        <dt className="text-gray-400 text-xs uppercase">{t('transactions.mobile.note', 'Note')}</dt>
                         <dd>{transaction.note || '—'}</dd>
                       </div>
                     </div>
@@ -427,7 +445,14 @@ const formatAmount = (amount) =>
               )}
             </div>
 
-            {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={filteredTransactions.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                itemName={t('common.items.transactions', 'transactions')}
+              />
           </div>
         )}
       </div>

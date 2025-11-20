@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 
 const initialState = {
@@ -10,6 +11,7 @@ const initialState = {
 
 function EquipmentForm({ equipment = null, onCancel, onSaved }) {
   const isEditing = Boolean(equipment?.id)
+  const { t } = useTranslation()
   const [formData, setFormData] = useState(initialState)
   const [categories, setCategories] = useState([])
   const [loading, setLoading] = useState(true)
@@ -50,7 +52,7 @@ function EquipmentForm({ equipment = null, onCancel, onSaved }) {
         }
       } catch (err) {
         console.error('Failed to load equipment form data:', err)
-        setError('Unable to load equipment data. Please try again.')
+        setError(t('equipmentForm.errors.load'))
       } finally {
         setLoading(false)
       }
@@ -75,7 +77,7 @@ function EquipmentForm({ equipment = null, onCancel, onSaved }) {
   const handleSubmit = async (event) => {
     event.preventDefault()
     if (!formData.name.trim()) {
-      setError('Equipment name is required.')
+      setError(t('equipmentForm.errors.nameRequired'))
       return
     }
 
@@ -102,7 +104,7 @@ function EquipmentForm({ equipment = null, onCancel, onSaved }) {
       onSaved?.()
     } catch (err) {
       console.error('Failed to save equipment:', err)
-      setError(err.message || 'Unable to save equipment. Please try again.')
+      setError(err.message || t('equipmentForm.errors.save'))
     } finally {
       setSaving(false)
     }
@@ -111,7 +113,7 @@ function EquipmentForm({ equipment = null, onCancel, onSaved }) {
   if (loading) {
     return (
       <div className="p-8">
-        <div className="text-gray-600">Loading equipment data...</div>
+        <div className="text-gray-600">{t('equipmentForm.loading')}</div>
       </div>
     )
   }
@@ -122,24 +124,22 @@ function EquipmentForm({ equipment = null, onCancel, onSaved }) {
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
             <h1 className="text-3xl font-bold text-gray-900">
-              {isEditing ? 'Edit Equipment' : 'Add Equipment'}
+              {isEditing ? t('equipmentForm.title.edit') : t('equipmentForm.title.new')}
             </h1>
-            <p className="text-gray-500 text-sm">
-              Assign a category and describe the equipment available for rentals or storage.
-            </p>
+            <p className="text-gray-500 text-sm">{t('equipmentForm.subtitle')}</p>
           </div>
           <button
             onClick={onCancel}
             className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {t('equipmentForm.buttons.cancel')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="name">
-              Equipment name
+              {t('equipmentForm.fields.name')}
             </label>
             <input
               id="name"
@@ -154,7 +154,7 @@ function EquipmentForm({ equipment = null, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="category_id">
-              Category
+              {t('equipmentForm.fields.category')}
             </label>
             <select
               id="category_id"
@@ -173,7 +173,7 @@ function EquipmentForm({ equipment = null, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="description">
-              Description
+              {t('equipmentForm.fields.description')}
             </label>
             <textarea
               id="description"
@@ -198,14 +198,18 @@ function EquipmentForm({ equipment = null, onCancel, onSaved }) {
               onClick={onCancel}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('equipmentForm.buttons.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving...' : isEditing ? 'Save changes' : 'Create equipment'}
+              {saving
+                ? t('equipmentForm.buttons.saving')
+                : isEditing
+                  ? t('equipmentForm.buttons.saveChanges')
+                  : t('equipmentForm.buttons.create')}
             </button>
           </div>
         </form>

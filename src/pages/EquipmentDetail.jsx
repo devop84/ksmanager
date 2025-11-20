@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import { useSettings } from '../context/SettingsContext'
 
 const statusStyles = {
   pending: 'bg-yellow-100 text-yellow-800',
@@ -15,6 +17,8 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const { t } = useTranslation()
+  const { formatDate, formatDateTime } = useSettings()
 
   useEffect(() => {
     if (!equipmentId) return
@@ -64,7 +68,7 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
         ])
 
         if (!equipmentRows?.length) {
-          setError('Equipment not found')
+          setError(t('equipmentDetail.notFound'))
           setEquipment(null)
           setRentals([])
           return
@@ -74,14 +78,14 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
         setRentals(rentalRows || [])
       } catch (err) {
         console.error('Failed to load equipment details:', err)
-        setError('Unable to load equipment details. Please try again later.')
+        setError(t('equipmentDetail.error.load'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [equipmentId])
+  }, [equipmentId, t])
 
   const determineStatus = (rental) => {
     if (rental.cancelled) return 'cancelled'
@@ -113,7 +117,7 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
   }, [rentals])
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this equipment? This action cannot be undone.')) {
+    if (!window.confirm(t('equipmentDetail.confirm.delete'))) {
       return
     }
     try {
@@ -126,41 +130,17 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
       }
     } catch (err) {
       console.error('Failed to delete equipment:', err)
-      alert('Unable to delete equipment. Please try again.')
+      alert(t('equipmentDetail.error.delete'))
     } finally {
       setDeleting(false)
     }
-  }
-
-  const formatDate = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
-
-  const formatDateTime = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    })
   }
 
   const formatDateRange = (start, end) => {
     if (!start && !end) return '—'
     const startDate = start ? new Date(start) : null
     const endDate = end ? new Date(end) : null
-    const formatter = new Intl.DateTimeFormat('en-US', { month: 'short', day: 'numeric' })
+    const formatter = new Intl.DateTimeFormat(undefined, { month: 'short', day: 'numeric' })
     if (startDate && endDate) {
       return `${formatter.format(startDate)} → ${formatter.format(endDate)}`
     }
@@ -173,8 +153,8 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
     const classes = statusStyles[status] || 'bg-gray-100 text-gray-700'
     const label =
       status === 'in_progress'
-        ? 'In Progress'
-        : status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
+        ? t('common.status.in_progress', 'In Progress')
+        : t(`common.status.${status}`, status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '))
 
     return (
       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${classes}`}>
@@ -184,9 +164,9 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
   }
 
   const getBillingMode = (rental) => {
-    if (rental.hourly) return 'Hourly'
-    if (rental.daily) return 'Daily'
-    if (rental.weekly) return 'Weekly'
+    if (rental.hourly) return t('equipmentDetail.billing.hourly')
+    if (rental.daily) return t('equipmentDetail.billing.daily')
+    if (rental.weekly) return t('equipmentDetail.billing.weekly')
     return '—'
   }
 
@@ -194,7 +174,7 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-gray-600">Loading equipment details...</div>
+          <div className="text-gray-600">{t('equipmentDetail.loading')}</div>
         </div>
       </div>
     )
@@ -204,13 +184,13 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-red-600">{error || 'Equipment not found'}</div>
+          <div className="text-red-600">{error || t('equipmentDetail.notFound')}</div>
           {onBack && (
             <button
               onClick={onBack}
               className="mt-4 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Back to Equipment
+              {t('equipmentDetail.back')}
             </button>
           )}
         </div>
@@ -229,13 +209,13 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Equipment
+            {t('equipmentDetail.back')}
           </button>
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{equipment.name}</h1>
               <p className="text-gray-500 text-sm mt-1">
-                {equipment.category_name || 'Uncategorized'} • Equipment details and rental history.
+                {equipment.category_name || t('equipment.category.uncategorized')} • {t('equipmentDetail.description')}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -244,14 +224,14 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
                 disabled={!canModify(user)}
                 className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               >
-                Edit
+                {t('equipmentDetail.actions.edit')}
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting || !canModify(user)}
                 className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               >
-                {deleting ? 'Deleting…' : 'Delete'}
+                {deleting ? t('equipmentDetail.buttons.deleting') : t('equipmentDetail.buttons.delete')}
               </button>
             </div>
           </div>
@@ -261,30 +241,30 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
           <div className="xl:col-span-3 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="rounded-lg border border-indigo-100 bg-indigo-50/70 p-4">
-                <p className="text-sm font-medium text-indigo-700">Unique Customers</p>
+                <p className="text-sm font-medium text-indigo-700">{t('equipmentDetail.summary.customers')}</p>
                 <p className="text-2xl font-bold text-indigo-900 mt-1">{summary.uniqueCustomers}</p>
               </div>
               <div className="rounded-lg border border-emerald-100 bg-emerald-50/70 p-4">
-                <p className="text-sm font-medium text-emerald-700">Total Rentals</p>
+                <p className="text-sm font-medium text-emerald-700">{t('equipmentDetail.summary.total')}</p>
                 <p className="text-2xl font-bold text-emerald-900 mt-1">{summary.totalRentals}</p>
               </div>
               <div className="rounded-lg border border-yellow-100 bg-yellow-50/70 p-4">
-                <p className="text-sm font-medium text-yellow-700">Active / Upcoming</p>
+                <p className="text-sm font-medium text-yellow-700">{t('equipmentDetail.summary.active')}</p>
                 <p className="text-2xl font-bold text-yellow-900 mt-1">{summary.activeRentals}</p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-medium text-slate-700">Last rental</p>
+                <p className="text-sm font-medium text-slate-700">{t('equipmentDetail.summary.last')}</p>
                 <p className="text-lg font-semibold text-slate-900 mt-1">{formatDate(summary.lastRental)}</p>
               </div>
             </div>
 
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Rental History</h2>
-                <p className="text-sm text-gray-500">{rentals.length} records</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('equipmentDetail.rentals.title')}</h2>
+                <p className="text-sm text-gray-500">{t('equipmentDetail.rentals.count', { count: rentals.length })}</p>
               </div>
               {rentals.length === 0 ? (
-                <div className="text-gray-600">No rentals recorded for this equipment yet.</div>
+                <div className="text-gray-600">{t('equipmentDetail.rentals.empty')}</div>
               ) : (
                 <>
                   <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
@@ -292,22 +272,22 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Order
+                            {t('equipmentDetail.rentals.table.order')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Customer
+                            {t('equipmentDetail.rentals.table.customer')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Service
+                            {t('equipmentDetail.rentals.table.service')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Billing
+                            {t('equipmentDetail.rentals.table.billing')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Window
+                            {t('equipmentDetail.rentals.table.window')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Status
+                            {t('equipmentDetail.rentals.table.status')}
                           </th>
                         </tr>
                       </thead>
@@ -338,15 +318,15 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
                         </div>
                         <dl className="mt-3 grid grid-cols-2 gap-3 text-xs text-gray-500">
                           <div>
-                            <dt className="uppercase">Service</dt>
+                            <dt className="uppercase">{t('equipmentDetail.rentals.table.service')}</dt>
                             <dd className="text-gray-900 text-sm">{rental.service_name || '—'}</dd>
                           </div>
                           <div>
-                            <dt className="uppercase">Billing</dt>
+                            <dt className="uppercase">{t('equipmentDetail.rentals.table.billing')}</dt>
                             <dd className="text-gray-900 text-sm">{getBillingMode(rental)}</dd>
                           </div>
                           <div>
-                            <dt className="uppercase">Window</dt>
+                            <dt className="uppercase">{t('equipmentDetail.rentals.table.window')}</dt>
                             <dd className="text-gray-900 text-sm">{formatDateRange(rental.starting, rental.ending)}</dd>
                           </div>
                         </dl>
@@ -362,24 +342,24 @@ function EquipmentDetail({ equipmentId, onBack, onEdit, onDelete, user = null })
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm sticky top-6 space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Equipment Info</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">{t('equipmentDetail.info.title')}</h2>
                 </div>
                 <dl className="space-y-4 text-sm">
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Category</dt>
-                    <dd className="mt-1 text-gray-900">{equipment.category_name || '—'}</dd>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('equipmentDetail.info.category')}</dt>
+                    <dd className="mt-1 text-gray-900">{equipment.category_name || t('equipment.category.uncategorized')}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Description</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('equipmentDetail.info.description')}</dt>
                     <dd className="mt-1 text-gray-900 whitespace-pre-wrap">{equipment.description || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Created</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('equipmentDetail.info.created')}</dt>
                     <dd className="mt-1 text-gray-900">{formatDateTime(equipment.created_at)}</dd>
                   </div>
                   {equipment.updated_at && (
                     <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase">Last Update</dt>
+                      <dt className="text-xs font-medium text-gray-500 uppercase">{t('equipmentDetail.info.updated')}</dt>
                       <dd className="mt-1 text-gray-900">{formatDateTime(equipment.updated_at)}</dd>
                     </div>
                   )}

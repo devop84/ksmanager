@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import { useSettings } from '../context/SettingsContext'
 
 function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = () => {}, onDeleteOrder = () => {}, user = null }) {
+  const { t } = useTranslation()
+  const { formatCurrency, formatDate, formatDateTime } = useSettings()
   const [customer, setCustomer] = useState(null)
   const [orders, setOrders] = useState([])
   const [billingItems, setBillingItems] = useState([])
@@ -48,11 +52,11 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
         if (result && result.length > 0) {
           setCustomer(result[0])
         } else {
-          setError('Customer not found')
+          setError(t('customerDetail.notFound'))
         }
       } catch (err) {
         console.error('Failed to load customer:', err)
-        setError('Unable to load customer. Please try again later.')
+        setError(t('customerDetail.error.load'))
       } finally {
         setLoading(false)
       }
@@ -356,8 +360,8 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
             serviceId: id,
             serviceName: detail.name,
             categoryName: detail.category_name,
-            quantityLabel: `${data.hours.toFixed(1)} h`,
-            unitLabel: rate ? `${formatCurrency(rate)} / h` : '—',
+            quantityLabel: `${data.hours.toFixed(1)} ${t('customerDetail.units.hours')}`,
+            unitLabel: rate ? `${formatCurrency(rate)} ${t('customerDetail.units.perHour')}` : '—',
             total
           })
         })
@@ -367,19 +371,19 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
           const detail = serviceMap.get(id)
           if (!detail || data.total === 0) return
           const quantityParts = []
-          if (data.hours > 0) quantityParts.push(`${data.hours.toFixed(1)} h`)
-          if (data.days > 0) quantityParts.push(`${data.days} day${data.days === 1 ? '' : 's'}`)
+          if (data.hours > 0) quantityParts.push(`${data.hours.toFixed(1)} ${t('customerDetail.units.hours')}`)
+          if (data.days > 0) quantityParts.push(`${data.days} ${t('customerDetail.units.day', { count: data.days })}`)
           quoteItems.push({
             serviceId: id,
             serviceName: detail.name,
             categoryName: detail.category_name,
-            quantityLabel: quantityParts.join(' • ') || `${data.orders} booking${data.orders === 1 ? '' : 's'}`,
+            quantityLabel: quantityParts.join(' • ') || `${data.orders} ${t('customerDetail.units.booking', { count: data.orders })}`,
             unitLabel:
               data.hours > 0 && data.days === 0
-                ? `${formatCurrency(data.hourlyRate)} / h`
+                ? `${formatCurrency(data.hourlyRate)} ${t('customerDetail.units.perHour')}`
                 : data.days > 0 && data.hours === 0
-                ? `${formatCurrency(data.dailyRate)} / day`
-                : 'Mixed',
+                ? `${formatCurrency(data.dailyRate)} ${t('customerDetail.units.perDay')}`
+                : t('customerDetail.units.mixed'),
             total: data.total
           })
         })
@@ -389,24 +393,24 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
           const detail = serviceMap.get(id)
           if (!detail || data.total === 0) return
           const quantityParts = []
-          if (data.dailyUnits > 0) quantityParts.push(`${data.dailyUnits} day${data.dailyUnits === 1 ? '' : 's'}`)
-          if (data.weeklyUnits > 0) quantityParts.push(`${data.weeklyUnits} week${data.weeklyUnits === 1 ? '' : 's'}`)
-          if (data.monthlyUnits > 0) quantityParts.push(`${data.monthlyUnits} month${data.monthlyUnits === 1 ? '' : 's'}`)
+          if (data.dailyUnits > 0) quantityParts.push(`${data.dailyUnits} ${t('customerDetail.units.day', { count: data.dailyUnits })}`)
+          if (data.weeklyUnits > 0) quantityParts.push(`${data.weeklyUnits} ${t('customerDetail.units.week', { count: data.weeklyUnits })}`)
+          if (data.monthlyUnits > 0) quantityParts.push(`${data.monthlyUnits} ${t('customerDetail.units.month', { count: data.monthlyUnits })}`)
 
           let unitLabel = '—'
           if (data.dailyUnits > 0 && detail.storage_daily_rate) {
-            unitLabel = `${formatCurrency(detail.storage_daily_rate)} / day`
+            unitLabel = `${formatCurrency(detail.storage_daily_rate)} ${t('customerDetail.units.perDay')}`
           } else if (data.weeklyUnits > 0 && detail.storage_weekly_rate) {
-            unitLabel = `${formatCurrency(detail.storage_weekly_rate)} / week`
+            unitLabel = `${formatCurrency(detail.storage_weekly_rate)} ${t('customerDetail.units.perWeek')}`
           } else if (data.monthlyUnits > 0 && detail.storage_monthly_rate) {
-            unitLabel = `${formatCurrency(detail.storage_monthly_rate)} / month`
+            unitLabel = `${formatCurrency(detail.storage_monthly_rate)} ${t('customerDetail.units.perMonth')}`
           }
 
           quoteItems.push({
             serviceId: id,
             serviceName: detail.name,
             categoryName: detail.category_name,
-            quantityLabel: quantityParts.join(' • ') || 'Storage',
+            quantityLabel: quantityParts.join(' • ') || t('customerDetail.units.storage'),
             unitLabel,
             total: data.total
           })
@@ -462,10 +466,7 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
 
   const renderStatusBadge = (status) => {
     const classes = statusStyles[status] || 'bg-gray-100 text-gray-700'
-    const label =
-      status === 'in_progress'
-        ? 'In Progress'
-        : status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' ')
+    const label = t(`common.status.${status}`, status.charAt(0).toUpperCase() + status.slice(1).replace('_', ' '))
     return (
       <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold capitalize ${classes}`}>
         {label}
@@ -474,7 +475,7 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
   }
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this customer? This action cannot be undone.')) {
+    if (!window.confirm(t('customerDetail.confirm.delete'))) {
       return
     }
 
@@ -484,54 +485,20 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
       onDelete?.()
     } catch (err) {
       console.error('Failed to delete customer:', err)
-      alert('Unable to delete customer. Please try again.')
+      alert(t('customerDetail.error.delete'))
     } finally {
       setDeleting(false)
     }
   }
 
-  const formatDate = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return value
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
-
-  const formatDateTime = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return value
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
-
   const formatOrderDate = (value) => {
     if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return value
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
+    return formatDateTime(value)
   }
 
   // Format total time in a human-readable way (similar to RentalsInProgress)
   const formatTotalTime = (totalHours) => {
-    if (totalHours === 0) return 'none'
+    if (totalHours === 0) return t('customerDetail.time.none')
     
     const totalMinutes = Math.floor(totalHours * 60)
     const days = Math.floor(totalMinutes / (24 * 60))
@@ -578,18 +545,12 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
 
   const orderStats = calculateOrderStats()
 
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-US', {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(amount ?? 0)
-  }
 
   if (loading) {
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-gray-600">Loading customer details...</div>
+          <div className="text-gray-600">{t('customerDetail.loading')}</div>
         </div>
       </div>
     )
@@ -599,13 +560,13 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-red-600">{error || 'Customer not found'}</div>
+          <div className="text-red-600">{error || t('customerDetail.notFound')}</div>
           {onBack && (
             <button
               onClick={onBack}
               className="mt-4 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Back to Customers
+              {t('customerDetail.back')}
             </button>
           )}
         </div>
@@ -625,10 +586,10 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Customers
+            {t('customerDetail.back')}
           </button>
-          <h1 className="text-3xl font-bold text-gray-900">{customer.fullname || 'Customer'}</h1>
-          <p className="text-gray-500 text-sm mt-1">Customer details and information</p>
+          <h1 className="text-3xl font-bold text-gray-900">{customer.fullname || t('customers.title')}</h1>
+          <p className="text-gray-500 text-sm mt-1">{t('customerDetail.title')}</p>
         </div>
 
         {/* Main Content: Two Column Layout */}
@@ -638,15 +599,15 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
             {/* Quick Look Stats */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-                <div className="text-sm font-medium text-blue-700 mb-1">Lesson Hours</div>
+                <div className="text-sm font-medium text-blue-700 mb-1">{t('customerDetail.summary.lessonHours')}</div>
                 <div className="text-2xl font-bold text-blue-900">{formatTotalTime(orderStats.lessonHours)}</div>
               </div>
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-green-50 to-green-100 p-4">
-                <div className="text-sm font-medium text-green-700 mb-1">Rental</div>
+                <div className="text-sm font-medium text-green-700 mb-1">{t('customerDetail.summary.rental')}</div>
                 <div className="text-2xl font-bold text-green-900">{formatTotalTime(orderStats.rentalHours)}</div>
               </div>
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-purple-50 to-purple-100 p-4">
-                <div className="text-sm font-medium text-purple-700 mb-1">Storage</div>
+                <div className="text-sm font-medium text-purple-700 mb-1">{t('customerDetail.summary.storage')}</div>
                 <div className="text-2xl font-bold text-purple-900">{formatTotalTime(orderStats.storageHours)}</div>
               </div>
             </div>
@@ -655,26 +616,26 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between mb-4">
                 <div>
-                  <h2 className="text-lg font-semibold text-gray-900">Billing</h2>
-                  <p className="text-sm text-gray-500">Lessons tiers combine hours across all lesson services.</p>
+                  <h2 className="text-lg font-semibold text-gray-900">{t('customerDetail.billing.title')}</h2>
+                  <p className="text-sm text-gray-500">{t('customerDetail.billing.description')}</p>
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div className="rounded-lg border border-emerald-100 bg-emerald-50 p-3">
-                    <p className="text-xs font-medium text-emerald-700 uppercase">Paid</p>
+                    <p className="text-xs font-medium text-emerald-700 uppercase">{t('customerDetail.billing.paid')}</p>
                     <p className="text-lg font-semibold text-emerald-900">{formatCurrency(billingTotals.paid)}</p>
                   </div>
                   <div className="rounded-lg border border-amber-100 bg-amber-50 p-3">
-                    <p className="text-xs font-medium text-amber-700 uppercase">To be paid</p>
+                    <p className="text-xs font-medium text-amber-700 uppercase">{t('customerDetail.billing.toPay')}</p>
                     <p className="text-lg font-semibold text-amber-900">{formatCurrency(billingTotals.toPay)}</p>
                   </div>
                 </div>
               </div>
 
               <div className="mt-4">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Service quotation</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">{t('customerDetail.billing.quotation.title')}</h3>
                 {billingQuote.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-sm text-gray-500">
-                    No services to quote yet.
+                    {t('customerDetail.billing.quotation.empty')}
                   </div>
                 ) : (
                   <>
@@ -682,11 +643,11 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
                       <table className="min-w-full divide-y divide-gray-200 text-sm">
                         <thead className="bg-gray-50">
                           <tr>
-                            <th className="px-4 py-2 text-left font-semibold text-gray-600">Service</th>
-                            <th className="px-4 py-2 text-left font-semibold text-gray-600">Category</th>
-                            <th className="px-4 py-2 text-left font-semibold text-gray-600">Quantity</th>
-                            <th className="px-4 py-2 text-left font-semibold text-gray-600">Rate</th>
-                            <th className="px-4 py-2 text-right font-semibold text-gray-600">Total</th>
+                            <th className="px-4 py-2 text-left font-semibold text-gray-600">{t('customerDetail.billing.quotation.table.service')}</th>
+                            <th className="px-4 py-2 text-left font-semibold text-gray-600">{t('customerDetail.billing.quotation.table.category')}</th>
+                            <th className="px-4 py-2 text-left font-semibold text-gray-600">{t('customerDetail.billing.quotation.table.quantity')}</th>
+                            <th className="px-4 py-2 text-left font-semibold text-gray-600">{t('customerDetail.billing.quotation.table.rate')}</th>
+                            <th className="px-4 py-2 text-right font-semibold text-gray-600">{t('customerDetail.billing.quotation.table.total')}</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-gray-100 bg-white">
@@ -705,24 +666,24 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
                       </table>
                     </div>
                     <div className="flex justify-end items-center gap-4 mt-3 text-sm font-semibold text-gray-900">
-                      <span>Grand total</span>
+                      <span>{t('customerDetail.billing.quotation.grandTotal')}</span>
                       <span className="text-lg">{formatCurrency(billingQuoteTotal)}</span>
                     </div>
                   </>
                 )}
                 {lessonPricing.totalHours > 0 && (
                   <p className="mt-2 text-xs text-gray-500">
-                    Lesson tier hours combined across services: {lessonPricing.totalHours.toFixed(1)}h
+                    {t('customerDetail.billing.quotation.tierNote', { hours: lessonPricing.totalHours.toFixed(1) })}
                   </p>
                 )}
               </div>
 
               <div className="mt-6">
-                <h3 className="text-sm font-semibold text-gray-900 mb-2">Recent transactions</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-2">{t('customerDetail.billing.transactions.title')}</h3>
                 {billingLoading ? (
-                  <div className="text-gray-600 text-sm">Loading billing entries...</div>
+                  <div className="text-gray-600 text-sm">{t('customerDetail.billing.transactions.loading')}</div>
                 ) : billingItems.length === 0 ? (
-                  <div className="text-sm text-gray-500">No transactions yet.</div>
+                  <div className="text-sm text-gray-500">{t('customerDetail.billing.transactions.empty')}</div>
                 ) : (
                   <div className="space-y-3 max-h-56 overflow-y-auto pr-1">
                     {billingItems.slice(0, 6).map((item, index) => (
@@ -732,7 +693,7 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
                       >
                         <div>
                           <p className="font-medium text-gray-900">
-                            {item.service_name || item.transaction_label || 'Transaction'}
+                            {item.service_name || item.transaction_label || t('customerDetail.billing.transactions.transaction')}
                           </p>
                           <p className="text-xs text-gray-500">
                             {item.category_name || item.transaction_type_code || '—'}
@@ -759,18 +720,18 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
             <div>
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900">Orders</h2>
+                  <h2 className="text-xl font-bold text-gray-900">{t('customerDetail.orders.title')}</h2>
                   <p className="text-gray-500 text-sm mt-1">
-                    {orders.length} {orders.length === 1 ? 'order' : 'orders'}
+                    {t('customerDetail.orders.count', { count: orders.length })}
                   </p>
                 </div>
               </div>
 
               {ordersLoading ? (
-                <div className="text-gray-600 text-sm py-8">Loading orders...</div>
+                <div className="text-gray-600 text-sm py-8">{t('customerDetail.orders.loading')}</div>
               ) : orders.length === 0 ? (
                 <div className="text-gray-500 text-sm py-8 text-center border border-dashed border-gray-300 rounded-lg">
-                  No orders found for this customer.
+                  {t('customerDetail.orders.empty')}
                 </div>
               ) : (
                 <div className="space-y-4">
@@ -780,28 +741,28 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Order #
+                            {t('customerDetail.orders.table.order')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Type
+                            {t('customerDetail.orders.table.type')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Service
+                            {t('customerDetail.orders.table.service')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Category
+                            {t('customerDetail.orders.table.category')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Status
+                            {t('customerDetail.orders.table.status')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Starting
+                            {t('customerDetail.orders.table.starting')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Ending
+                            {t('customerDetail.orders.table.ending')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Actions
+                            {t('customerDetail.orders.table.actions')}
                           </th>
                         </tr>
                       </thead>
@@ -824,7 +785,7 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
                                   onClick={() => onEditOrder({ id: order.id })}
                                   disabled={!canModify(user)}
                                   className="text-gray-500 hover:text-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-500"
-                                  title="Edit order"
+                                  title={t('customerDetail.orders.actions.edit')}
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z" />
@@ -834,7 +795,7 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
                                   onClick={() => onDeleteOrder?.(order.id)}
                                   disabled={!canModify(user)}
                                   className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-500"
-                                  title="Delete order"
+                                  title={t('customerDetail.orders.actions.delete')}
                                 >
                                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -870,31 +831,31 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
                         <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600 mt-3 pt-3 border-t border-gray-100">
                           {order.type === 'lessons' && order.instructor_name && (
                             <div className="col-span-2">
-                              <dt className="text-gray-400 text-xs uppercase">Instructor</dt>
+                              <dt className="text-gray-400 text-xs uppercase">{t('customerDetail.orders.mobile.instructor')}</dt>
                               <dd>{order.instructor_name}</dd>
                             </div>
                           )}
                           {order.type === 'rentals' && order.equipment_name && (
                             <div className="col-span-2">
-                              <dt className="text-gray-400 text-xs uppercase">Equipment</dt>
+                              <dt className="text-gray-400 text-xs uppercase">{t('customerDetail.orders.mobile.equipment')}</dt>
                               <dd>{order.equipment_name}</dd>
                             </div>
                           )}
                           {order.starting && (
                             <div>
-                              <dt className="text-gray-400 text-xs uppercase">Starting</dt>
+                              <dt className="text-gray-400 text-xs uppercase">{t('customerDetail.orders.mobile.starting')}</dt>
                               <dd className="font-medium">{formatOrderDate(order.starting)}</dd>
                             </div>
                           )}
                           {order.ending && (
                             <div>
-                              <dt className="text-gray-400 text-xs uppercase">Ending</dt>
+                              <dt className="text-gray-400 text-xs uppercase">{t('customerDetail.orders.mobile.ending')}</dt>
                               <dd className="font-medium">{formatOrderDate(order.ending)}</dd>
                             </div>
                           )}
                           {(order.lesson_note || order.rental_note || order.storage_note) && (
                             <div className="col-span-2">
-                              <dt className="text-gray-400 text-xs uppercase">Note</dt>
+                              <dt className="text-gray-400 text-xs uppercase">{t('customerDetail.orders.mobile.note')}</dt>
                               <dd className="mt-1">{order.lesson_note || order.rental_note || order.storage_note}</dd>
                             </div>
                           )}
@@ -907,7 +868,7 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
                             }}
                             disabled={!canModify(user)}
                             className="text-gray-500 hover:text-indigo-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-500"
-                            title="Edit order"
+                            title={t('customerDetail.orders.actions.edit')}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z" />
@@ -920,7 +881,7 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
                             }}
                             disabled={!canModify(user)}
                             className="text-gray-500 hover:text-red-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:text-gray-500"
-                            title="Delete order"
+                            title={t('customerDetail.orders.actions.delete')}
                           >
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -940,13 +901,13 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
             {/* Personal Info Card */}
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm sticky top-6">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Personal Information</h2>
+                <h2 className="text-lg font-semibold text-gray-900">{t('customerDetail.info.title')}</h2>
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => onEdit?.(customer)}
                     disabled={!canModify(user)}
                     className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-                    title="Edit customer"
+                    title={t('customerDetail.actions.edit')}
                   >
                     <svg
                       className="w-4 h-4"
@@ -967,7 +928,7 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
                     onClick={handleDelete}
                     disabled={deleting || !canModify(user)}
                     className="inline-flex items-center justify-center p-2 rounded-lg border border-red-300 bg-white text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-                    title="Delete customer"
+                    title={t('customerDetail.actions.delete')}
                   >
                     <svg
                       className="w-4 h-4"
@@ -989,58 +950,58 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onEditOrder = ()
               
               <dl className="space-y-4">
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase">Full Name</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">{t('customerDetail.info.fullname')}</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.fullname || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase">Phone</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">{t('customerDetail.info.phone')}</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.phone || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase">Email</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">{t('customerDetail.info.email')}</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.email || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase">Birthdate</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">{t('customerDetail.info.birthdate')}</dt>
                   <dd className="mt-1 text-sm text-gray-900">{formatDate(customer.birthdate)}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase">Country</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">{t('customerDetail.info.country')}</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.country || '—'}</dd>
                 </div>
                 <div className="pt-4 border-t border-gray-200">
-                  <dt className="text-xs font-medium text-gray-500 uppercase">Document Type</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">{t('customerDetail.info.doctype')}</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.doctype || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase">Document Number</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">{t('customerDetail.info.doc')}</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.doc || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase">Hotel</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">{t('customerDetail.info.hotel')}</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.hotel_name || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase">Agency</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">{t('customerDetail.info.agency')}</dt>
                   <dd className="mt-1 text-sm text-gray-900">{customer.agency_name || '—'}</dd>
                 </div>
                 {customer.note && (
                   <div className="pt-4 border-t border-gray-200">
-                    <dt className="text-xs font-medium text-gray-500 uppercase mb-2 block">Note</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase mb-2 block">{t('customerDetail.info.note')}</dt>
                     <dd className="text-sm text-gray-700 whitespace-pre-wrap">{customer.note}</dd>
                   </div>
                 )}
                 <div className="pt-4 border-t border-gray-200">
-                  <dt className="text-xs font-medium text-gray-500 uppercase">Customer ID</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">{t('customerDetail.info.customerId')}</dt>
                   <dd className="mt-1 text-sm text-gray-900 font-mono">#{customer.id}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-medium text-gray-500 uppercase">Created At</dt>
+                  <dt className="text-xs font-medium text-gray-500 uppercase">{t('customerDetail.info.created')}</dt>
                   <dd className="mt-1 text-sm text-gray-900">{formatDateTime(customer.created_at)}</dd>
                 </div>
                 {customer.updated_at && (
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Last Updated</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('customerDetail.info.updated')}</dt>
                     <dd className="mt-1 text-sm text-gray-900">{formatDateTime(customer.updated_at)}</dd>
                   </div>
                 )}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 
 const initialFormState = {
@@ -11,6 +12,7 @@ const initialFormState = {
 
 function ThirdPartyForm({ thirdParty, onCancel, onSaved }) {
   const isEditing = Boolean(thirdParty?.id)
+  const { t } = useTranslation()
   const [formData, setFormData] = useState(initialFormState)
   const [categories, setCategories] = useState([])
   const [loadingCategories, setLoadingCategories] = useState(true)
@@ -29,7 +31,7 @@ function ThirdPartyForm({ thirdParty, onCancel, onSaved }) {
         setCategories(result || [])
       } catch (err) {
         console.error('Failed to load third party categories:', err)
-        setError('Unable to load categories. Please refresh and try again.')
+        setError(t('thirdPartyForm.errors.categories'))
       } finally {
         setLoadingCategories(false)
       }
@@ -86,7 +88,7 @@ function ThirdPartyForm({ thirdParty, onCancel, onSaved }) {
       onSaved?.()
     } catch (err) {
       console.error('Failed to save third party:', err)
-      setError('Unable to save third party. Please check the details and try again.')
+      setError(t('thirdPartyForm.errors.save'))
     } finally {
       setSaving(false)
     }
@@ -97,23 +99,25 @@ function ThirdPartyForm({ thirdParty, onCancel, onSaved }) {
       <div className="mx-auto max-w-3xl rounded-xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{isEditing ? 'Edit Third Party' : 'Add Third Party'}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditing ? t('thirdPartyForm.title.edit') : t('thirdPartyForm.title.new')}
+            </h1>
             <p className="text-gray-500 text-sm">
-              {isEditing ? 'Update partner contact and category.' : 'Provide the information to register a new partner.'}
+              {isEditing ? t('thirdPartyForm.subtitle.edit') : t('thirdPartyForm.subtitle.new')}
             </p>
           </div>
           <button
             onClick={onCancel}
             className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {t('thirdPartyForm.buttons.cancel')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="name">
-              Third party name *
+              {t('thirdPartyForm.fields.name')}
             </label>
             <input
               id="name"
@@ -128,7 +132,7 @@ function ThirdPartyForm({ thirdParty, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="category_id">
-              Category
+              {t('thirdPartyForm.fields.category')}
             </label>
             <select
               id="category_id"
@@ -138,7 +142,7 @@ function ThirdPartyForm({ thirdParty, onCancel, onSaved }) {
               disabled={loadingCategories}
               className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:bg-gray-100"
             >
-              <option value="">Uncategorized</option>
+              <option value="">{t('thirdPartyForm.fields.category.uncategorized')}</option>
               {categories.map((category) => (
                 <option key={category.id} value={category.id}>
                   {category.name}
@@ -149,7 +153,7 @@ function ThirdPartyForm({ thirdParty, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="phone">
-              Phone
+              {t('thirdPartyForm.fields.phone')}
             </label>
             <input
               id="phone"
@@ -163,7 +167,7 @@ function ThirdPartyForm({ thirdParty, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="email">
-              Email
+              {t('thirdPartyForm.fields.email')}
             </label>
             <input
               id="email"
@@ -177,7 +181,7 @@ function ThirdPartyForm({ thirdParty, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="note">
-              Note
+              {t('thirdPartyForm.fields.note')}
             </label>
             <textarea
               id="note"
@@ -201,14 +205,18 @@ function ThirdPartyForm({ thirdParty, onCancel, onSaved }) {
               onClick={onCancel}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('thirdPartyForm.buttons.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving...' : isEditing ? 'Save changes' : 'Create third party'}
+              {saving
+                ? t('thirdPartyForm.buttons.saving')
+                : isEditing
+                  ? t('thirdPartyForm.buttons.saveChanges')
+                  : t('thirdPartyForm.buttons.create')}
             </button>
           </div>
         </form>

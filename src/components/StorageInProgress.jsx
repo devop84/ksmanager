@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
+import { useSettings } from '../context/SettingsContext'
 
 function StorageInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
   const [storages, setStorages] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const { formatDateTime } = useSettings()
+  const { t } = useTranslation()
 
   // Update current time every minute
   useEffect(() => {
@@ -54,7 +58,7 @@ function StorageInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
         setStorages(rows || [])
       } catch (err) {
         console.error('Failed to load storage:', err)
-        setError('Unable to load storage. Please try again later.')
+        setError(t('dashboard.storage.error.load'))
       } finally {
         setLoading(false)
       }
@@ -67,28 +71,6 @@ function StorageInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
     return () => clearInterval(interval)
   }, [])
 
-  // Format date/time for display
-  const formatDateTime = (dateString) => {
-    if (!dateString) return '—'
-    const date = new Date(dateString)
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
-
-  // Get storage type (daily, weekly, monthly)
-  const getStorageType = (storage) => {
-    if (storage.monthly) return 'Monthly'
-    if (storage.weekly) return 'Weekly'
-    if (storage.daily) return 'Daily'
-    return '—'
-  }
-
   // Calculate time remaining
   const getTimeRemaining = (ending) => {
     if (!ending) return '—'
@@ -96,7 +78,7 @@ function StorageInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
     const now = currentTime
     const diff = end - now
     
-    if (diff < 0) return 'Overdue'
+    if (diff < 0) return t('dashboard.storage.time.overdue')
     
     const days = Math.floor(diff / (1000 * 60 * 60 * 24))
     const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60))
@@ -114,8 +96,8 @@ function StorageInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
   if (loading) {
     return (
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Storage In Progress</h2>
-        <div className="text-gray-600">Loading...</div>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">{t('dashboard.storage.title')}</h2>
+        <div className="text-gray-600">{t('common.loading')}</div>
       </div>
     )
   }
@@ -123,7 +105,7 @@ function StorageInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
   if (error) {
     return (
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Storage In Progress</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">{t('dashboard.storage.title')}</h2>
         <div className="text-red-600">{error}</div>
       </div>
     )
@@ -131,10 +113,10 @@ function StorageInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
 
   return (
     <div className="rounded-xl bg-white p-2 sm:p-4 md:p-6 shadow-sm w-full">
-      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Storage In Progress</h2>
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">{t('dashboard.storage.title')}</h2>
 
       {storages.length === 0 ? (
-        <div className="text-gray-600">No storage currently in progress.</div>
+        <div className="text-gray-600">{t('common.empty')}</div>
       ) : (
         <div className="space-y-3">
           {/* Desktop view */}
@@ -143,19 +125,19 @@ function StorageInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Customer
+                    {t('dashboard.storage.table.customer')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Service
+                    {t('dashboard.storage.table.service')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Started
+                    {t('dashboard.storage.table.started')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Ends
+                    {t('dashboard.storage.table.ends')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Time Remaining
+                    {t('dashboard.storage.table.timeRemaining')}
                   </th>
                 </tr>
               </thead>
@@ -218,7 +200,7 @@ function StorageInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
                 </div>
                 <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 text-sm text-gray-600">
                   <div>
-                    <dt className="text-gray-400 text-xs uppercase">Ends</dt>
+                    <dt className="text-gray-400 text-xs uppercase">{t('dashboard.storage.mobile.ends')}</dt>
                     <dd className="font-medium">{formatDateTime(storage.ending)}</dd>
                   </div>
                 </dl>

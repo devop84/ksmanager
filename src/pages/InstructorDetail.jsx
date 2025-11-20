@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import { useSettings } from '../context/SettingsContext'
 
 function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null }) {
   const [instructor, setInstructor] = useState(null)
@@ -14,6 +16,8 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
     totalOwed: 0,
     totalPaid: 0
   })
+  const { t } = useTranslation()
+  const { formatCurrency, formatDateTime, formatNumber } = useSettings()
 
   useEffect(() => {
     const fetchInstructor = async () => {
@@ -40,7 +44,7 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
         `
 
         if (!instructorRows?.length) {
-          setError('Instructor not found')
+          setError(t('instructorDetail.notFound'))
           setInstructor(null)
           return
         }
@@ -118,7 +122,7 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
         })
       } catch (err) {
         console.error('Failed to load instructor detail:', err)
-        setError('Unable to load instructor details. Please try again later.')
+        setError(t('instructorDetail.error.load'))
       } finally {
         setLoading(false)
       }
@@ -127,40 +131,33 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
     if (instructorId) {
       fetchInstructor()
     }
-  }, [instructorId])
+  }, [instructorId, t])
 
-  const formatDate = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
+  const displayCurrency = (value) => {
+    if (value === null || value === undefined) return '—'
+    return formatCurrency(value)
   }
 
-  const formatDateTime = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    })
+  const displayPercent = (value) => {
+    if (value === null || value === undefined) return '—'
+    return `${formatNumber(Number(value), { minimumFractionDigits: 1, maximumFractionDigits: 1 })}%`
   }
 
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0))
+  const formatLessonDuration = (lesson) => {
+    if (!lesson.starting || !lesson.ending) return '—'
+    const start = new Date(lesson.starting)
+    const end = new Date(lesson.ending)
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '—'
+    const minutes = Math.max(0, Math.round((end - start) / (1000 * 60)))
+    if (!minutes) return '—'
+    return t('instructorDetail.lessons.durationMinutes', { minutes })
+  }
 
   if (loading) {
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-gray-600">Loading instructor details...</div>
+          <div className="text-gray-600">{t('instructorDetail.loading')}</div>
         </div>
       </div>
     )
@@ -170,13 +167,13 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-red-600">{error || 'Instructor not found'}</div>
+          <div className="text-red-600">{error || t('instructorDetail.notFound')}</div>
           {onBack && (
             <button
               onClick={onBack}
               className="mt-4 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Back to Instructors
+              {t('instructorDetail.back')}
             </button>
           )}
         </div>
@@ -195,36 +192,44 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Instructors
+            {t('instructorDetail.back')}
           </button>
           <h1 className="text-3xl font-bold text-gray-900">{instructor.fullname}</h1>
-          <p className="text-gray-500 text-sm mt-1">Instructor details, lesson history, and payouts.</p>
+          <p className="text-gray-500 text-sm mt-1">{t('instructorDetail.description')}</p>
         </div>
 
         <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
           <div className="xl:col-span-3 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-blue-50 to-blue-100 p-4">
-                <div className="text-sm font-medium text-blue-700 mb-1">Total Lessons</div>
+                <div className="text-sm font-medium text-blue-700 mb-1">{t('instructorDetail.summary.lessons')}</div>
                 <div className="text-2xl font-bold text-blue-900">{summary.totalLessons}</div>
               </div>
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-green-50 to-green-100 p-4">
-                <div className="text-sm font-medium text-green-700 mb-1">Total Hours</div>
-                <div className="text-2xl font-bold text-green-900">{summary.totalHours.toFixed(1)}h</div>
+                <div className="text-sm font-medium text-green-700 mb-1">{t('instructorDetail.summary.hours')}</div>
+                <div className="text-2xl font-bold text-green-900">
+                  {t('instructorDetail.summary.hoursValue', {
+                    hours: formatNumber(summary.totalHours, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+                  })}
+                </div>
               </div>
               <div className="rounded-lg border border-gray-200 bg-gradient-to-br from-purple-50 to-purple-100 p-4">
-                <div className="text-sm font-medium text-purple-700 mb-1">Outstanding</div>
-                <div className="text-2xl font-bold text-purple-900">{formatCurrency(summary.outstanding)}</div>
+                <div className="text-sm font-medium text-purple-700 mb-1">
+                  {t('instructorDetail.summary.outstanding')}
+                </div>
+                <div className="text-2xl font-bold text-purple-900">{displayCurrency(summary.outstanding)}</div>
               </div>
             </div>
 
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Lesson History</h2>
-                <p className="text-sm text-gray-500">{lessons.length} recent lessons</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('instructorDetail.lessons.title')}</h2>
+                <p className="text-sm text-gray-500">
+                  {t('instructorDetail.lessons.count', { count: lessons.length })}
+                </p>
               </div>
               {lessons.length === 0 ? (
-                <div className="text-gray-600">No lessons recorded for this instructor.</div>
+                <div className="text-gray-600">{t('instructorDetail.lessons.empty')}</div>
               ) : (
                 <div className="space-y-3">
                   <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
@@ -232,16 +237,16 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Date
+                            {t('instructorDetail.lessons.table.date')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Student
+                            {t('instructorDetail.lessons.table.student')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Service
+                            {t('instructorDetail.lessons.table.service')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Duration
+                            {t('instructorDetail.lessons.table.duration')}
                           </th>
                         </tr>
                       </thead>
@@ -252,9 +257,7 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
                             <td className="px-4 py-3 text-sm text-gray-700">{lesson.student_name || '—'}</td>
                             <td className="px-4 py-3 text-sm text-gray-700">{lesson.service_name || '—'}</td>
                             <td className="px-4 py-3 text-sm text-gray-700">
-                              {lesson.starting && lesson.ending
-                                ? `${((new Date(lesson.ending) - new Date(lesson.starting)) / (1000 * 60)) || 0} mins`
-                                : '—'}
+                              {formatLessonDuration(lesson)}
                             </td>
                           </tr>
                         ))}
@@ -267,11 +270,13 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
 
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Transactions</h2>
-                <p className="text-sm text-gray-500">{transactions.length} payouts/refunds</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('instructorDetail.transactions.title')}</h2>
+                <p className="text-sm text-gray-500">
+                  {t('instructorDetail.transactions.count', { count: transactions.length })}
+                </p>
               </div>
               {transactions.length === 0 ? (
-                <div className="text-gray-600">No transactions recorded for this instructor.</div>
+                <div className="text-gray-600">{t('instructorDetail.transactions.empty')}</div>
               ) : (
                 <div className="space-y-3">
                   <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
@@ -279,16 +284,16 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Date
+                            {t('instructorDetail.transactions.table.date')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Type
+                            {t('instructorDetail.transactions.table.type')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Method
+                            {t('instructorDetail.transactions.table.method')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Amount
+                            {t('instructorDetail.transactions.table.amount')}
                           </th>
                         </tr>
                       </thead>
@@ -323,13 +328,13 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm sticky top-6 space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Instructor Info</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">{t('instructorDetail.info.title')}</h2>
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => onEdit?.(instructor)}
                       disabled={!canModify(user)}
                       className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-                      title="Edit instructor"
+                      title={t('instructorDetail.actions.edit')}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z" />
@@ -339,7 +344,7 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
                       onClick={onDelete}
                       disabled={!canModify(user)}
                       className="inline-flex items-center justify-center p-2 rounded-lg border border-red-300 bg-white text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-                      title="Delete instructor"
+                      title={t('instructorDetail.actions.delete')}
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -349,38 +354,38 @@ function InstructorDetail({ instructorId, onBack, onEdit, onDelete, user = null 
                 </div>
                 <dl className="space-y-4 text-sm">
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Phone</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('instructorDetail.info.phone')}</dt>
                     <dd className="mt-1 text-gray-900">{instructor.phone || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Email</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('instructorDetail.info.email')}</dt>
                     <dd className="mt-1 text-gray-900">{instructor.email || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Hourly Rate</dt>
-                    <dd className="mt-1 text-gray-900">{formatCurrency(instructor.hourlyrate || 0)}</dd>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('instructorDetail.info.hourly')}</dt>
+                    <dd className="mt-1 text-gray-900">{displayCurrency(instructor.hourlyrate)}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Commission</dt>
-                    <dd className="mt-1 text-gray-900">
-                      {instructor.commission != null ? `${Number(instructor.commission).toFixed(1)}%` : '—'}
-                    </dd>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">
+                      {t('instructorDetail.info.commission')}
+                    </dt>
+                    <dd className="mt-1 text-gray-900">{displayPercent(instructor.commission)}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Bank Details</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('instructorDetail.info.bank')}</dt>
                     <dd className="mt-1 text-gray-900">{instructor.bankdetail || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Note</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('instructorDetail.info.note')}</dt>
                     <dd className="mt-1 text-gray-900 whitespace-pre-wrap">{instructor.note || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Joined</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('instructorDetail.info.joined')}</dt>
                     <dd className="mt-1 text-gray-900">{formatDateTime(instructor.created_at)}</dd>
                   </div>
                   {instructor.updated_at && (
                     <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase">Last Update</dt>
+                      <dt className="text-xs font-medium text-gray-500 uppercase">{t('instructorDetail.info.updated')}</dt>
                       <dd className="mt-1 text-gray-900">{formatDateTime(instructor.updated_at)}</dd>
                     </div>
                   )}

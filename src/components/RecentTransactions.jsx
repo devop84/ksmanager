@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
+import { useSettings } from '../context/SettingsContext'
 
 const MAX_ROWS = 5
 
@@ -7,6 +9,8 @@ function RecentTransactions({ onViewCustomer = () => {} }) {
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const { formatCurrency, formatDateTime } = useSettings()
+  const { t } = useTranslation()
 
   useEffect(() => {
     const fetchTransactions = async () => {
@@ -54,7 +58,7 @@ function RecentTransactions({ onViewCustomer = () => {} }) {
         setTransactions(rows)
       } catch (err) {
         console.error('Failed to load recent transactions:', err)
-        setError('Unable to load transactions. Please try again later.')
+        setError(t('dashboard.recentTransactions.error.load'))
       } finally {
         setLoading(false)
       }
@@ -64,61 +68,55 @@ function RecentTransactions({ onViewCustomer = () => {} }) {
   }, [])
 
   const formatAmount = (amount, direction) => {
-    const formatted = new Intl.NumberFormat('en-US', {
+    const formatted = formatCurrency(Math.abs(Number(amount || 0)), {
       minimumFractionDigits: 2,
-      maximumFractionDigits: 2
-    }).format(Number(amount || 0))
+      maximumFractionDigits: 2,
+      signDisplay: 'never',
+    })
     if (direction === 'income') return `+${formatted}`
     if (direction === 'expense') return `-${formatted}`
     return formatted
   }
 
-  const formatDate = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    })
-  }
-
   return (
     <div className="rounded-xl bg-white p-2 sm:p-4 md:p-6 shadow-sm w-full">
-      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Recent Transactions</h2>
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">{t('dashboard.recentTransactions.title')}</h2>
 
-      {loading && <div className="text-sm text-gray-600">Loading transactions...</div>}
+      {loading && <div className="text-sm text-gray-600">{t('common.loading')}</div>}
       {error && <div className="text-sm text-red-600">{error}</div>}
 
-      {!loading && !error && transactions.length === 0 && (
-        <div className="text-gray-600">No transactions recorded yet.</div>
-      )}
+      {!loading && !error && transactions.length === 0 && <div className="text-gray-600">{t('common.empty')}</div>}
 
       {!loading && !error && transactions.length > 0 && (
         <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Date</th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('dashboard.recentTransactions.table.date')}</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('dashboard.recentTransactions.table.type')}</th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Source
+                    {t('dashboard.recentTransactions.table.source')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Destination
+                    {t('dashboard.recentTransactions.table.destination')}
                   </th>
                 <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Method
+                  {t('dashboard.recentTransactions.table.method')}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Amount</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">{t('dashboard.recentTransactions.table.amount')}</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
               {transactions.map((txn) => (
                 <tr key={txn.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 text-sm text-gray-600">{formatDate(txn.occurred_at)}</td>
+                  <td className="px-4 py-3 text-sm text-gray-600">
+                    {formatDateTime(txn.occurred_at, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </td>
                   <td className="px-4 py-3 text-sm text-gray-600">{txn.type_label}</td>
                   <td
                     className={`px-4 py-3 text-sm ${
@@ -168,7 +166,14 @@ function RecentTransactions({ onViewCustomer = () => {} }) {
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div className="flex-1">
                   <p className="text-base font-semibold text-gray-900">{txn.type_label}</p>
-                  <p className="text-sm text-gray-500">{formatDate(txn.occurred_at)}</p>
+                  <p className="text-sm text-gray-500">
+                    {formatDateTime(txn.occurred_at, {
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </p>
                 </div>
                 <div
                   className={`text-sm font-semibold ${

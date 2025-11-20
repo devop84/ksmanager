@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 
 const initialFormState = {
@@ -9,6 +10,7 @@ const initialFormState = {
 
 function CompanyAccountForm({ account, onCancel, onSaved }) {
   const isEditing = Boolean(account?.id)
+  const { t } = useTranslation()
   const [formData, setFormData] = useState(initialFormState)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -54,7 +56,7 @@ function CompanyAccountForm({ account, onCancel, onSaved }) {
       onSaved?.()
     } catch (err) {
       console.error('Failed to save company account:', err)
-      setError('Unable to save company account. Please check the details and try again.')
+      setError(t('companyAccountForm.errors.save'))
     } finally {
       setSaving(false)
     }
@@ -65,23 +67,25 @@ function CompanyAccountForm({ account, onCancel, onSaved }) {
       <div className="mx-auto max-w-3xl rounded-xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{isEditing ? 'Edit Company Account' : 'Add Company Account'}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditing ? t('companyAccountForm.title.edit') : t('companyAccountForm.title.new')}
+            </h1>
             <p className="text-gray-500 text-sm">
-              {isEditing ? 'Update treasury details and notes.' : 'Provide the information to register a new account.'}
+              {isEditing ? t('companyAccountForm.subtitle.edit') : t('companyAccountForm.subtitle.new')}
             </p>
           </div>
           <button
             onClick={onCancel}
             className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {t('companyAccountForm.buttons.cancel')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="name">
-              Account name *
+              {t('companyAccountForm.fields.name')}
             </label>
             <input
               id="name"
@@ -96,7 +100,7 @@ function CompanyAccountForm({ account, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="details">
-              Details
+              {t('companyAccountForm.fields.details')}
             </label>
             <textarea
               id="details"
@@ -110,7 +114,7 @@ function CompanyAccountForm({ account, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="note">
-              Note
+              {t('companyAccountForm.fields.note')}
             </label>
             <textarea
               id="note"
@@ -134,14 +138,18 @@ function CompanyAccountForm({ account, onCancel, onSaved }) {
               onClick={onCancel}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('companyAccountForm.buttons.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving...' : isEditing ? 'Save changes' : 'Create account'}
+              {saving
+                ? t('companyAccountForm.buttons.saving')
+                : isEditing
+                  ? t('companyAccountForm.buttons.saveChanges')
+                  : t('companyAccountForm.buttons.create')}
             </button>
           </div>
         </form>

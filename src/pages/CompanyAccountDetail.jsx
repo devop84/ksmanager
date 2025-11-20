@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import { useSettings } from '../context/SettingsContext'
 
 function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null }) {
   const [account, setAccount] = useState(null)
@@ -8,6 +10,8 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const { formatCurrency, formatDateTime } = useSettings()
+  const { t } = useTranslation()
 
   useEffect(() => {
     if (!accountId) return
@@ -69,7 +73,7 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
         ])
 
         if (!accountRows?.length) {
-          setError('Company account not found')
+          setError(t('companyAccountDetail.notFound'))
           setAccount(null)
           setTransactions([])
           return
@@ -87,14 +91,14 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
         setTransactions(preparedTransactions)
       } catch (err) {
         console.error('Failed to load company account details:', err)
-        setError('Unable to load company account details. Please try again later.')
+        setError(t('companyAccountDetail.error.load'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchData()
-  }, [accountId])
+  }, [accountId, t])
 
   const summary = useMemo(() => {
     const totalTransactions = transactions.length
@@ -138,7 +142,7 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
   }, [transactions])
 
   const handleDelete = async () => {
-    if (!window.confirm('Are you sure you want to delete this company account? This action cannot be undone.')) {
+    if (!window.confirm(t('companyAccountDetail.confirm.delete'))) {
       return
     }
     try {
@@ -151,44 +155,17 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
       }
     } catch (err) {
       console.error('Failed to delete company account:', err)
-      alert('Unable to delete company account. Please try again.')
+      alert(t('companyAccountDetail.error.delete'))
     } finally {
       setDeleting(false)
     }
-  }
-
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0))
-
-  const formatDate = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
-    })
-  }
-
-  const formatDateTime = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    })
   }
 
   if (loading) {
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-gray-600">Loading company account details...</div>
+          <div className="text-gray-600">{t('common.loading')}</div>
         </div>
       </div>
     )
@@ -198,13 +175,13 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-red-600">{error || 'Company account not found'}</div>
+          <div className="text-red-600">{error || t('companyAccountDetail.notFound')}</div>
           {onBack && (
             <button
               onClick={onBack}
               className="mt-4 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Back to Company Accounts
+              {t('companyAccountDetail.back')}
             </button>
           )}
         </div>
@@ -223,12 +200,12 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Company Accounts
+            {t('companyAccountDetail.back')}
           </button>
           <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">{account.name}</h1>
-              <p className="text-gray-500 text-sm mt-1">Company account details and transaction history.</p>
+              <p className="text-gray-500 text-sm mt-1">{t('companyAccountDetail.description')}</p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -236,14 +213,14 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
                 disabled={!canModify(user)}
                 className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               >
-                Edit
+                {t('companyAccountDetail.buttons.edit')}
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting || !canModify(user)}
                 className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               >
-                {deleting ? 'Deleting…' : 'Delete'}
+                {deleting ? t('companyAccountDetail.buttons.deleting') : t('companyAccountDetail.buttons.delete')}
               </button>
             </div>
           </div>
@@ -253,19 +230,19 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
           <div className="xl:col-span-3 space-y-6">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="rounded-lg border border-indigo-100 bg-indigo-50/70 p-4">
-                <p className="text-sm font-medium text-indigo-700">Total Transactions</p>
+                <p className="text-sm font-medium text-indigo-700">{t('companyAccountDetail.summary.transactions')}</p>
                 <p className="text-2xl font-bold text-indigo-900 mt-1">{summary.totalTransactions}</p>
               </div>
               <div className="rounded-lg border border-emerald-100 bg-emerald-50/70 p-4">
-                <p className="text-sm font-medium text-emerald-700">Total Incoming</p>
+                <p className="text-sm font-medium text-emerald-700">{t('companyAccountDetail.summary.incoming')}</p>
                 <p className="text-2xl font-bold text-emerald-900 mt-1">{formatCurrency(summary.totalIncoming)}</p>
               </div>
               <div className="rounded-lg border border-rose-100 bg-rose-50/70 p-4">
-                <p className="text-sm font-medium text-rose-700">Total Outgoing</p>
+                <p className="text-sm font-medium text-rose-700">{t('companyAccountDetail.summary.outgoing')}</p>
                 <p className="text-2xl font-bold text-rose-900 mt-1">{formatCurrency(summary.totalOutgoing)}</p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <p className="text-sm font-medium text-slate-700">Net Balance</p>
+                <p className="text-sm font-medium text-slate-700">{t('companyAccountDetail.summary.net')}</p>
                 <p className={`text-2xl font-bold mt-1 ${summary.netBalance >= 0 ? 'text-slate-900' : 'text-rose-600'}`}>
                   {formatCurrency(summary.netBalance)}
                 </p>
@@ -274,11 +251,13 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
 
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-gray-900">Transaction History</h2>
-                <p className="text-sm text-gray-500">{transactions.length} records</p>
+                <h2 className="text-lg font-semibold text-gray-900">{t('companyAccountDetail.transactions.title')}</h2>
+                <p className="text-sm text-gray-500">
+                  {t('companyAccountDetail.transactions.count', { count: transactions.length })}
+                </p>
               </div>
               {transactions.length === 0 ? (
-                <div className="text-gray-600">No transactions recorded for this account.</div>
+                <div className="text-gray-600">{t('companyAccountDetail.transactions.empty')}</div>
               ) : (
                 <>
                   <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
@@ -286,22 +265,22 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
                       <thead className="bg-gray-50">
                         <tr>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Date
+                            {t('companyAccountDetail.table.date')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Type
+                            {t('companyAccountDetail.table.type')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Source/Destination
+                            {t('companyAccountDetail.table.counterparty')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Payment Method
+                            {t('companyAccountDetail.table.payment')}
                           </th>
                           <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Reference
+                            {t('companyAccountDetail.table.reference')}
                           </th>
                           <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Amount
+                            {t('companyAccountDetail.table.amount')}
                           </th>
                         </tr>
                       </thead>
@@ -357,20 +336,20 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
                           </div>
                           <dl className="mt-3 grid grid-cols-2 gap-3 text-xs text-gray-500">
                             <div>
-                              <dt className="uppercase">Source/Destination</dt>
+                              <dt className="uppercase">{t('companyAccountDetail.mobile.counterparty')}</dt>
                               <dd className="text-gray-900 text-sm">{otherParty || '—'}</dd>
                             </div>
                             <div>
-                              <dt className="uppercase">Payment</dt>
+                              <dt className="uppercase">{t('companyAccountDetail.mobile.payment')}</dt>
                               <dd className="text-gray-900 text-sm">{txn.payment_method || '—'}</dd>
                             </div>
                             <div>
-                              <dt className="uppercase">Reference</dt>
+                              <dt className="uppercase">{t('companyAccountDetail.mobile.reference')}</dt>
                               <dd className="text-gray-900 text-sm">{txn.reference || '—'}</dd>
                             </div>
                             {txn.transaction_note && (
                               <div className="col-span-2">
-                                <dt className="uppercase">Note</dt>
+                                <dt className="uppercase">{t('companyAccountDetail.mobile.note')}</dt>
                                 <dd className="text-gray-900 text-sm">{txn.transaction_note}</dd>
                               </div>
                             )}
@@ -388,15 +367,15 @@ function CompanyAccountDetail({ accountId, onBack, onEdit, onDelete, user = null
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm sticky top-6 space-y-6">
               <div>
                 <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">Account Info</h2>
+                  <h2 className="text-lg font-semibold text-gray-900">{t('companyAccountDetail.info.title')}</h2>
                 </div>
                 <dl className="space-y-4 text-sm">
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Details</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('companyAccountDetail.info.details')}</dt>
                     <dd className="mt-1 text-gray-900 whitespace-pre-wrap">{account.details || '—'}</dd>
                   </div>
                   <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase">Note</dt>
+                    <dt className="text-xs font-medium text-gray-500 uppercase">{t('companyAccountDetail.info.note')}</dt>
                     <dd className="mt-1 text-gray-900 whitespace-pre-wrap">{account.note || '—'}</dd>
                   </div>
                 </dl>

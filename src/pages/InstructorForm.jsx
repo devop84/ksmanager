@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
+import { useSettings } from '../context/SettingsContext'
 
 const initialFormState = {
   fullname: '',
@@ -14,6 +16,8 @@ const initialFormState = {
 
 function InstructorForm({ instructor, onCancel, onSaved }) {
   const isEditing = Boolean(instructor?.id)
+  const { t } = useTranslation()
+  const { currency } = useSettings()
   const [formData, setFormData] = useState(initialFormState)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
@@ -87,7 +91,7 @@ function InstructorForm({ instructor, onCancel, onSaved }) {
       onSaved?.()
     } catch (err) {
       console.error('Failed to save instructor:', err)
-      setError('Unable to save instructor. Please check the details and try again.')
+      setError(t('instructorForm.errors.save'))
     } finally {
       setSaving(false)
     }
@@ -98,25 +102,25 @@ function InstructorForm({ instructor, onCancel, onSaved }) {
       <div className="mx-auto max-w-3xl rounded-xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{isEditing ? 'Edit Instructor' : 'Add Instructor'}</h1>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditing ? t('instructorForm.title.edit') : t('instructorForm.title.new')}
+            </h1>
             <p className="text-gray-500 text-sm">
-              {isEditing
-                ? 'Update the instructor information and pay details.'
-                : 'Fill out the form to add a new instructor.'}
+              {isEditing ? t('instructorForm.subtitle.edit') : t('instructorForm.subtitle.new')}
             </p>
           </div>
           <button
             onClick={onCancel}
             className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {t('instructorForm.buttons.cancel')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="fullname">
-              Full name *
+              {t('instructorForm.fields.fullname')}
             </label>
             <input
               id="fullname"
@@ -131,7 +135,7 @@ function InstructorForm({ instructor, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="phone">
-              Phone
+              {t('instructorForm.fields.phone')}
             </label>
             <input
               id="phone"
@@ -145,7 +149,7 @@ function InstructorForm({ instructor, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="email">
-              Email
+              {t('instructorForm.fields.email')}
             </label>
             <input
               id="email"
@@ -159,7 +163,7 @@ function InstructorForm({ instructor, onCancel, onSaved }) {
 
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="bankdetail">
-              Bank detail
+              {t('instructorForm.fields.bankdetail')}
             </label>
             <textarea
               id="bankdetail"
@@ -173,7 +177,7 @@ function InstructorForm({ instructor, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="hourlyrate">
-              Hourly rate (USD)
+              {t('instructorForm.fields.hourlyrate', { currency })}
             </label>
             <input
               id="hourlyrate"
@@ -189,7 +193,7 @@ function InstructorForm({ instructor, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="commission">
-              Commission (%)
+              {t('instructorForm.fields.commission')}
             </label>
             <input
               id="commission"
@@ -205,7 +209,7 @@ function InstructorForm({ instructor, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="monthlyfix">
-              Monthly fix (USD)
+              {t('instructorForm.fields.monthlyfix', { currency })}
             </label>
             <input
               id="monthlyfix"
@@ -221,7 +225,7 @@ function InstructorForm({ instructor, onCancel, onSaved }) {
 
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="note">
-              Note
+              {t('instructorForm.fields.note')}
             </label>
             <textarea
               id="note"
@@ -245,14 +249,18 @@ function InstructorForm({ instructor, onCancel, onSaved }) {
               onClick={onCancel}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('instructorForm.buttons.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving...' : isEditing ? 'Save changes' : 'Create instructor'}
+              {saving
+                ? t('instructorForm.buttons.saving')
+                : isEditing
+                  ? t('instructorForm.buttons.saveChanges')
+                  : t('instructorForm.buttons.create')}
             </button>
           </div>
         </form>

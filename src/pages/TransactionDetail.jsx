@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import { useSettings } from '../context/SettingsContext'
 
 const directionStyles = {
   income: {
@@ -17,20 +19,24 @@ const directionStyles = {
   }
 }
 
-const entityTypeLabels = {
-  company_account: 'Company Account',
-  customer: 'Customer',
-  agency: 'Agency',
-  instructor: 'Instructor',
-  third_party: 'Third Party',
-  order: 'Order'
-}
-
 function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = null }) {
   const [transaction, setTransaction] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [deleting, setDeleting] = useState(false)
+  const { formatCurrency, formatDateTime } = useSettings()
+  const { t } = useTranslation()
+  const entityTypeLabels = useMemo(
+    () => ({
+      company_account: t('transactions.entity.company_account', 'Company Account'),
+      customer: t('transactions.entity.customer', 'Customer'),
+      agency: t('transactions.entity.agency', 'Agency'),
+      instructor: t('transactions.entity.instructor', 'Instructor'),
+      third_party: t('transactions.entity.third_party', 'Third Party'),
+      order: t('transactions.entity.order', 'Order'),
+    }),
+    [t],
+  )
 
   useEffect(() => {
     if (!transactionId) return
@@ -90,7 +96,7 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
           `) || []
 
         if (!rows.length) {
-          setError('Transaction not found')
+          setError(t('transactionDetail.notFound', 'Transaction not found'))
           setTransaction(null)
           return
         }
@@ -98,30 +104,17 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
         setTransaction(rows[0])
       } catch (err) {
         console.error('Failed to load transaction details:', err)
-        setError('Unable to load transaction details. Please try again later.')
+        setError(t('transactionDetail.error.load', 'Unable to load transaction details. Please try again later.'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchTransaction()
-  }, [transactionId])
+  }, [transactionId, t])
 
-  const formatAmount = (value) =>
-    new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0))
-
-  const formatDateTime = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    })
-  }
+  const formatAmount = (value, options) =>
+    formatCurrency(Number(value || 0), { minimumFractionDigits: 2, maximumFractionDigits: 2, ...options })
 
   const formatEntityName = (txn, role = 'source') => {
     if (!txn) return '—'
@@ -151,7 +144,7 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
 
   const handleDelete = async () => {
     if (!transactionId) return
-    if (!window.confirm('Are you sure you want to delete this transaction? This action cannot be undone.')) {
+    if (!window.confirm(t('transactionDetail.confirm.delete', 'Are you sure you want to delete this transaction? This action cannot be undone.'))) {
       return
     }
     try {
@@ -160,7 +153,7 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
       onDelete?.()
     } catch (err) {
       console.error('Failed to delete transaction:', err)
-      alert('Unable to delete transaction. Please try again.')
+      alert(t('transactionDetail.error.delete', 'Unable to delete transaction. Please try again.'))
     } finally {
       setDeleting(false)
     }
@@ -170,7 +163,7 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-gray-600">Loading transaction details...</div>
+          <div className="text-gray-600">{t('transactionDetail.loading', 'Loading transaction details...')}</div>
         </div>
       </div>
     )
@@ -180,13 +173,13 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
     return (
       <div className="px-4 py-6 sm:p-6 lg:p-8">
         <div className="rounded-xl bg-white p-6 shadow-sm">
-          <div className="text-red-600">{error || 'Transaction not found'}</div>
+          <div className="text-red-600">{error || t('transactionDetail.notFound', 'Transaction not found')}</div>
           {onBack && (
             <button
               onClick={onBack}
               className="mt-4 rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Back to Transactions
+              {t('transactionDetail.backToList', 'Back to Transactions')}
             </button>
           )}
         </div>
@@ -195,7 +188,7 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
   }
 
   const directionStyle = directionStyles[transaction.type_direction] || directionStyles.transfer
-  const amountValue = formatAmount(Math.abs(transaction.amount))
+  const amountValue = formatAmount(Math.abs(transaction.amount), { signDisplay: 'never' })
   const amountPrefix = transaction.amount < 0 ? '-' : ''
 
   return (
@@ -209,12 +202,16 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            Back to Transactions
+            {t('transactionDetail.backToList', 'Back to Transactions')}
           </button>
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Transaction #{transaction.id}</h1>
-              <p className="text-gray-500 text-sm mt-1">Full audit trail for this transaction entry.</p>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {t('transactionDetail.title', 'Transaction #{{id}}', { id: transaction.id })}
+              </h1>
+              <p className="text-gray-500 text-sm mt-1">
+                {t('transactionDetail.subtitle', 'Full audit trail for this transaction entry.')}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -222,14 +219,14 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
                 disabled={!canModify(user)}
                 className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               >
-                Edit
+                {t('transactionDetail.buttons.edit', 'Edit')}
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting || !canModify(user)}
                 className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               >
-                {deleting ? 'Deleting…' : 'Delete'}
+                {deleting ? t('transactionDetail.buttons.deleting', 'Deleting…') : t('transactionDetail.buttons.delete', 'Delete')}
               </button>
             </div>
           </div>
@@ -240,32 +237,50 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
               <div className="flex flex-wrap items-center gap-4">
                 <div>
-                  <p className="text-xs font-semibold uppercase text-gray-500">Amount</p>
+                  <p className="text-xs font-semibold uppercase text-gray-500">
+                    {t('transactionDetail.amount', 'Amount')}
+                  </p>
                   <p className={`text-3xl font-bold ${directionStyle.amount}`}>
                     {amountPrefix}
                     {amountValue}
                   </p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase text-gray-500">Type</p>
+                  <p className="text-xs font-semibold uppercase text-gray-500">
+                    {t('transactionDetail.type', 'Type')}
+                  </p>
                   <span className={`mt-1 inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${directionStyle.pill}`}>
                     {transaction.type_label}
                   </span>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase text-gray-500">Payment Method</p>
+                  <p className="text-xs font-semibold uppercase text-gray-500">
+                    {t('transactionDetail.paymentMethod', 'Payment Method')}
+                  </p>
                   <p className="text-base font-medium text-gray-900">{transaction.payment_method_name || '—'}</p>
                 </div>
                 <div>
-                  <p className="text-xs font-semibold uppercase text-gray-500">Occurred at</p>
-                  <p className="text-base font-medium text-gray-900">{formatDateTime(transaction.occurred_at)}</p>
+                  <p className="text-xs font-semibold uppercase text-gray-500">
+                    {t('transactionDetail.occurredAt', 'Occurred at')}
+                  </p>
+                  <p className="text-base font-medium text-gray-900">
+                    {formatDateTime(transaction.occurred_at, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </p>
                 </div>
               </div>
             </div>
 
             <div className="grid gap-4 md:grid-cols-2">
               <div className="rounded-xl border border-emerald-100 bg-emerald-50/50 p-4">
-                <p className="text-xs font-semibold uppercase text-emerald-600">Source</p>
+                <p className="text-xs font-semibold uppercase text-emerald-600">
+                  {t('transactionDetail.source', 'Source')}
+                </p>
                 <p className="mt-2 text-lg font-semibold text-gray-900">{formatEntityName(transaction, 'source')}</p>
                 <p className="text-xs uppercase text-gray-500">
                   {entityTypeLabels[transaction.source_entity_type] || transaction.source_entity_type || '—'} • ID #
@@ -273,7 +288,9 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
                 </p>
               </div>
               <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                <p className="text-xs font-semibold uppercase text-slate-600">Destination</p>
+                <p className="text-xs font-semibold uppercase text-slate-600">
+                  {t('transactionDetail.destination', 'Destination')}
+                </p>
                 <p className="mt-2 text-lg font-semibold text-gray-900">{formatEntityName(transaction, 'destination')}</p>
                 <p className="text-xs uppercase text-gray-500">
                   {entityTypeLabels[transaction.destination_entity_type] || transaction.destination_entity_type || '—'} • ID #
@@ -283,18 +300,26 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
             </div>
 
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Details</h2>
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                {t('transactionDetail.details.title', 'Details')}
+              </h2>
               <dl className="grid gap-4 md:grid-cols-2">
                 <div>
-                  <dt className="text-xs font-semibold uppercase text-gray-500">Reference</dt>
+                  <dt className="text-xs font-semibold uppercase text-gray-500">
+                    {t('transactionDetail.details.reference', 'Reference')}
+                  </dt>
                   <dd className="mt-1 text-gray-900">{transaction.reference || '—'}</dd>
                 </div>
                 <div>
-                  <dt className="text-xs font-semibold uppercase text-gray-500">Created By</dt>
+                  <dt className="text-xs font-semibold uppercase text-gray-500">
+                    {t('transactionDetail.details.createdBy', 'Created By')}
+                  </dt>
                   <dd className="mt-1 text-gray-900">{transaction.created_by_name || '—'}</dd>
                 </div>
                 <div className="md:col-span-2">
-                  <dt className="text-xs font-semibold uppercase text-gray-500">Note</dt>
+                  <dt className="text-xs font-semibold uppercase text-gray-500">
+                    {t('transactionDetail.details.note', 'Note')}
+                  </dt>
                   <dd className="mt-1 whitespace-pre-wrap text-gray-900">{transaction.note || '—'}</dd>
                 </div>
               </dl>
@@ -304,17 +329,39 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
           <div className="xl:col-span-1">
             <div className="rounded-xl border border-gray-200 bg-gray-50 p-5 shadow-sm sticky top-6 space-y-4">
               <div>
-                <p className="text-xs font-semibold uppercase text-gray-500">Created</p>
-                <p className="mt-1 text-gray-900">{formatDateTime(transaction.created_at)}</p>
+                <p className="text-xs font-semibold uppercase text-gray-500">
+                  {t('transactionDetail.sidebar.created', 'Created')}
+                </p>
+                <p className="mt-1 text-gray-900">
+                  {formatDateTime(transaction.created_at, {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric',
+                    hour: 'numeric',
+                    minute: '2-digit',
+                  })}
+                </p>
               </div>
               {transaction.updated_at && (
                 <div>
-                  <p className="text-xs font-semibold uppercase text-gray-500">Last update</p>
-                  <p className="mt-1 text-gray-900">{formatDateTime(transaction.updated_at)}</p>
+                  <p className="text-xs font-semibold uppercase text-gray-500">
+                    {t('transactionDetail.sidebar.updated', 'Last update')}
+                  </p>
+                  <p className="mt-1 text-gray-900">
+                    {formatDateTime(transaction.updated_at, {
+                      year: 'numeric',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: 'numeric',
+                      minute: '2-digit',
+                    })}
+                  </p>
                 </div>
               )}
               <div>
-                <p className="text-xs font-semibold uppercase text-gray-500">Type code</p>
+                <p className="text-xs font-semibold uppercase text-gray-500">
+                  {t('transactionDetail.sidebar.typeCode', 'Type code')}
+                </p>
                 <p className="mt-1 text-gray-900 uppercase tracking-wide">{transaction.type_code}</p>
               </div>
             </div>

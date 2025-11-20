@@ -1,22 +1,28 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import Pagination from '../components/Pagination'
 
 const PAGE_SIZE = 25
 
-const columns = [
-  { key: 'name', label: 'Equipment' },
-  { key: 'category_name', label: 'Category' },
-  { key: 'description', label: 'Description' }
-]
-
 function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment = () => {}, onViewEquipment = () => {}, user = null }) {
+  const { t } = useTranslation()
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' })
   const [currentPage, setCurrentPage] = useState(1)
+
+  const columns = useMemo(
+    () => [
+      { key: 'name', label: t('equipment.table.name') },
+      { key: 'category_name', label: t('equipment.table.category') },
+      { key: 'description', label: t('equipment.table.description') }
+    ],
+    [t]
+  )
 
   useEffect(() => {
     const fetchEquipment = async () => {
@@ -32,14 +38,14 @@ function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment 
         setItems(result || [])
       } catch (err) {
         console.error('Failed to load equipment:', err)
-        setError('Unable to load equipment. Please try again later.')
+        setError(t('equipment.error.load'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchEquipment()
-  }, [refreshKey])
+  }, [refreshKey, t])
 
   const filteredItems = useMemo(() => {
     if (!searchTerm.trim()) return items
@@ -88,42 +94,16 @@ function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment 
   }
 
   const handlePageChange = (newPage) => {
-    setCurrentPage((prev) => Math.min(Math.max(newPage, 1), totalPages))
+    setCurrentPage(newPage)
   }
-
-  const renderPagination = () => (
-    <div className="flex items-center justify-between text-sm text-gray-600">
-      <span>
-        Page {currentPage} of {totalPages} • Showing {paginatedItems.length} of {sortedItems.length} items
-      </span>
-      <div className="space-x-2">
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Previous
-        </button>
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  )
 
   return (
     <div className="px-4 py-6 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Equipment</h1>
-            <p className="text-gray-500 text-sm">
-              Track boards, kites, harnesses, and other inventory items.
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('equipment.title')}</h1>
+            <p className="text-gray-500 text-sm">{t('equipment.description')}</p>
           </div>
           <button
             onClick={onAddEquipment}
@@ -139,7 +119,7 @@ function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment 
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add equipment
+            {t('equipment.add')}
           </button>
         </div>
 
@@ -149,16 +129,23 @@ function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment 
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search equipment by name or category..."
+              placeholder={t('equipment.search')}
               className="w-full md:w-1/2 rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-shadow"
             />
           </div>
 
-          {loading && <div className="text-gray-600 text-sm">Loading equipment...</div>}
+          {loading && <div className="text-gray-600 text-sm">{t('equipment.loading')}</div>}
           {error && <div className="text-red-600 text-sm">{error}</div>}
           {!loading && !error && (
             <div className="flex flex-col gap-4">
-              {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedItems.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                summaryKey="equipment.pagination.summary"
+              />
 
               <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
                 <table className="min-w-full divide-y divide-gray-200">
@@ -188,7 +175,7 @@ function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment 
                     {paginatedItems.length === 0 ? (
                       <tr>
                         <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-gray-500">
-                          No equipment found. Try adjusting your search.
+                          {t('equipment.table.empty')}
                         </td>
                       </tr>
                     ) : (
@@ -210,7 +197,7 @@ function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment 
               <div className="md:hidden space-y-3">
                 {paginatedItems.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    No equipment found. Try adjusting your search.
+                    {t('equipment.table.empty')}
                   </div>
                 ) : (
                   paginatedItems.map((item) => (
@@ -222,7 +209,9 @@ function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment 
                       <div className="flex items-start justify-between gap-3">
                         <div>
                           <p className="text-base font-semibold text-gray-900">{item.name}</p>
-                          <p className="text-sm text-gray-500">{item.category_name || 'Uncategorized'}</p>
+                          <p className="text-sm text-gray-500">
+                            {item.category_name || t('equipment.category.uncategorized')}
+                          </p>
                         </div>
                       </div>
                       {item.description && (
@@ -232,7 +221,14 @@ function Equipment({ refreshKey = 0, onAddEquipment = () => {}, onEditEquipment 
                   ))
                 )}
               </div>
-              {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedItems.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                summaryKey="equipment.pagination.summary"
+              />
             </div>
           )}
         </div>

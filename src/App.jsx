@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
 import Sidebar from './components/Sidebar'
 import Dashboard from './pages/Dashboard'
 import Customers from './pages/Customers'
@@ -33,10 +34,11 @@ import ThirdPartyDetail from './pages/ThirdPartyDetail'
 import Transactions from './pages/Transactions'
 import TransactionForm from './pages/TransactionForm'
 import TransactionDetail from './pages/TransactionDetail'
+import Settings from './pages/Settings'
 import { getSession, deleteSession } from './lib/auth.js'
 import { canModify } from './lib/permissions.js'
-
 function App() {
+  const { t } = useTranslation()
   const [currentPage, setCurrentPage] = useState('dashboard')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
@@ -771,6 +773,8 @@ function App() {
             user={user}
           />
         )
+      case 'settings':
+        return <Settings />
       case 'orderDetail':
         return (
           <OrderDetail
@@ -798,7 +802,7 @@ function App() {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-gray-600">Loading...</div>
+        <div className="text-gray-600">{t('common.loading', 'Loading...')}</div>
       </div>
     )
   }

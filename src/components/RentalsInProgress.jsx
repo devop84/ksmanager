@@ -1,11 +1,15 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
+import { useSettings } from '../context/SettingsContext'
 
 function RentalsInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
   const [rentals, setRentals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [currentTime, setCurrentTime] = useState(new Date())
+  const { formatDateTime } = useSettings()
+  const { t } = useTranslation()
 
   // Update current time every minute
   useEffect(() => {
@@ -81,7 +85,7 @@ function RentalsInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
         setRentals(inProgressRentals)
       } catch (err) {
         console.error('Failed to load rentals:', err)
-        setError('Unable to load rentals. Please try again later.')
+        setError(t('dashboard.rentals.error.load'))
       } finally {
         setLoading(false)
       }
@@ -94,28 +98,6 @@ function RentalsInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
     return () => clearInterval(interval)
   }, [])
 
-  // Format date/time for display
-  const formatDateTime = (dateString) => {
-    if (!dateString) return '—'
-    const date = new Date(dateString)
-    return date.toLocaleString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    })
-  }
-
-  // Get rental type (hourly, daily, weekly)
-  const getRentalType = (rental) => {
-    if (rental.weekly) return 'Weekly'
-    if (rental.daily) return 'Daily'
-    if (rental.hourly) return 'Hourly'
-    return '—'
-  }
-
   // Calculate time remaining
   const getTimeRemaining = (ending) => {
     if (!ending) return '—'
@@ -123,7 +105,7 @@ function RentalsInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
     const now = currentTime
     const diff = end - now
     
-    if (diff < 0) return 'Overdue'
+    if (diff < 0) return t('dashboard.rentals.time.overdue')
     
     const totalHours = Math.floor(diff / (1000 * 60 * 60))
     const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60))
@@ -148,8 +130,8 @@ function RentalsInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
   if (loading) {
     return (
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Rentals In Progress</h2>
-        <div className="text-gray-600">Loading...</div>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">{t('dashboard.rentals.title')}</h2>
+        <div className="text-gray-600">{t('common.loading')}</div>
       </div>
     )
   }
@@ -157,7 +139,7 @@ function RentalsInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
   if (error) {
     return (
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Rentals In Progress</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">{t('dashboard.rentals.title')}</h2>
         <div className="text-red-600">{error}</div>
       </div>
     )
@@ -165,10 +147,10 @@ function RentalsInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
 
   return (
     <div className="rounded-xl bg-white p-2 sm:p-4 md:p-6 shadow-sm w-full">
-      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Rentals In Progress</h2>
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">{t('dashboard.rentals.title')}</h2>
 
       {rentals.length === 0 ? (
-        <div className="text-gray-600">No rentals currently in progress.</div>
+        <div className="text-gray-600">{t('common.empty')}</div>
       ) : (
         <div className="space-y-3">
           {/* Desktop view */}
@@ -177,19 +159,19 @@ function RentalsInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Customer
+                    {t('dashboard.rentals.table.customer')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Service
+                    {t('dashboard.rentals.table.service')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Started
+                    {t('dashboard.rentals.table.started')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Ends
+                    {t('dashboard.rentals.table.ends')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Time Remaining
+                    {t('dashboard.rentals.table.timeRemaining')}
                   </th>
                 </tr>
               </thead>
@@ -248,7 +230,7 @@ function RentalsInProgress({ onEditOrder = () => {}, onViewCustomer = () => {} }
                 </div>
                 <dl className="mt-3 grid grid-cols-1 gap-x-4 gap-y-2 text-sm text-gray-600">
                   <div>
-                    <dt className="text-gray-400 text-xs uppercase">Ends</dt>
+                    <dt className="text-gray-400 text-xs uppercase">{t('dashboard.rentals.mobile.ends')}</dt>
                     <dd className="font-medium">{formatDateTime(rental.ending)}</dd>
                   </div>
                 </dl>

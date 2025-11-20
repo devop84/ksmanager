@@ -1,10 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
+import { useSettings } from '../context/SettingsContext'
 
 function PaymentsDue({ limit = 5, onViewCustomer = () => {} }) {
   const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const { formatCurrency, formatDate } = useSettings()
+  const { t } = useTranslation()
 
   useEffect(() => {
     const fetchPayments = async () => {
@@ -175,7 +179,7 @@ function PaymentsDue({ limit = 5, onViewCustomer = () => {} }) {
         setEntries(entriesData)
       } catch (err) {
         console.error('Failed to load payments due:', err)
-        setError('Unable to load payments due. Please try again later.')
+        setError(t('dashboard.paymentsDue.error.load'))
       } finally {
         setLoading(false)
       }
@@ -184,26 +188,14 @@ function PaymentsDue({ limit = 5, onViewCustomer = () => {} }) {
     fetchPayments()
   }, [limit])
 
-  const formatCurrency = (value) =>
-    new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(Number(value || 0))
-
-  const formatDate = (value) => {
-    if (!value) return '—'
-    const date = new Date(value)
-    if (Number.isNaN(date.getTime())) return '—'
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
-
   return (
     <div className="rounded-xl bg-white p-2 sm:p-4 md:p-6 shadow-sm w-full">
-      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">Payments Due</h2>
+      <h2 className="text-lg sm:text-xl font-semibold text-gray-800 mb-4">{t('dashboard.paymentsDue.title')}</h2>
 
-      {loading && <div className="text-sm text-gray-600">Loading payments...</div>}
+      {loading && <div className="text-sm text-gray-600">{t('common.loading')}</div>}
       {error && <div className="text-sm text-red-600">{error}</div>}
 
-      {!loading && !error && entries.length === 0 && (
-        <div className="text-gray-600">No payments to show.</div>
-      )}
+      {!loading && !error && entries.length === 0 && <div className="text-gray-600">{t('common.empty')}</div>}
 
       {!loading && !error && entries.length > 0 && (
         <div className="space-y-3">
@@ -213,13 +205,13 @@ function PaymentsDue({ limit = 5, onViewCustomer = () => {} }) {
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Customer
+                    {t('dashboard.paymentsDue.table.customer')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Paid
+                    {t('dashboard.paymentsDue.table.paid')}
                   </th>
                   <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Outstanding
+                    {t('dashboard.paymentsDue.table.outstanding')}
                   </th>
                 </tr>
               </thead>
@@ -233,7 +225,10 @@ function PaymentsDue({ limit = 5, onViewCustomer = () => {} }) {
                     <td className="px-4 py-3 text-sm text-gray-900 font-medium">
                       {entry.customerName || '—'}
                       {entry.lastOrderDate && (
-                        <span className="block text-xs text-gray-400">Last {formatDate(entry.lastOrderDate)}</span>
+                        <span className="block text-xs text-gray-400">
+                          {t('common.last', 'Last')}{' '}
+                          {formatDate(entry.lastOrderDate, { month: 'short', day: 'numeric' })}
+                        </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-sm text-emerald-600 font-semibold">{formatCurrency(entry.paid)}</td>
@@ -256,8 +251,11 @@ function PaymentsDue({ limit = 5, onViewCustomer = () => {} }) {
                   <div className="flex-1">
                     <p className="text-base font-semibold text-gray-900">{entry.customerName || '—'}</p>
                     <p className="text-xs text-gray-500">
-                      {entry.serviceCount} {entry.serviceCount === 1 ? 'service' : 'services'}
-                      {entry.lastOrderDate ? ` • Last ${formatDate(entry.lastOrderDate)}` : ''}
+                      {entry.serviceCount}{' '}
+                      {entry.serviceCount === 1 ? t('common.services.one') : t('common.services.other')}
+                      {entry.lastOrderDate
+                        ? ` • ${t('common.last', 'Last')} ${formatDate(entry.lastOrderDate, { month: 'short', day: 'numeric' })}`
+                        : ''}
                     </p>
                   </div>
                   <div className="text-right">
@@ -268,7 +266,7 @@ function PaymentsDue({ limit = 5, onViewCustomer = () => {} }) {
                 </div>
                 <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm text-gray-600">
                   <div>
-                    <dt className="text-gray-400 text-xs uppercase">Paid</dt>
+                    <dt className="text-gray-400 text-xs uppercase">{t('dashboard.paymentsDue.mobile.paid')}</dt>
                     <dd className="font-medium">{formatCurrency(entry.paid)}</dd>
                   </div>
                 </dl>

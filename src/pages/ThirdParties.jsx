@@ -1,24 +1,30 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { canModify } from '../lib/permissions'
+import Pagination from '../components/Pagination'
 
 const PAGE_SIZE = 25
 
-const columns = [
-  { key: 'name', label: 'Name' },
-  { key: 'category_name', label: 'Category' },
-  { key: 'phone', label: 'Phone' },
-  { key: 'email', label: 'Email' },
-  { key: 'note', label: 'Note' }
-]
-
 function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdParty = () => {}, onViewThirdParty = () => {}, user = null }) {
+  const { t } = useTranslation()
   const [thirdParties, setThirdParties] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [sortConfig, setSortConfig] = useState({ key: 'name', direction: 'asc' })
   const [currentPage, setCurrentPage] = useState(1)
+
+  const columns = useMemo(
+    () => [
+      { key: 'name', label: t('thirdParties.table.name') },
+      { key: 'category_name', label: t('thirdParties.table.category') },
+      { key: 'phone', label: t('thirdParties.table.phone') },
+      { key: 'email', label: t('thirdParties.table.email') },
+      { key: 'note', label: t('thirdParties.table.note') }
+    ],
+    [t]
+  )
 
   useEffect(() => {
     const fetchThirdParties = async () => {
@@ -40,14 +46,14 @@ function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdP
         setThirdParties(result || [])
       } catch (err) {
         console.error('Failed to load third parties:', err)
-        setError('Unable to load third parties. Please try again later.')
+        setError(t('thirdParties.error.load'))
       } finally {
         setLoading(false)
       }
     }
 
     fetchThirdParties()
-  }, [refreshKey])
+  }, [refreshKey, t])
 
   const filteredThirdParties = useMemo(() => {
     if (!searchTerm.trim()) return thirdParties
@@ -96,40 +102,16 @@ function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdP
   }
 
   const handlePageChange = (newPage) => {
-    setCurrentPage((prev) => Math.min(Math.max(newPage, 1), totalPages))
+    setCurrentPage(newPage)
   }
-
-  const renderPagination = () => (
-    <div className="flex items-center justify-between text-sm text-gray-600">
-      <span>
-        Page {currentPage} of {totalPages} • Showing {paginatedThirdParties.length} of {sortedThirdParties.length} records
-      </span>
-      <div className="space-x-2">
-        <button
-          onClick={() => handlePageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Previous
-        </button>
-        <button
-          onClick={() => handlePageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="px-3 py-1 rounded-md border text-sm disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          Next
-        </button>
-      </div>
-    </div>
-  )
 
   return (
     <div className="px-4 py-6 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Third Parties</h1>
-            <p className="text-gray-500 text-sm">Manage external partners, suppliers, and service vendors.</p>
+            <h1 className="text-3xl font-bold text-gray-900">{t('thirdParties.title')}</h1>
+            <p className="text-gray-500 text-sm">{t('thirdParties.description')}</p>
           </div>
           <button
             onClick={onAddThirdParty}
@@ -145,7 +127,7 @@ function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdP
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
             </svg>
-            Add third party
+            {t('thirdParties.add')}
           </button>
         </div>
 
@@ -155,16 +137,23 @@ function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdP
               type="text"
               value={searchTerm}
               onChange={handleSearchChange}
-              placeholder="Search by name, category, or contact..."
+              placeholder={t('thirdParties.search')}
               className="w-full md:w-1/2 rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-shadow"
             />
           </div>
 
-          {loading && <div className="text-gray-600 text-sm">Loading third parties...</div>}
+          {loading && <div className="text-gray-600 text-sm">{t('thirdParties.loading')}</div>}
           {error && <div className="text-red-600 text-sm">{error}</div>}
           {!loading && !error && (
             <div className="flex flex-col gap-4">
-              {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedThirdParties.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                summaryKey="thirdParties.pagination.summary"
+              />
               <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50">
@@ -193,7 +182,7 @@ function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdP
                     {paginatedThirdParties.length === 0 ? (
                       <tr>
                         <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-gray-500">
-                          No third parties found. Try adjusting your search or filters.
+                          {t('thirdParties.table.empty')}
                         </td>
                       </tr>
                     ) : (
@@ -218,7 +207,7 @@ function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdP
               <div className="md:hidden space-y-3">
                 {paginatedThirdParties.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    No third parties found. Try adjusting your search or filters.
+                    {t('thirdParties.table.empty')}
                   </div>
                 ) : (
                   paginatedThirdParties.map((tp) => (
@@ -235,15 +224,15 @@ function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdP
                       </div>
                       <dl className="mt-4 grid grid-cols-2 gap-3 text-sm text-gray-600">
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Phone</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('thirdParties.mobile.phone')}</dt>
                           <dd>{tp.phone || '—'}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">Email</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('thirdParties.mobile.email')}</dt>
                           <dd>{tp.email || '—'}</dd>
                         </div>
                         <div className="md:col-span-2">
-                          <dt className="text-gray-400 text-xs uppercase">Note</dt>
+                          <dt className="text-gray-400 text-xs uppercase">{t('thirdParties.mobile.note')}</dt>
                           <dd>{tp.note || '—'}</dd>
                         </div>
                       </dl>
@@ -252,7 +241,14 @@ function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdP
                 )}
               </div>
 
-              {renderPagination()}
+              <Pagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={sortedThirdParties.length}
+                pageSize={PAGE_SIZE}
+                onPageChange={handlePageChange}
+                summaryKey="thirdParties.pagination.summary"
+              />
             </div>
           )}
         </div>

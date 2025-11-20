@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
+import { useSettings } from '../context/SettingsContext'
 
 function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
   const [lessons, setLessons] = useState([])
@@ -11,6 +13,8 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
     return today.toISOString().split('T')[0] // Format: YYYY-MM-DD
   })
   const [currentTime, setCurrentTime] = useState(new Date())
+  const { formatTime } = useSettings()
+  const { t } = useTranslation()
 
   // Update current time every minute and on mount/date change
   useEffect(() => {
@@ -72,7 +76,7 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
             const row = rows.find((r) => r.instructor_id === id)
             return {
               id: id,
-              name: row?.instructor_name || 'Unknown'
+              name: row?.instructor_name || t('dashboard.dailyLessons.unknown')
             }
           })
           .filter((inst) => inst.id) // Ensure we have a valid ID
@@ -81,7 +85,7 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
         setInstructors(uniqueInstructors)
       } catch (err) {
         console.error('Failed to load lessons:', err)
-        setError('Unable to load lessons. Please try again later.')
+        setError(t('dashboard.dailyLessons.error.load'))
       } finally {
         setLoading(false)
       }
@@ -98,10 +102,13 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
     const labels = []
     for (let hour = 6; hour <= 19; hour++) {
       const displayHour = hour < 12 ? hour : hour === 12 ? 12 : hour - 12
-      const ampm = hour < 12 ? 'AM' : 'PM'
+      // Use locale-aware time formatting
+      const date = new Date()
+      date.setHours(hour, 0, 0, 0)
+      const timeStr = formatTime(date, { hour: 'numeric', minute: '2-digit' })
       labels.push({
         hour,
-        label: `${displayHour}:00 ${ampm}`,
+        label: timeStr,
         position: ((hour - 6) / 13) * 100 // Percentage position
       })
     }
@@ -228,15 +235,13 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
         const widthPercent = (duration / TOTAL_MINUTES) * 100
         
         // Format time for display
-        const startStr = lessonStart.toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
+        const startStr = formatTime(lesson.starting, {
+          hour: 'numeric',
           minute: '2-digit',
-          hour12: true 
         })
-        const endStr = lessonEnd.toLocaleTimeString('en-US', { 
-          hour: 'numeric', 
+        const endStr = formatTime(lesson.ending, {
+          hour: 'numeric',
           minute: '2-digit',
-          hour12: true 
         })
         
         // Determine status
@@ -261,8 +266,8 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
   if (loading) {
     return (
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Daily Lessons</h2>
-        <div className="text-gray-600">Loading...</div>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">{t('dashboard.dailyLessons.title')}</h2>
+        <div className="text-gray-600">{t('common.loading')}</div>
       </div>
     )
   }
@@ -270,7 +275,7 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
   if (error) {
     return (
       <div className="rounded-xl bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-semibold text-gray-800 mb-4">Daily Lessons</h2>
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">{t('dashboard.dailyLessons.title')}</h2>
         <div className="text-red-600">{error}</div>
       </div>
     )
@@ -279,14 +284,14 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
   return (
     <div className="rounded-xl bg-white p-2 sm:p-4 md:p-6 shadow-sm w-full">
       <div className="sticky top-0 z-20 bg-white w-full flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 sm:gap-3 md:gap-4 mb-2 sm:mb-3 md:mb-4 pb-2 sm:pb-3 md:pb-4 border-b border-gray-200">
-        <h2 className="w-full sm:w-auto text-lg sm:text-xl font-semibold text-gray-800">Daily Lessons</h2>
+        <h2 className="w-full sm:w-auto text-lg sm:text-xl font-semibold text-gray-800">{t('dashboard.dailyLessons.title')}</h2>
         
         {/* Date navigation */}
         <div className="w-full sm:w-auto flex items-center gap-1.5 sm:gap-2">
           <button
             onClick={goToPreviousDay}
             className="p-1.5 sm:p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
-            aria-label="Previous day"
+            aria-label={t('dashboard.dailyLessons.previousDay')}
           >
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
@@ -304,7 +309,7 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
             onClick={goToToday}
             disabled={isToday()}
             className="p-1.5 sm:p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-            aria-label="Go to today"
+            aria-label={t('dashboard.dailyLessons.goToToday')}
           >
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -314,7 +319,7 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
           <button
             onClick={goToNextDay}
             className="p-1.5 sm:p-2 rounded-lg border border-gray-300 bg-white hover:bg-gray-50 transition-colors"
-            aria-label="Next day"
+            aria-label={t('dashboard.dailyLessons.nextDay')}
           >
             <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
@@ -324,7 +329,7 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
       </div>
 
       {instructors.length === 0 ? (
-        <div className="text-gray-600">No lessons scheduled for this date.</div>
+        <div className="text-gray-600">{t('common.empty')}</div>
       ) : (
         <div className="overflow-x-auto w-full">
           {/* Instructor rows with lessons */}
@@ -375,10 +380,10 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
                           width: `${lesson.widthPercent}%`,
                           minWidth: '60px'
                         }}
-                        title={`${lesson.student_name || 'Unknown'}: ${lesson.startStr} - ${lesson.endStr} (${lesson.status}) - Click to edit`}
+                        title={`${lesson.student_name || t('dashboard.dailyLessons.unknown')}: ${lesson.startStr} - ${lesson.endStr} (${t(`common.status.${lesson.status}`, lesson.status)}) - ${t('dashboard.dailyLessons.tooltip.clickToEdit')}`}
                       >
                         <div className={`text-xs sm:text-xs font-semibold ${lesson.statusStyles.text} truncate leading-tight`}>
-                          {lesson.student_name || 'Unknown'}
+                          {lesson.student_name || t('dashboard.dailyLessons.unknown')}
                         </div>
                         <div className={`text-[10px] sm:text-xs ${lesson.statusStyles.textSecondary} opacity-75 truncate leading-tight mt-0.5`}>
                           {lesson.startStr} - {lesson.endStr}

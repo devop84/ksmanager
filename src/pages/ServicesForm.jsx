@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
+import { useSettings } from '../context/SettingsContext'
 
 const baseFormState = {
   id: null,
@@ -21,6 +23,8 @@ const baseFormState = {
 
 function ServicesForm({ service, onCancel, onSaved }) {
   const isEditing = Boolean(service?.id)
+  const { t } = useTranslation()
+  const { currency } = useSettings()
   const [formData, setFormData] = useState(baseFormState)
   const [packageRows, setPackageRows] = useState([])
   const [categories, setCategories] = useState([])
@@ -136,14 +140,14 @@ function ServicesForm({ service, onCancel, onSaved }) {
           }
         } catch (err) {
           console.error('Failed to load service form data:', err)
-          setError('Unable to load data. Please try again.')
+          setError(t('servicesForm.errors.load'))
         } finally {
           setLoading(false)
         }
       }
 
     loadForm()
-  }, [service])
+  }, [service, t])
 
   const selectedCategory = useMemo(
     () => categories.find((category) => category.id === Number(formData.category_id)),
@@ -183,7 +187,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
     event.preventDefault()
 
     if (isLessonsCategory && formData.requires_package_pricing && packageRows.length === 0) {
-      setError('Please add at least one lesson package tier or disable package pricing.')
+      setError(t('servicesForm.errors.packages'))
       return
     }
 
@@ -273,7 +277,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
       onSaved?.()
     } catch (err) {
       console.error('Failed to save service:', err)
-      setError(err.message || 'Unable to save service. Please try again.')
+      setError(err.message || t('servicesForm.errors.save'))
     } finally {
       setSaving(false)
     }
@@ -282,7 +286,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
   if (loading) {
     return (
       <div className="p-8">
-        <div className="text-gray-600">Loading service data...</div>
+        <div className="text-gray-600">{t('servicesForm.loading')}</div>
       </div>
     )
   }
@@ -292,23 +296,23 @@ function ServicesForm({ service, onCancel, onSaved }) {
       <div className="mx-auto max-w-4xl rounded-xl bg-white p-6 shadow-sm">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">{isEditing ? 'Edit Service' : 'Add Service'}</h1>
-            <p className="text-gray-500 text-sm">
-              Define service details and category-specific settings.
-            </p>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {isEditing ? t('servicesForm.title.edit') : t('servicesForm.title.new')}
+            </h1>
+            <p className="text-gray-500 text-sm">{t('servicesForm.subtitle')}</p>
           </div>
           <button
             onClick={onCancel}
             className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
           >
-            Cancel
+            {t('servicesForm.buttons.cancel')}
           </button>
         </div>
 
         <form onSubmit={handleSubmit} className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="name">
-              Service name *
+              {t('servicesForm.fields.name')}
             </label>
             <input
               id="name"
@@ -323,7 +327,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
 
           <div>
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="category_id">
-              Category *
+              {t('servicesForm.fields.category')}
             </label>
             <select
               id="category_id"
@@ -342,7 +346,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
 
           <div className="md:col-span-2">
             <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="description">
-              Description
+              {t('servicesForm.fields.description')}
             </label>
             <textarea
               id="description"
@@ -358,7 +362,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
             <>
               <div className="md:col-span-2 grid grid-cols-2 gap-4">
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="default_duration_hours">
-                  Default duration (hours)
+                  {t('servicesForm.fields.defaultDuration')}
                 </label>
                 <input
                   id="default_duration_hours"
@@ -374,7 +378,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
 
               <div className="md:col-span-2 grid grid-cols-2 gap-4">
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="base_price_per_hour">
-                  Base price per hour
+                  {t('servicesForm.fields.basePrice', { currency })}
                 </label>
                 <input
                   id="base_price_per_hour"
@@ -398,37 +402,37 @@ function ServicesForm({ service, onCancel, onSaved }) {
                   className="h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
                 />
                 <label htmlFor="requires_package_pricing" className="text-sm font-medium text-gray-700">
-                  Enable package pricing tiers
+                  {t('servicesForm.fields.requiresPackage')}
                 </label>
               </div>
 
               {formData.requires_package_pricing && (
                 <div className="md:col-span-2">
                   <div className="flex items-center justify-between">
-                    <h2 className="text-sm font-semibold text-gray-800">Package tiers</h2>
+                    <h2 className="text-sm font-semibold text-gray-800">{t('servicesForm.packages.title')}</h2>
                     <button
                       type="button"
                       onClick={addPackageRow}
                       className="text-sm text-indigo-600 hover:text-indigo-800"
                     >
-                      Add tier
+                      {t('servicesForm.packages.add')}
                     </button>
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Define how price per hour changes based on total hours.
-                  </p>
+                  <p className="text-xs text-gray-500 mt-1">{t('servicesForm.packages.helper')}</p>
 
                   <div className="mt-3 space-y-3">
                     {packageRows.length === 0 && (
                       <div className="rounded-lg border border-dashed border-gray-300 px-4 py-3 text-sm text-gray-500">
-                        No tiers defined yet. Add one above.
+                        {t('servicesForm.packages.empty')}
                       </div>
                     )}
 
                     {packageRows.map((pkg, index) => (
                       <div key={index} className="rounded-lg border border-gray-200 p-3 grid grid-cols-1 gap-3 md:grid-cols-4">
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-gray-600">Min hours</label>
+                          <label className="mb-1 block text-xs font-medium text-gray-600">
+                            {t('servicesForm.packages.min')}
+                          </label>
                           <input
                             type="number"
                             step="0.5"
@@ -439,19 +443,23 @@ function ServicesForm({ service, onCancel, onSaved }) {
                           />
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-gray-600">Max hours</label>
+                          <label className="mb-1 block text-xs font-medium text-gray-600">
+                            {t('servicesForm.packages.max')}
+                          </label>
                           <input
                             type="number"
                             step="0.5"
                             min="0"
                             value={pkg.max_total_hours ?? ''}
                             onChange={(e) => handlePackageChange(index, 'max_total_hours', e.target.value)}
-                            placeholder="Unlimited"
+                            placeholder={t('servicesForm.packages.unlimited')}
                             className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                           />
                         </div>
                         <div>
-                          <label className="mb-1 block text-xs font-medium text-gray-600">Price per hour</label>
+                          <label className="mb-1 block text-xs font-medium text-gray-600">
+                            {t('servicesForm.packages.price', { currency })}
+                          </label>
                           <input
                             type="number"
                             step="1"
@@ -467,7 +475,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
                             onClick={() => removePackageRow(index)}
                             className="text-sm text-red-600 hover:text-red-800"
                           >
-                            Remove
+                            {t('servicesForm.packages.remove')}
                           </button>
                         </div>
                       </div>
@@ -482,7 +490,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
             <div className="md:col-span-2 grid grid-cols-1 gap-4 md:grid-cols-2">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="hourly_rate">
-                  Hourly rate
+                  {t('servicesForm.fields.hourlyRate', { currency })}
                 </label>
                 <input
                   id="hourly_rate"
@@ -497,7 +505,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="daily_rate">
-                  Daily rate
+                  {t('servicesForm.fields.dailyRate', { currency })}
                 </label>
                 <input
                   id="daily_rate"
@@ -517,7 +525,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
             <div className="md:col-span-2 grid grid-cols-1 gap-4 md:grid-cols-3">
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="storage_daily_rate">
-                  Daily rate
+                  {t('servicesForm.fields.storageDaily', { currency })}
                 </label>
                 <input
                   id="storage_daily_rate"
@@ -532,7 +540,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="storage_weekly_rate">
-                  Weekly rate
+                  {t('servicesForm.fields.storageWeekly', { currency })}
                 </label>
                 <input
                   id="storage_weekly_rate"
@@ -547,7 +555,7 @@ function ServicesForm({ service, onCancel, onSaved }) {
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-gray-700" htmlFor="storage_monthly_rate">
-                  Monthly rate
+                  {t('servicesForm.fields.storageMonthly', { currency })}
                 </label>
                 <input
                   id="storage_monthly_rate"
@@ -575,14 +583,18 @@ function ServicesForm({ service, onCancel, onSaved }) {
               onClick={onCancel}
               className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
             >
-              Cancel
+              {t('servicesForm.buttons.cancel')}
             </button>
             <button
               type="submit"
               disabled={saving}
               className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors disabled:opacity-50"
             >
-              {saving ? 'Saving...' : isEditing ? 'Save changes' : 'Create service'}
+              {saving
+                ? t('servicesForm.buttons.saving')
+                : isEditing
+                  ? t('servicesForm.buttons.saveChanges')
+                  : t('servicesForm.buttons.create')}
             </button>
           </div>
         </form>
