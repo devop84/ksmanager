@@ -8,6 +8,7 @@ function Landing({ onNavigate, isAuthenticated = false }) {
   const { language, setLanguage } = useSettings()
   const [showFeedback, setShowFeedback] = useState(false)
   const [showLanguageMenu, setShowLanguageMenu] = useState(false)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const features = [
     {
@@ -56,33 +57,36 @@ function Landing({ onNavigate, isAuthenticated = false }) {
       <nav className="bg-white border-b border-gray-200 sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
-            <div className="flex items-center gap-3">
+            {/* Logo */}
+            <div className="flex items-center gap-2 sm:gap-3">
               <svg
-                className="w-8 h-8 text-indigo-600"
+                className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-600 flex-shrink-0"
                 viewBox="0 0 24 24"
                 fill="currentColor"
                 xmlns="http://www.w3.org/2000/svg"
               >
                 <path d="M24 15v-2.3c-1.63.6-3.33.81-5 .61-2.26-.28-4.24-1.32-6.22-2.38-3.02-1.62-5.93-3.18-9.78-2.45-1.06.19-2.08.57-3 1.11v2.36c1.63-.6 3.33-.81 5-.61 2.26.28 4.24 1.32 6.22 2.38 3.02 1.61 5.93 3.18 9.78 2.44 1.06-.18 2.08-.56 3-1.12zm0-5.5V7.2c-1.63.6-3.33.82-5 .62-2.26-.29-4.24-1.33-6.22-2.39C9 3.8 6.1 2.22 2.25 2.95c-1.06.19-2.08.57-3 1.11v2.36c1.63-.6 3.33-.81 5-.61 2.26.28 4.24 1.33 6.22 2.39 3.02 1.61 5.93 3.17 9.78 2.44 1.06-.2 2.08-.58 3-1.13z" />
               </svg>
-              <h1 className="text-2xl font-bold text-gray-900">KSMANAGER</h1>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 whitespace-nowrap">KSMANAGER</h1>
             </div>
-            <div className="flex items-center gap-4">
+
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-3 lg:gap-4">
               {/* Language Selector */}
               <div className="relative">
                 <button
                   onClick={() => setShowLanguageMenu(!showLanguageMenu)}
-                  className="flex items-center gap-2 px-3 py-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors rounded-lg hover:bg-gray-50"
+                  className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-2 text-gray-700 hover:text-indigo-600 font-medium transition-colors rounded-lg hover:bg-gray-50"
                   aria-label="Select language"
                 >
-                  <span className="text-lg">
+                  <span className="text-base sm:text-lg">
                     {language === 'pt-BR' ? '🇧🇷' : '🇺🇸'}
                   </span>
-                  <span className="text-sm">
+                  <span className="text-xs sm:text-sm hidden sm:inline">
                     {language === 'pt-BR' ? 'PT' : 'EN'}
                   </span>
                   <svg
-                    className={`w-4 h-4 transition-transform ${showLanguageMenu ? 'rotate-180' : ''}`}
+                    className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform ${showLanguageMenu ? 'rotate-180' : ''}`}
                     fill="none"
                     stroke="currentColor"
                     viewBox="0 0 24 24"
@@ -145,24 +149,128 @@ function Landing({ onNavigate, isAuthenticated = false }) {
                   const feedbackSection = document.getElementById('feedback')
                   feedbackSection?.scrollIntoView({ behavior: 'smooth' })
                 }}
-                className="text-gray-700 hover:text-indigo-600 font-medium transition-colors"
+                className="text-gray-700 hover:text-indigo-600 font-medium transition-colors text-sm lg:text-base"
               >
                 {t('landing.nav.feedback')}
               </button>
               <button
                 onClick={() => onNavigate && onNavigate('roadmap')}
-                className="text-gray-700 hover:text-indigo-600 font-medium transition-colors"
+                className="text-gray-700 hover:text-indigo-600 font-medium transition-colors text-sm lg:text-base"
               >
                 {t('landing.nav.roadmap')}
               </button>
               <button
                 onClick={() => onNavigate && onNavigate('login')}
-                className="px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors"
+                className="px-3 lg:px-4 py-1.5 lg:py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-sm lg:text-base"
               >
                 {t('landing.nav.login')}
               </button>
             </div>
+
+            {/* Mobile Menu Button */}
+            <div className="flex md:hidden items-center gap-2">
+              {/* Language Selector - Mobile */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowLanguageMenu(!showLanguageMenu)}
+                  className="flex items-center gap-1 px-2 py-2 text-gray-700 hover:text-indigo-600 transition-colors rounded-lg hover:bg-gray-50"
+                  aria-label="Select language"
+                >
+                  <span className="text-base">
+                    {language === 'pt-BR' ? '🇧🇷' : '🇺🇸'}
+                  </span>
+                </button>
+                
+                {showLanguageMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setShowLanguageMenu(false)}
+                    ></div>
+                    <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
+                      <button
+                        onClick={() => {
+                          setLanguage('en-US')
+                          setShowLanguageMenu(false)
+                        }}
+                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-gray-50 transition-colors text-sm ${
+                          language === 'en-US' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
+                        }`}
+                      >
+                        <span className="text-lg">🇺🇸</span>
+                        <span className="font-medium">English</span>
+                      </button>
+                      <button
+                        onClick={() => {
+                          setLanguage('pt-BR')
+                          setShowLanguageMenu(false)
+                        }}
+                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-gray-50 transition-colors text-sm ${
+                          language === 'pt-BR' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
+                        }`}
+                      >
+                        <span className="text-lg">🇧🇷</span>
+                        <span className="font-medium">Português</span>
+                      </button>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Hamburger Menu Button */}
+              <button
+                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                className="p-2 text-gray-700 hover:text-indigo-600 hover:bg-gray-50 rounded-lg transition-colors"
+                aria-label="Toggle menu"
+              >
+                {isMobileMenuOpen ? (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </button>
+            </div>
           </div>
+
+          {/* Mobile Menu */}
+          {isMobileMenuOpen && (
+            <div className="md:hidden border-t border-gray-200 py-4">
+              <div className="flex flex-col gap-3 px-2">
+                <button
+                  onClick={() => {
+                    const feedbackSection = document.getElementById('feedback')
+                    feedbackSection?.scrollIntoView({ behavior: 'smooth' })
+                    setIsMobileMenuOpen(false)
+                  }}
+                  className="w-full text-left px-4 py-2 text-gray-700 hover:text-indigo-600 hover:bg-gray-50 font-medium rounded-lg transition-colors"
+                >
+                  {t('landing.nav.feedback')}
+                </button>
+                <button
+                  onClick={() => {
+                    onNavigate && onNavigate('roadmap')
+                    setIsMobileMenuOpen(false)
+                  }}
+                  className="w-full text-left px-4 py-2 text-gray-700 hover:text-indigo-600 hover:bg-gray-50 font-medium rounded-lg transition-colors"
+                >
+                  {t('landing.nav.roadmap')}
+                </button>
+                <button
+                  onClick={() => {
+                    onNavigate && onNavigate('login')
+                    setIsMobileMenuOpen(false)
+                  }}
+                  className="w-full px-4 py-2 bg-indigo-600 text-white font-medium rounded-lg hover:bg-indigo-700 transition-colors text-center"
+                >
+                  {t('landing.nav.login')}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </nav>
       )}
