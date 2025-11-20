@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import sql from '../lib/neon'
 import { useSettings } from '../context/SettingsContext'
 
-function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
+function DailyLessonsGraph({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
   const [lessons, setLessons] = useState([])
   const [instructors, setInstructors] = useState([])
   const [loading, setLoading] = useState(true)
@@ -401,5 +401,5 @@ function DailyLessons({ onEditOrder = () => {}, onViewCustomer = () => {} }) {
   )
 }
 
-export default DailyLessons
+export default DailyLessonsGraph
 

@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import Sidebar from './components/Sidebar'
-import Dashboard from './pages/Dashboard'
+import DashboardOperations from './pages/DashboardOperations'
+import DashboardFinancial from './pages/DashboardFinancial'
+import DashboardManagement from './pages/DashboardManagement'
 import Customers from './pages/Customers'
 import Hotels from './pages/Hotels'
 import Agencies from './pages/Agencies'
@@ -39,7 +41,7 @@ import { getSession, deleteSession } from './lib/auth.js'
 import { canModify } from './lib/permissions.js'
 function App() {
   const { t } = useTranslation()
-  const [currentPage, setCurrentPage] = useState('dashboard')
+  const [currentPage, setCurrentPage] = useState('dashboardManagement')
   const [isAuthenticated, setIsAuthenticated] = useState(false)
   const [showSignup, setShowSignup] = useState(false)
   const [user, setUser] = useState(null)
@@ -124,7 +126,7 @@ function App() {
       setUser(null)
       setIsAuthenticated(false)
       localStorage.removeItem('kiteManager_session')
-      setCurrentPage('dashboard')
+      setCurrentPage('dashboardManagement')
     }
   }
 
@@ -511,8 +513,12 @@ function App() {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard onEditOrder={(order) => openOrderForm(order)} onViewCustomer={(customer) => openCustomerDetail(customer)} />
+      case 'dashboardOperations':
+        return <DashboardOperations onEditOrder={(order) => openOrderForm(order)} onViewCustomer={(customer) => openCustomerDetail(customer)} />
+      case 'dashboardFinancial':
+        return <DashboardFinancial onViewCustomer={(customer) => openCustomerDetail(customer)} onNavigate={(page) => setCurrentPage(page)} />
+      case 'dashboardManagement':
+        return <DashboardManagement onEditOrder={(order) => openOrderForm(order)} onViewCustomer={(customer) => openCustomerDetail(customer)} onNavigate={(page) => setCurrentPage(page)} />
       case 'customers':
         return (
           <Customers

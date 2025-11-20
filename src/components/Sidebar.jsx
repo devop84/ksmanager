@@ -1,7 +1,20 @@
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClose }) {
   const { t } = useTranslation()
+  const [dashboardsOpen, setDashboardsOpen] = useState(() => {
+    // Open if any dashboard is active
+    return ['dashboardOperations', 'dashboardFinancial', 'dashboardManagement'].includes(currentPage)
+  })
+
+  // Keep submenu open when a dashboard page is active
+  useEffect(() => {
+    if (['dashboardOperations', 'dashboardFinancial', 'dashboardManagement'].includes(currentPage)) {
+      setDashboardsOpen(true)
+    }
+  }, [currentPage])
+
   const handleNavigateClick = (page) => {
     onNavigate(page)
     if (onClose) {
@@ -9,8 +22,15 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
     }
   }
 
+  const isDashboardActive = ['dashboardOperations', 'dashboardFinancial', 'dashboardManagement'].includes(currentPage)
+
+  const dashboardItems = [
+    { key: 'dashboardManagement', label: t('nav.dashboardManagement', 'Management') },
+    { key: 'dashboardOperations', label: t('nav.dashboardOperations', 'Operations') },
+    { key: 'dashboardFinancial', label: t('nav.dashboardFinancial', 'Financial') },
+  ]
+
   const navItems = [
-    { key: 'dashboard', label: t('nav.dashboard', 'Dashboard') },
     { key: 'orders', label: t('nav.orders', 'Orders') },
     { key: 'customers', label: t('nav.customers', 'Customers') },
     { key: 'transactions', label: t('nav.transactions', 'Transactions') },
@@ -98,8 +118,49 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
       )}
 
       {/* Navigation Menu */}
-      <nav className="flex-1 p-4">
+      <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-2">
+          {/* Dashboards Submenu */}
+          <li>
+            <button
+              onClick={() => setDashboardsOpen(!dashboardsOpen)}
+              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 flex items-center justify-between ${
+                isDashboardActive
+                  ? 'bg-indigo-600 text-white'
+                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
+              }`}
+            >
+              <span>{t('nav.dashboards', 'Dashboards')}</span>
+              <svg
+                className={`w-4 h-4 transition-transform duration-200 ${dashboardsOpen ? 'rotate-90' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            {dashboardsOpen && (
+              <ul className="mt-1 ml-4 space-y-1 border-l-2 border-gray-700 pl-2">
+                {dashboardItems.map((item) => (
+                  <li key={item.key}>
+                    <button
+                      onClick={() => handleNavigateClick(item.key)}
+                      className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200 text-sm ${
+                        currentPage === item.key
+                          ? 'bg-indigo-600 text-white'
+                          : 'text-gray-400 hover:bg-gray-800 hover:text-white'
+                      }`}
+                    >
+                      {item.label}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </li>
+
+          {/* Other Navigation Items */}
           {navItems.map((item) => (
             <li key={item.key}>
               <button
