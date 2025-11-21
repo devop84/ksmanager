@@ -27,30 +27,15 @@ function PaymentsDue({ limit = 5, onViewCustomer = () => {} }) {
               sc.name AS category_name,
               COALESCE(ol.starting, orent.starting, ost.starting) AS starting,
               COALESCE(ol.ending, orent.ending, ost.ending) AS ending,
-              sl.base_price_per_hour,
-              sr.hourly_rate,
-              sr.daily_rate,
-              sr.weekly_rate,
-              ss.daily_rate AS storage_daily_rate,
-              ss.weekly_rate AS storage_weekly_rate,
-              ss.monthly_rate AS storage_monthly_rate,
-              orent.hourly AS rental_hourly_flag,
-              orent.daily AS rental_daily_flag,
-              orent.weekly AS rental_weekly_flag,
-              ost.daily AS storage_daily_flag,
-              ost.weekly AS storage_weekly_flag,
-              ost.monthly AS storage_monthly_flag,
+              o.calculated_price,
               o.created_at
             FROM orders o
             JOIN customers c ON c.id = o.customer_id
             JOIN services s ON s.id = o.service_id
             JOIN service_categories sc ON sc.id = s.category_id
             LEFT JOIN orders_lessons ol ON ol.order_id = o.id
-            LEFT JOIN services_lessons sl ON sl.service_id = s.id
             LEFT JOIN orders_rentals orent ON orent.order_id = o.id
-            LEFT JOIN services_rentals sr ON sr.service_id = s.id
             LEFT JOIN orders_storage ost ON ost.order_id = o.id
-            LEFT JOIN services_storage ss ON ss.service_id = s.id
           `) || []
 
         const paymentRows =
@@ -119,42 +104,10 @@ function PaymentsDue({ limit = 5, onViewCustomer = () => {} }) {
           const diffHours = hoursBetween(row.starting, row.ending)
           let charge = 0
 
-          if (category === 'lessons') {
-            const rate = Number(row.base_price_per_hour || 0)
-            charge = diffHours * rate
-          } else if (category === 'rentals') {
-            if (row.rental_hourly_flag && row.hourly_rate) {
-              charge += diffHours * Number(row.hourly_rate)
-            }
-            if (row.rental_daily_flag && row.daily_rate) {
-              const days = Math.max(1, Math.ceil(diffHours / 24))
-              charge += days * Number(row.daily_rate)
-            }
-            if (row.rental_weekly_flag && row.weekly_rate) {
-              const weeks = Math.max(1, Math.ceil(diffHours / (24 * 7)))
-              charge += weeks * Number(row.weekly_rate)
-            }
-            if (!row.rental_hourly_flag && !row.rental_daily_flag && !row.rental_weekly_flag && row.daily_rate) {
-              const days = Math.max(1, Math.ceil(diffHours / 24))
-              charge += days * Number(row.daily_rate)
-            }
-          } else if (category === 'storage') {
-            const days = diffHours > 0 ? Math.max(1, Math.ceil(diffHours / 24)) : 0
-            if (row.storage_daily_flag && row.storage_daily_rate) {
-              charge += days * Number(row.storage_daily_rate)
-            }
-            if (row.storage_weekly_flag && row.storage_weekly_rate) {
-              const weeks = Math.max(1, Math.ceil(days / 7))
-              charge += weeks * Number(row.storage_weekly_rate)
-            }
-            if (row.storage_monthly_flag && row.storage_monthly_rate) {
-              const months = Math.max(1, Math.ceil(days / 30))
-              charge += months * Number(row.storage_monthly_rate)
-            }
-            if (!row.storage_daily_flag && !row.storage_weekly_flag && !row.storage_monthly_flag && row.storage_daily_rate) {
-              charge += days * Number(row.storage_daily_rate)
-            }
-          }
+          // Pricing calculation removed - will need to be updated to use packages or orders.calculated_price
+          // For now, just use calculated_price from orders table if available
+          const calculatedPrice = row.calculated_price || 0
+          charge = calculatedPrice
 
           entry.total += charge
         })

@@ -1,19 +1,7 @@
-import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 
 function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClose }) {
   const { t } = useTranslation()
-  const [dashboardsOpen, setDashboardsOpen] = useState(() => {
-    // Open if any dashboard is active
-    return ['dashboardOperations', 'dashboardFinancial', 'dashboardManagement', 'dashboardPartners'].includes(currentPage)
-  })
-
-  // Keep submenu open when a dashboard page is active
-  useEffect(() => {
-    if (['dashboardOperations', 'dashboardFinancial', 'dashboardManagement', 'dashboardPartners'].includes(currentPage)) {
-      setDashboardsOpen(true)
-    }
-  }, [currentPage])
 
   const handleNavigateClick = (page) => {
     onNavigate(page)
@@ -22,26 +10,14 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
     }
   }
 
-  const isDashboardActive = ['dashboardOperations', 'dashboardFinancial', 'dashboardManagement', 'dashboardPartners'].includes(currentPage)
-
-  const dashboardItems = [
-    { key: 'dashboardManagement', label: t('nav.dashboardManagement', 'Management') },
-    { key: 'dashboardOperations', label: t('nav.dashboardOperations', 'Operations') },
-    { key: 'dashboardFinancial', label: t('nav.dashboardFinancial', 'Financial') },
-    { key: 'dashboardPartners', label: t('nav.dashboardPartners', 'Partners & Salaries') },
-  ]
-
   const navItems = [
-    { key: 'orders', label: t('nav.orders', 'Orders') },
     { key: 'customers', label: t('nav.customers', 'Customers') },
     { key: 'transactions', label: t('nav.transactions', 'Transactions') },
     { key: 'companyAccounts', label: t('nav.companyAccounts', 'Company Accounts') },
     { key: 'instructors', label: t('nav.instructors', 'Instructors') },
     { key: 'staff', label: t('nav.staff', 'Staff') },
-    { key: 'services', label: t('nav.services', 'Services') },
     { key: 'agencies', label: t('nav.agencies', 'Agencies') },
     { key: 'thirdParties', label: t('nav.thirdParties', 'Third Parties') },
-    { key: 'equipment', label: t('nav.equipment', 'Equipment') },
     { key: 'hotels', label: t('nav.hotels', 'Hotels') },
     { key: 'settings', label: t('nav.settings', 'Settings') },
     { key: 'roadmap', label: t('nav.roadmap', 'Roadmap') },
@@ -141,8 +117,8 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
                 </svg>
               </button>
               {/* Logout Button */}
-              <button
-                onClick={onLogout}
+            <button
+              onClick={onLogout}
                 className="p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 transition-colors duration-200"
                 aria-label={t('user.logout', 'Logout')}
                 title={t('user.logout', 'Logout')}
@@ -152,7 +128,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
-                >
+            >
                   <path
                     strokeLinecap="round"
                     strokeLinejoin="round"
@@ -160,7 +136,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
                     d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
                   />
                 </svg>
-              </button>
+            </button>
             </div>
           </div>
         </div>
@@ -169,47 +145,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
       {/* Navigation Menu */}
       <nav className="flex-1 p-4 overflow-y-auto">
         <ul className="space-y-2">
-          {/* Dashboards Submenu */}
-          <li>
-            <button
-              onClick={() => setDashboardsOpen(!dashboardsOpen)}
-              className={`w-full text-left px-4 py-3 rounded-lg transition-colors duration-200 flex items-center justify-between ${
-                isDashboardActive
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-              }`}
-            >
-              <span>{t('nav.dashboards', 'Dashboards')}</span>
-              <svg
-                className={`w-4 h-4 transition-transform duration-200 ${dashboardsOpen ? 'rotate-90' : ''}`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-              </svg>
-            </button>
-            {dashboardsOpen && (
-              <ul className="mt-1 ml-4 space-y-1 border-l-2 border-gray-700 pl-2">
-                {dashboardItems.map((item) => (
-                  <li key={item.key}>
-                    <button
-                      onClick={() => handleNavigateClick(item.key)}
-                      className={`w-full text-left px-4 py-2 rounded-lg transition-colors duration-200 text-sm ${
-                        currentPage === item.key
-                          ? 'bg-indigo-600 text-white'
-                          : 'text-gray-400 hover:bg-gray-800 hover:text-white'
-                      }`}
-                    >
-                      {item.label}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </li>
-
-          {/* Other Navigation Items */}
+          {/* Navigation Items */}
           {navItems.map((item) => (
             <li key={item.key}>
               <button

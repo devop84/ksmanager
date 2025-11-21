@@ -51,15 +51,6 @@ function Login({ onLogin, onSwitchToSignup, onNavigate }) {
           <h2 className="text-center text-3xl font-bold text-gray-900">
             Sign in to KSMANAGER
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            Or{' '}
-            <button
-              onClick={onSwitchToSignup}
-              className="font-medium text-indigo-600 hover:text-indigo-500"
-            >
-              create a new account
-            </button>
-          </p>
           {onNavigate && (
             <p className="mt-2 text-center text-sm text-gray-600">
               <button
