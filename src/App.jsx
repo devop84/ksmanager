@@ -1,48 +1,53 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import Sidebar from './components/Sidebar'
-import Customers from './pages/Customers'
-import Hotels from './pages/Hotels'
-import Agencies from './pages/Agencies'
-import Instructors from './pages/Instructors'
-import Staff from './pages/Staff'
-import CustomerForm from './pages/CustomerForm'
-import CustomerDetail from './pages/CustomerDetail'
-import HotelForm from './pages/HotelForm'
-import HotelDetail from './pages/HotelDetail'
-import AgencyForm from './pages/AgencyForm'
-import AgencyDetail from './pages/AgencyDetail'
-import InstructorForm from './pages/InstructorForm'
-import InstructorDetail from './pages/InstructorDetail'
-import StaffForm from './pages/StaffForm'
-import StaffDetail from './pages/StaffDetail'
+import Customers from './pages/customers/Customers'
+import Hotels from './pages/hotels/Hotels'
+import Agencies from './pages/agencies/Agencies'
+import Instructors from './pages/instructors/Instructors'
+import Staff from './pages/staff/Staff'
+import CustomerForm from './pages/customers/CustomerForm'
+import CustomerDetail from './pages/customers/CustomerDetail'
+import HotelForm from './pages/hotels/HotelForm'
+import HotelDetail from './pages/hotels/HotelDetail'
+import AgencyForm from './pages/agencies/AgencyForm'
+import AgencyDetail from './pages/agencies/AgencyDetail'
+import InstructorForm from './pages/instructors/InstructorForm'
+import InstructorDetail from './pages/instructors/InstructorDetail'
+import StaffForm from './pages/staff/StaffForm'
+import StaffDetail from './pages/staff/StaffDetail'
 import Login from './pages/Login'
 import Signup from './pages/Signup'
-import CompanyAccounts from './pages/CompanyAccounts'
-import CompanyAccountForm from './pages/CompanyAccountForm'
-import CompanyAccountDetail from './pages/CompanyAccountDetail'
-import ThirdParties from './pages/ThirdParties'
-import ThirdPartyForm from './pages/ThirdPartyForm'
-import ThirdPartyDetail from './pages/ThirdPartyDetail'
-import Transactions from './pages/Transactions'
-import TransactionForm from './pages/TransactionForm'
-import TransactionDetail from './pages/TransactionDetail'
-import Orders from './pages/Orders'
-import OrderDetail from './pages/OrderDetail'
-import Products from './pages/Products'
-import ProductForm from './pages/ProductForm'
-import ProductDetail from './pages/ProductDetail'
-import Services from './pages/Services'
-import ServiceForm from './pages/ServiceForm'
-import ServiceDetail from './pages/ServiceDetail'
-import ServicePackages from './pages/ServicePackages'
-import ServicePackageForm from './pages/ServicePackageForm'
-import ServicePackageDetail from './pages/ServicePackageDetail'
+import CompanyAccounts from './pages/companyaccounts/CompanyAccounts'
+import CompanyAccountForm from './pages/companyaccounts/CompanyAccountForm'
+import CompanyAccountDetail from './pages/companyaccounts/CompanyAccountDetail'
+import ThirdParties from './pages/thirdparties/ThirdParties'
+import ThirdPartyForm from './pages/thirdparties/ThirdPartyForm'
+import ThirdPartyDetail from './pages/thirdparties/ThirdPartyDetail'
+import Transactions from './pages/transactions/Transactions'
+import TransactionForm from './pages/transactions/TransactionForm'
+import TransactionDetail from './pages/transactions/TransactionDetail'
+import Orders from './pages/orders/Orders'
+import OrderForm from './pages/orders/OrderForm'
+import OrderDetail from './pages/orders/OrderDetail'
+import Products from './pages/products/Products'
+import ProductForm from './pages/products/ProductForm'
+import ProductDetail from './pages/products/ProductDetail'
+import Services from './pages/services/Services'
+import ServiceForm from './pages/services/ServiceForm'
+import ServiceDetail from './pages/services/ServiceDetail'
+import ServicePackages from './pages/services/ServicePackages'
+import ServicePackageForm from './pages/services/ServicePackageForm'
+import ServicePackageDetail from './pages/services/ServicePackageDetail'
+import Appointments from './pages/appointments/Appointments'
+import AppointmentForm from './pages/appointments/AppointmentForm'
+import AppointmentDetail from './pages/appointments/AppointmentDetail'
 import Settings from './pages/Settings'
 import Landing from './pages/Landing'
 import Roadmap from './pages/Roadmap'
 import { getSession, deleteSession } from './lib/auth.js'
 import { canModify } from './lib/permissions.js'
+import sql from './lib/neon'
 function App() {
   const { t } = useTranslation()
   const [currentPage, setCurrentPage] = useState('landing')
@@ -82,6 +87,8 @@ function App() {
   const [productFormProduct, setProductFormProduct] = useState(null)
   const [productDetailId, setProductDetailId] = useState(null)
   const [ordersRefreshKey, setOrdersRefreshKey] = useState(0)
+  const [orderFormOrder, setOrderFormOrder] = useState(null)
+  const [orderFormCustomer, setOrderFormCustomer] = useState(null)
   const [servicesRefreshKey, setServicesRefreshKey] = useState(0)
   const [serviceFormService, setServiceFormService] = useState(null)
   const [serviceDetailId, setServiceDetailId] = useState(null)
@@ -91,6 +98,10 @@ function App() {
   const [servicePackageDetailId, setServicePackageDetailId] = useState(null)
   const [servicePackageDetailBackPage, setServicePackageDetailBackPage] = useState('servicePackages')
   const [servicePackageDetailBackId, setServicePackageDetailBackId] = useState(null)
+  const [appointmentsRefreshKey, setAppointmentsRefreshKey] = useState(0)
+  const [appointmentFormAppointment, setAppointmentFormAppointment] = useState(null)
+  const [appointmentFormCustomer, setAppointmentFormCustomer] = useState(null)
+  const [appointmentDetailId, setAppointmentDetailId] = useState(null)
 
   // Check if user is logged in on mount using session
   useEffect(() => {
@@ -206,15 +217,39 @@ function App() {
     setCurrentPage('orders')
   }
 
-  const openOrderForm = (order = null) => {
-    // For now, we can create a new order or edit an existing one
-    // This can be implemented when OrderForm is created
-    if (order) {
+  const openOrderForm = (order = null, customer = null) => {
+    setOrderFormOrder(order)
+    setOrderFormCustomer(customer)
+    setCurrentPage('orderForm')
+  }
+
+  const handleOrderFormSaved = () => {
+    setOrderFormOrder(null)
+    setOrderFormCustomer(null)
+    setOrdersRefreshKey((prev) => prev + 1)
+    if (orderFormOrder) {
+      // After editing, go to order detail
+      setOrderDetailId(orderFormOrder.id)
       setCurrentPage('orderDetail')
-      setOrderDetailId(order.id)
     } else {
-      // Navigate to create new order - for now, just go to orders page
-      // Could be expanded to create OrderForm later
+      // After creating, go to orders list
+      setCurrentPage('orders')
+    }
+  }
+
+  const handleOrderFormCancel = () => {
+    setOrderFormOrder(null)
+    setOrderFormCustomer(null)
+    if (orderFormOrder) {
+      // If editing, go back to order detail
+      setOrderDetailId(orderFormOrder.id)
+      setCurrentPage('orderDetail')
+    } else if (orderFormCustomer) {
+      // If creating from customer detail, go back to customer
+      setCustomerDetailId(orderFormCustomer.id)
+      setCurrentPage('customerDetail')
+    } else {
+      // Otherwise, go to orders list
       setCurrentPage('orders')
     }
   }
@@ -241,8 +276,7 @@ function App() {
   }
 
   const handleOrderDetailEdit = (order) => {
-    // For now, just go back - can add order form later
-    handleOrderDetailBack()
+    openOrderForm(order)
   }
 
   const handleOrderDetailDelete = () => {
@@ -536,6 +570,21 @@ function App() {
     setCurrentPage('instructors')
   }
 
+  const handleInstructorDetailDelete = async () => {
+    if (!instructorDetailId) return
+    if (!window.confirm(t('instructors.confirm.delete', 'Are you sure you want to delete this instructor?'))) return
+    
+    try {
+      await sql`DELETE FROM instructors WHERE id = ${instructorDetailId}`
+      setInstructorsRefreshKey((prev) => prev + 1)
+      setInstructorDetailId(null)
+      setCurrentPage('instructors')
+    } catch (err) {
+      console.error('Failed to delete instructor:', err)
+      alert(t('instructors.error.delete', 'Failed to delete instructor'))
+    }
+  }
+
   const openStaffForm = (staff = null) => {
     setStaffFormStaff(staff)
     setCurrentPage('staffForm')
@@ -689,6 +738,62 @@ function App() {
     setCurrentPage('transactions')
   }
 
+  const openAppointmentForm = (appointment = null, customer = null) => {
+    setAppointmentFormAppointment(appointment)
+    setAppointmentFormCustomer(customer)
+    setCurrentPage('appointmentForm')
+  }
+
+  const handleAppointmentFormSaved = () => {
+    setAppointmentFormAppointment(null)
+    const savedCustomer = appointmentFormCustomer
+    setAppointmentFormCustomer(null)
+    setAppointmentsRefreshKey((prev) => prev + 1)
+    // If we were adding from customer detail, go back to customer detail
+    if (savedCustomer) {
+      setCustomerDetailId(savedCustomer.id)
+      setCurrentPage('customerDetail')
+    } else {
+      setCurrentPage('appointments')
+    }
+  }
+
+  const handleAppointmentFormCancel = () => {
+    setAppointmentFormAppointment(null)
+    const cancelledCustomer = appointmentFormCustomer
+    setAppointmentFormCustomer(null)
+    // If we were adding from customer detail, go back to customer detail
+    if (cancelledCustomer) {
+      setCustomerDetailId(cancelledCustomer.id)
+      setCurrentPage('customerDetail')
+    } else {
+      setCurrentPage('appointments')
+    }
+  }
+
+  const handleAppointmentView = (appointment) => {
+    setAppointmentDetailId(appointment.id)
+    setCurrentPage('appointmentDetail')
+  }
+
+  const handleAppointmentEdit = (appointment) => {
+    openAppointmentForm(appointment)
+  }
+
+  const handleAppointmentDetailBack = () => {
+    setAppointmentDetailId(null)
+    setCurrentPage('appointments')
+  }
+
+  const handleAppointmentDetailEdit = (appointment) => {
+    openAppointmentForm(appointment)
+  }
+
+  const handleAppointmentDetailDelete = () => {
+    setAppointmentsRefreshKey((prev) => prev + 1)
+    setAppointmentDetailId(null)
+    setCurrentPage('appointments')
+  }
 
 
   const closeSidebar = () => {
@@ -783,6 +888,8 @@ function App() {
             onBack={handleCustomerDetailBack}
             onEdit={handleCustomerDetailEdit}
             onDelete={handleCustomerDetailDelete}
+            onViewAppointment={handleAppointmentView}
+            onAddAppointment={(customer) => openAppointmentForm(null, customer)}
             onAddTransaction={(customer) => {
               const transaction = {
                 destination_entity_type: 'customer',
@@ -790,6 +897,7 @@ function App() {
               }
               openTransactionForm(transaction)
             }}
+            onAddOrder={(customer) => openOrderForm(null, customer)}
             onViewOrder={(order) => openOrderDetail(order, 'customerDetail', customerDetailId)}
             user={user}
           />
@@ -852,6 +960,7 @@ function App() {
             instructorId={instructorDetailId}
             onBack={handleInstructorDetailBack}
             onEdit={(instructor) => openInstructorForm(instructor)}
+            onDelete={handleInstructorDetailDelete}
             user={user}
           />
         )
@@ -917,6 +1026,15 @@ function App() {
             onAddOrder={() => openOrderForm(null)}
             onEditOrder={(order) => openOrderDetail(order, 'orders')}
             onViewOrder={(order) => openOrderDetail(order, 'orders')}
+          />
+        )
+      case 'orderForm':
+        return (
+          <OrderForm
+            order={orderFormOrder}
+            customer={orderFormCustomer}
+            onCancel={handleOrderFormCancel}
+            onSaved={handleOrderFormSaved}
           />
         )
       case 'orderDetail':
@@ -1014,6 +1132,35 @@ function App() {
             onEdit={handleServicePackageDetailEdit}
             onDelete={handleServicePackageDetailDelete}
             onViewService={handleServicePackageDetailViewService}
+            user={user}
+          />
+        )
+      case 'appointments':
+        return (
+          <Appointments
+            refreshKey={appointmentsRefreshKey}
+            user={user}
+            onAddAppointment={() => openAppointmentForm(null)}
+            onViewAppointment={handleAppointmentView}
+            onEditAppointment={handleAppointmentEdit}
+          />
+        )
+      case 'appointmentForm':
+        return (
+          <AppointmentForm
+            appointment={appointmentFormAppointment}
+            customer={appointmentFormCustomer}
+            onCancel={handleAppointmentFormCancel}
+            onSaved={handleAppointmentFormSaved}
+          />
+        )
+      case 'appointmentDetail':
+        return (
+          <AppointmentDetail
+            appointmentId={appointmentDetailId}
+            onBack={handleAppointmentDetailBack}
+            onEdit={handleAppointmentDetailEdit}
+            onDelete={handleAppointmentDetailDelete}
             user={user}
           />
         )
@@ -1145,4 +1292,5 @@ function App() {
 }
 
 export default App
+
 

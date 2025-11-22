@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS sessions (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     session_token VARCHAR(255) UNIQUE NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
+    expires_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -253,6 +253,7 @@ CREATE TABLE IF NOT EXISTS services (
     description TEXT,
     base_price NUMERIC(10,2) NOT NULL DEFAULT 0,
     currency VARCHAR(3) NOT NULL DEFAULT 'BRL',
+    duration_unit VARCHAR(20) CHECK (duration_unit IN ('hours', 'days', 'months', 'none')) DEFAULT 'none',
     is_active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -260,13 +261,16 @@ CREATE TABLE IF NOT EXISTS services (
 
 CREATE INDEX IF NOT EXISTS idx_services_category ON services(category_id);
 CREATE INDEX IF NOT EXISTS idx_services_active ON services(is_active);
+CREATE INDEX IF NOT EXISTS idx_services_duration_unit ON services(duration_unit);
 
 -- Service packages (e.g., 2h, 4h, 6h, 8h, 10h lesson packages)
 CREATE TABLE IF NOT EXISTS service_packages (
     id SERIAL PRIMARY KEY,
     service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
     name VARCHAR(255) NOT NULL,  -- e.g., "2h Package", "4h Package"
-    duration_hours NUMERIC(5,2),  -- e.g., 2.0, 4.0, 6.0
+    duration_hours NUMERIC(5,2),  -- Used when service.duration_unit = 'hours'
+    duration_days NUMERIC(5,2),   -- Used when service.duration_unit = 'days'
+    duration_months INTEGER,      -- Used when service.duration_unit = 'months'
     price NUMERIC(10,2) NOT NULL,
     currency VARCHAR(3) NOT NULL DEFAULT 'BRL',
     description TEXT,
@@ -339,7 +343,6 @@ CREATE TABLE IF NOT EXISTS orders (
     cancelled_at TIMESTAMP,
     
     -- Optional relationships
-    instructor_id INTEGER REFERENCES instructors(id) ON DELETE SET NULL,  -- For lesson bookings
     agency_id INTEGER REFERENCES agencies(id) ON DELETE SET NULL,  -- If booked through agency
     created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,  -- Staff member who created
     
@@ -350,7 +353,6 @@ CREATE INDEX IF NOT EXISTS idx_orders_customer ON orders(customer_id);
 CREATE INDEX IF NOT EXISTS idx_orders_status ON orders(status);
 CREATE INDEX IF NOT EXISTS idx_orders_order_number ON orders(order_number);
 CREATE INDEX IF NOT EXISTS idx_orders_created_at ON orders(created_at);
-CREATE INDEX IF NOT EXISTS idx_orders_instructor ON orders(instructor_id);
 CREATE INDEX IF NOT EXISTS idx_orders_agency ON orders(agency_id);
 
 -- Order items table (services/products/packages in an order)
@@ -559,3 +561,381 @@ CREATE TRIGGER trigger_update_order_payment_balance
 AFTER INSERT OR UPDATE OR DELETE ON order_payments
 FOR EACH ROW
 EXECUTE FUNCTION update_order_payment_balance();
+
+-- ============================================
+-- SCHEDULING & AGENDA SYSTEM
+-- ============================================
+
+-- Customer service credits table
+-- Tracks credits from purchased service packages
+CREATE TABLE IF NOT EXISTS customer_service_credits (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    order_item_id INTEGER NOT NULL REFERENCES order_items(id) ON DELETE CASCADE,
+    
+    -- Link to the service package that was purchased (NULL for direct service purchases)
+    service_package_id INTEGER REFERENCES service_packages(id) ON DELETE RESTRICT,
+    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE RESTRICT,
+    
+    -- Credit details (based on service.duration_unit)
+    -- Only one of these will be populated based on service.duration_unit
+    total_hours NUMERIC(5,2),      -- For services with duration_unit = 'hours'
+    total_days NUMERIC(5,2),       -- For services with duration_unit = 'days'
+    total_months INTEGER,          -- For services with duration_unit = 'months'
+    
+    -- Status
+    status VARCHAR(20) NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'expired', 'cancelled', 'fully_used')),
+    
+    -- Expiry (optional - can be NULL for no expiration)
+    expires_at TIMESTAMP WITH TIME ZONE,
+    
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_customer_service_credits_customer ON customer_service_credits(customer_id);
+CREATE INDEX IF NOT EXISTS idx_customer_service_credits_order_item ON customer_service_credits(order_item_id);
+CREATE INDEX IF NOT EXISTS idx_customer_service_credits_service_package ON customer_service_credits(service_package_id);
+CREATE INDEX IF NOT EXISTS idx_customer_service_credits_service ON customer_service_credits(service_id);
+CREATE INDEX IF NOT EXISTS idx_customer_service_credits_status ON customer_service_credits(status);
+CREATE INDEX IF NOT EXISTS idx_customer_service_credits_expires_at ON customer_service_credits(expires_at);
+
+-- Scheduled appointments table
+CREATE TABLE IF NOT EXISTS scheduled_appointments (
+    id SERIAL PRIMARY KEY,
+    customer_id INTEGER NOT NULL REFERENCES customers(id) ON DELETE CASCADE,
+    
+    -- What service is being scheduled
+    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE RESTRICT,
+    service_package_id INTEGER REFERENCES service_packages(id) ON DELETE SET NULL,  -- Optional: if booked from a package
+    
+    -- Which credit is being used (can be NULL if it's a direct service purchase, not from credit)
+    credit_id INTEGER REFERENCES customer_service_credits(id) ON DELETE SET NULL,
+    
+    -- Scheduling details
+    scheduled_start TIMESTAMP WITH TIME ZONE NOT NULL,
+    scheduled_end TIMESTAMP WITH TIME ZONE NOT NULL,
+    
+    -- Duration consumed (based on service.duration_unit)
+    duration_hours NUMERIC(5,2),   -- For services with duration_unit = 'hours'
+    duration_days NUMERIC(5,2),    -- For services with duration_unit = 'days'
+    duration_months INTEGER,       -- For services with duration_unit = 'months'
+    
+    -- Status
+    status VARCHAR(20) NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'completed', 'cancelled', 'no_show', 'rescheduled')),
+    
+    -- Optional: assign instructor/staff
+    instructor_id INTEGER REFERENCES instructors(id) ON DELETE SET NULL,
+    staff_id INTEGER REFERENCES staff(id) ON DELETE SET NULL,
+    
+    -- Optional: name of the person attending (for appointments booked for family/friends)
+    attendee_name VARCHAR(255),
+    
+    -- Notes
+    note TEXT,
+    
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP WITH TIME ZONE,
+    cancelled_at TIMESTAMP WITH TIME ZONE,
+    
+    -- Who created/modified
+    created_by INTEGER REFERENCES users(id) ON DELETE SET NULL,
+    
+    -- Check that end is after start
+    CONSTRAINT check_scheduled_time CHECK (scheduled_end > scheduled_start)
+);
+
+CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_customer ON scheduled_appointments(customer_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_service ON scheduled_appointments(service_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_credit ON scheduled_appointments(credit_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_status ON scheduled_appointments(status);
+CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_start ON scheduled_appointments(scheduled_start);
+CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_end ON scheduled_appointments(scheduled_end);
+CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_instructor ON scheduled_appointments(instructor_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_staff ON scheduled_appointments(staff_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_date_range ON scheduled_appointments(scheduled_start, scheduled_end);
+
+-- Function to calculate credit balance
+CREATE OR REPLACE FUNCTION get_credit_balance(credit_id_param INTEGER)
+RETURNS TABLE (
+    credit_id INTEGER,
+    total NUMERIC,
+    used NUMERIC,
+    available NUMERIC,
+    duration_unit VARCHAR
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        csc.id,
+        CASE 
+            WHEN s.duration_unit = 'hours' THEN csc.total_hours
+            WHEN s.duration_unit = 'days' THEN csc.total_days
+            WHEN s.duration_unit = 'months' THEN csc.total_months::NUMERIC
+            ELSE 0
+        END as total,
+        CASE 
+            WHEN s.duration_unit = 'hours' THEN COALESCE(SUM(sa.duration_hours), 0)
+            WHEN s.duration_unit = 'days' THEN COALESCE(SUM(sa.duration_days), 0)
+            WHEN s.duration_unit = 'months' THEN COALESCE(SUM(sa.duration_months), 0)::NUMERIC
+            ELSE 0
+        END as used,
+        CASE 
+            WHEN s.duration_unit = 'hours' THEN csc.total_hours - COALESCE(SUM(sa.duration_hours), 0)
+            WHEN s.duration_unit = 'days' THEN csc.total_days - COALESCE(SUM(sa.duration_days), 0)
+            WHEN s.duration_unit = 'months' THEN (csc.total_months::NUMERIC - COALESCE(SUM(sa.duration_months), 0)::NUMERIC)
+            ELSE 0
+        END as available,
+        s.duration_unit
+    FROM customer_service_credits csc
+    JOIN services s ON csc.service_id = s.id
+    LEFT JOIN scheduled_appointments sa ON sa.credit_id = csc.id 
+        AND sa.status IN ('scheduled', 'completed')
+        AND (sa.cancelled_at IS NULL)
+    WHERE csc.id = credit_id_param
+        AND csc.status = 'active'
+    GROUP BY csc.id, csc.total_hours, csc.total_days, csc.total_months, s.duration_unit;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get all credits for a customer with balances
+CREATE OR REPLACE FUNCTION get_customer_credits(customer_id_param INTEGER)
+RETURNS TABLE (
+    credit_id INTEGER,
+    customer_id INTEGER,
+    order_item_id INTEGER,
+    service_package_id INTEGER,
+    service_id INTEGER,
+    service_name VARCHAR,
+    package_name VARCHAR,
+    duration_unit VARCHAR,
+    total NUMERIC,
+    used NUMERIC,
+    available NUMERIC,
+    status VARCHAR,
+    expires_at TIMESTAMP,
+    created_at TIMESTAMP
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        csc.id as credit_id,
+        csc.customer_id,
+        csc.order_item_id,
+        csc.service_package_id,
+        csc.service_id,
+        s.name as service_name,
+        sp.name as package_name,
+        s.duration_unit,
+        CASE 
+            WHEN s.duration_unit = 'hours' THEN csc.total_hours
+            WHEN s.duration_unit = 'days' THEN csc.total_days
+            WHEN s.duration_unit = 'months' THEN csc.total_months::NUMERIC
+            ELSE 0
+        END as total,
+        CASE 
+            WHEN s.duration_unit = 'hours' THEN COALESCE(SUM(sa.duration_hours) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
+            WHEN s.duration_unit = 'days' THEN COALESCE(SUM(sa.duration_days) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
+            WHEN s.duration_unit = 'months' THEN COALESCE(SUM(sa.duration_months) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)::NUMERIC
+            ELSE 0
+        END as used,
+        CASE 
+            WHEN s.duration_unit = 'hours' THEN csc.total_hours - COALESCE(SUM(sa.duration_hours) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
+            WHEN s.duration_unit = 'days' THEN csc.total_days - COALESCE(SUM(sa.duration_days) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
+            WHEN s.duration_unit = 'months' THEN (csc.total_months::NUMERIC - COALESCE(SUM(sa.duration_months) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)::NUMERIC)
+            ELSE 0
+        END as available,
+        csc.status,
+        csc.expires_at,
+        csc.created_at
+    FROM customer_service_credits csc
+    JOIN services s ON csc.service_id = s.id
+    LEFT JOIN service_packages sp ON csc.service_package_id = sp.id
+    LEFT JOIN scheduled_appointments sa ON sa.credit_id = csc.id
+    WHERE csc.customer_id = customer_id_param
+    GROUP BY csc.id, csc.customer_id, csc.order_item_id, csc.service_package_id, csc.service_id, 
+             s.name, sp.name, s.duration_unit, csc.total_hours, csc.total_days, csc.total_months,
+             csc.status, csc.expires_at, csc.created_at
+    ORDER BY csc.created_at DESC;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to automatically create credits when service_package is purchased
+CREATE OR REPLACE FUNCTION create_service_credits_from_order_item()
+RETURNS TRIGGER AS $$
+DECLARE
+    pkg RECORD;
+    svc RECORD;
+    credit_total_hours NUMERIC(5,2);
+    credit_total_days NUMERIC(5,2);
+    credit_total_months INTEGER;
+    i INTEGER;
+    customer_id_val INTEGER;
+    credit_id_val INTEGER;
+BEGIN
+    -- Process service_package order items
+    IF NEW.item_type = 'service_package' THEN
+        -- Get customer_id from order
+        SELECT customer_id INTO customer_id_val
+        FROM orders
+        WHERE id = NEW.order_id;
+        
+        -- Get service package details
+        SELECT sp.*, s.duration_unit, s.id as service_id
+        INTO pkg
+        FROM service_packages sp
+        JOIN services s ON sp.service_id = s.id
+        WHERE sp.id = NEW.item_id
+        LIMIT 1;
+        
+        IF FOUND THEN
+            -- Only create credit if duration_unit is not 'none'
+            IF pkg.duration_unit != 'none' THEN
+                -- Determine which duration field to use based on service duration_unit
+                -- Multiply by quantity to get total credit amount
+                IF pkg.duration_unit = 'hours' THEN
+                    credit_total_hours := pkg.duration_hours * NEW.quantity;
+                    credit_total_days := NULL;
+                    credit_total_months := NULL;
+                ELSIF pkg.duration_unit = 'days' THEN
+                    credit_total_hours := NULL;
+                    credit_total_days := pkg.duration_days * NEW.quantity;
+                    credit_total_months := NULL;
+                ELSIF pkg.duration_unit = 'months' THEN
+                    credit_total_hours := NULL;
+                    credit_total_days := NULL;
+                    credit_total_months := pkg.duration_months * NEW.quantity;
+                END IF;
+                
+                -- Create a single credit with total amount (quantity * duration)
+                INSERT INTO customer_service_credits (
+                    customer_id,
+                    order_item_id,
+                    service_package_id,
+                    service_id,
+                    total_hours,
+                    total_days,
+                    total_months,
+                    status
+                )
+                VALUES (
+                    customer_id_val,
+                    NEW.id,
+                    pkg.id,
+                    pkg.service_id,
+                    credit_total_hours,
+                    credit_total_days,
+                    credit_total_months,
+                    'active'
+                )
+                RETURNING id INTO credit_id_val;
+                
+                -- Transfer orphaned appointments to this new credit
+                -- Find appointments for this customer+service that have no credit_id (orphaned)
+                UPDATE scheduled_appointments
+                SET credit_id = credit_id_val
+                WHERE customer_id = customer_id_val
+                  AND service_id = pkg.service_id
+                  AND credit_id IS NULL
+                  AND status IN ('scheduled', 'completed')
+                  AND cancelled_at IS NULL;
+            END IF;
+        END IF;
+    END IF;
+    
+    -- Also process direct service order items (if service has duration_unit)
+    IF NEW.item_type = 'service' THEN
+        -- Get customer_id from order
+        SELECT customer_id INTO customer_id_val
+        FROM orders
+        WHERE id = NEW.order_id;
+        
+        -- Get service details
+        SELECT s.id as service_id, s.duration_unit
+        INTO svc
+        FROM services s
+        WHERE s.id = NEW.item_id
+        LIMIT 1;
+        
+        IF FOUND AND svc.duration_unit != 'none' THEN
+            -- Determine which duration field to use based on service duration_unit
+            -- For direct services, use 1 unit per quantity (multiply by quantity)
+            IF svc.duration_unit = 'hours' THEN
+                credit_total_hours := 1 * NEW.quantity;
+                credit_total_days := NULL;
+                credit_total_months := NULL;
+            ELSIF svc.duration_unit = 'days' THEN
+                credit_total_hours := NULL;
+                credit_total_days := 1 * NEW.quantity;
+                credit_total_months := NULL;
+            ELSIF svc.duration_unit = 'months' THEN
+                credit_total_hours := NULL;
+                credit_total_days := NULL;
+                credit_total_months := 1 * NEW.quantity;
+            END IF;
+            
+            -- Create a single credit with total amount (quantity * 1 unit)
+            INSERT INTO customer_service_credits (
+                customer_id,
+                order_item_id,
+                service_package_id,
+                service_id,
+                total_hours,
+                total_days,
+                total_months,
+                status
+            )
+            VALUES (
+                customer_id_val,
+                NEW.id,
+                NULL,  -- No package for direct service
+                svc.service_id,
+                credit_total_hours,
+                credit_total_days,
+                credit_total_months,
+                'active'
+            )
+            RETURNING id INTO credit_id_val;
+            
+            -- Transfer orphaned appointments to this new credit
+            UPDATE scheduled_appointments
+            SET credit_id = credit_id_val
+            WHERE customer_id = customer_id_val
+              AND service_id = svc.service_id
+              AND credit_id IS NULL
+              AND status IN ('scheduled', 'completed')
+              AND cancelled_at IS NULL;
+        END IF;
+    END IF;
+    
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER trigger_create_service_credits
+AFTER INSERT ON order_items
+FOR EACH ROW
+EXECUTE FUNCTION create_service_credits_from_order_item();
+
+-- Function to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_at = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger to update updated_at timestamp for credits and appointments
+CREATE TRIGGER trigger_update_customer_service_credits_updated_at
+BEFORE UPDATE ON customer_service_credits
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_update_scheduled_appointments_updated_at
+BEFORE UPDATE ON scheduled_appointments
+FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();

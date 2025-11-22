@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "create-admin": "node database/create_admin.js"
+    "create-admin": "node database/create_admin.js",
+    "extract-seed": "node database/extract_seed_data.js"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.9.0",
