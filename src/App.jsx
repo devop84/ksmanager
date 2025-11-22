@@ -27,6 +27,17 @@ import ThirdPartyDetail from './pages/ThirdPartyDetail'
 import Transactions from './pages/Transactions'
 import TransactionForm from './pages/TransactionForm'
 import TransactionDetail from './pages/TransactionDetail'
+import Orders from './pages/Orders'
+import OrderDetail from './pages/OrderDetail'
+import Products from './pages/Products'
+import ProductForm from './pages/ProductForm'
+import ProductDetail from './pages/ProductDetail'
+import Services from './pages/Services'
+import ServiceForm from './pages/ServiceForm'
+import ServiceDetail from './pages/ServiceDetail'
+import ServicePackages from './pages/ServicePackages'
+import ServicePackageForm from './pages/ServicePackageForm'
+import ServicePackageDetail from './pages/ServicePackageDetail'
 import Settings from './pages/Settings'
 import Landing from './pages/Landing'
 import Roadmap from './pages/Roadmap'
@@ -64,6 +75,22 @@ function App() {
   const [transactionsRefreshKey, setTransactionsRefreshKey] = useState(0)
   const [transactionFormTransaction, setTransactionFormTransaction] = useState(null)
   const [transactionDetailId, setTransactionDetailId] = useState(null)
+  const [orderDetailId, setOrderDetailId] = useState(null)
+  const [orderDetailBackPage, setOrderDetailBackPage] = useState('customers')
+  const [orderDetailBackId, setOrderDetailBackId] = useState(null)
+  const [productsRefreshKey, setProductsRefreshKey] = useState(0)
+  const [productFormProduct, setProductFormProduct] = useState(null)
+  const [productDetailId, setProductDetailId] = useState(null)
+  const [ordersRefreshKey, setOrdersRefreshKey] = useState(0)
+  const [servicesRefreshKey, setServicesRefreshKey] = useState(0)
+  const [serviceFormService, setServiceFormService] = useState(null)
+  const [serviceDetailId, setServiceDetailId] = useState(null)
+  const [servicePackagesRefreshKey, setServicePackagesRefreshKey] = useState(0)
+  const [servicePackageFormPackage, setServicePackageFormPackage] = useState(null)
+  const [servicePackageFormService, setServicePackageFormService] = useState(null)
+  const [servicePackageDetailId, setServicePackageDetailId] = useState(null)
+  const [servicePackageDetailBackPage, setServicePackageDetailBackPage] = useState('servicePackages')
+  const [servicePackageDetailBackId, setServicePackageDetailBackId] = useState(null)
 
   // Check if user is logged in on mount using session
   useEffect(() => {
@@ -173,6 +200,237 @@ function App() {
     setCustomersRefreshKey((prev) => prev + 1)
     setCustomerDetailId(null)
     setCurrentPage('customers')
+  }
+
+  const openOrders = () => {
+    setCurrentPage('orders')
+  }
+
+  const openOrderForm = (order = null) => {
+    // For now, we can create a new order or edit an existing one
+    // This can be implemented when OrderForm is created
+    if (order) {
+      setCurrentPage('orderDetail')
+      setOrderDetailId(order.id)
+    } else {
+      // Navigate to create new order - for now, just go to orders page
+      // Could be expanded to create OrderForm later
+      setCurrentPage('orders')
+    }
+  }
+
+  const openOrderDetail = (order, backPage = 'customers', backId = null) => {
+    setOrderDetailId(order.id)
+    setOrderDetailBackPage(backPage)
+    setOrderDetailBackId(backId)
+    setCurrentPage('orderDetail')
+  }
+
+  const handleOrderDetailBack = () => {
+    setOrderDetailId(null)
+    if (orderDetailBackPage === 'customerDetail' && orderDetailBackId) {
+      setCustomerDetailId(orderDetailBackId)
+      setCurrentPage('customerDetail')
+    } else if (orderDetailBackPage === 'orders') {
+      setCurrentPage('orders')
+    } else {
+      setCurrentPage(orderDetailBackPage || 'customers')
+    }
+    setOrderDetailBackPage('customers')
+    setOrderDetailBackId(null)
+  }
+
+  const handleOrderDetailEdit = (order) => {
+    // For now, just go back - can add order form later
+    handleOrderDetailBack()
+  }
+
+  const handleOrderDetailDelete = () => {
+    // Refresh the orders list
+    setOrdersRefreshKey((prev) => prev + 1)
+    // Refresh the customer detail if we came from there
+    if (orderDetailBackPage === 'customerDetail' && orderDetailBackId) {
+      // Could trigger a refresh here if needed
+    }
+    handleOrderDetailBack()
+  }
+
+  const openProductForm = (product = null) => {
+    setProductFormProduct(product)
+    setCurrentPage('productForm')
+  }
+
+  const handleProductFormSaved = () => {
+    setProductsRefreshKey((prev) => prev + 1)
+    setProductFormProduct(null)
+    setCurrentPage('products')
+  }
+
+  const handleProductFormCancel = () => {
+    setProductFormProduct(null)
+    setCurrentPage('products')
+  }
+
+  const openProductDetail = (product) => {
+    setProductDetailId(product.id)
+    setCurrentPage('productDetail')
+  }
+
+  const handleProductDetailBack = () => {
+    setProductDetailId(null)
+    setCurrentPage('products')
+  }
+
+  const handleProductDetailEdit = (product) => {
+    setProductFormProduct(product)
+    setProductDetailId(null)
+    setCurrentPage('productForm')
+  }
+
+  const handleProductDetailDelete = () => {
+    setProductsRefreshKey((prev) => prev + 1)
+    setProductDetailId(null)
+    setCurrentPage('products')
+  }
+
+  const openServiceForm = (service = null) => {
+    setServiceFormService(service)
+    setCurrentPage('serviceForm')
+  }
+
+  const handleServiceFormSaved = () => {
+    setServicesRefreshKey((prev) => prev + 1)
+    setServiceFormService(null)
+    setCurrentPage('services')
+  }
+
+  const handleServiceFormCancel = () => {
+    setServiceFormService(null)
+    setCurrentPage('services')
+  }
+
+  const openServiceDetail = (service) => {
+    setServiceDetailId(service.id)
+    setCurrentPage('serviceDetail')
+  }
+
+  const handleServiceDetailBack = () => {
+    setServiceDetailId(null)
+    setCurrentPage('services')
+  }
+
+  const handleServiceDetailEdit = (service) => {
+    setServiceFormService(service)
+    setServiceDetailId(null)
+    setCurrentPage('serviceForm')
+  }
+
+  const handleServiceDetailDelete = () => {
+    setServicesRefreshKey((prev) => prev + 1)
+    setServiceDetailId(null)
+    setCurrentPage('services')
+  }
+
+  const handleServiceDetailAddPackage = (service) => {
+    setServicePackageFormService(service)
+    setServiceDetailId(null)
+    setCurrentPage('servicePackageForm')
+  }
+
+  const handleServiceDetailViewPackage = (pkg) => {
+    setServicePackageDetailId(pkg.id)
+    setServicePackageDetailBackPage('serviceDetail')
+    setServicePackageDetailBackId(serviceDetailId)
+    setCurrentPage('servicePackageDetail')
+  }
+
+  const openServicePackages = () => {
+    setCurrentPage('servicePackages')
+  }
+
+  const openServicePackageForm = (pkg = null, service = null) => {
+    setServicePackageFormPackage(pkg)
+    setServicePackageFormService(service)
+    setCurrentPage('servicePackageForm')
+  }
+
+  const handleServicePackageFormSaved = () => {
+    setServicePackagesRefreshKey((prev) => prev + 1)
+    setServicesRefreshKey((prev) => prev + 1) // Refresh services too in case package count changed
+    setServicePackageFormPackage(null)
+    setServicePackageFormService(null)
+    // If we came from service detail, go back there
+    if (serviceDetailId || servicePackageFormService) {
+      const backToServiceId = serviceDetailId || servicePackageFormService?.id
+      if (backToServiceId) {
+        setServiceDetailId(backToServiceId)
+        setCurrentPage('serviceDetail')
+      } else {
+        setCurrentPage('servicePackages')
+      }
+    } else {
+      setCurrentPage('servicePackages')
+    }
+  }
+
+  const handleServicePackageFormCancel = () => {
+    const backToServiceId = serviceDetailId || servicePackageFormService?.id
+    setServicePackageFormPackage(null)
+    setServicePackageFormService(null)
+    if (backToServiceId) {
+      setServiceDetailId(backToServiceId)
+      setCurrentPage('serviceDetail')
+    } else {
+      setCurrentPage('servicePackages')
+    }
+  }
+
+  const openServicePackageDetail = (pkg, backPage = 'servicePackages', backId = null) => {
+    setServicePackageDetailId(pkg.id)
+    setServicePackageDetailBackPage(backPage)
+    setServicePackageDetailBackId(backId)
+    setCurrentPage('servicePackageDetail')
+  }
+
+  const handleServicePackageDetailBack = () => {
+    setServicePackageDetailId(null)
+    if (servicePackageDetailBackPage === 'serviceDetail' && servicePackageDetailBackId) {
+      setServiceDetailId(servicePackageDetailBackId)
+      setCurrentPage('serviceDetail')
+    } else if (servicePackageDetailBackPage === 'servicePackages') {
+      setCurrentPage('servicePackages')
+    } else {
+      setCurrentPage(servicePackageDetailBackPage || 'servicePackages')
+    }
+    setServicePackageDetailBackPage('servicePackages')
+    setServicePackageDetailBackId(null)
+  }
+
+  const handleServicePackageDetailEdit = (pkg) => {
+    setServicePackageFormPackage(pkg)
+    setServicePackageDetailId(null)
+    setCurrentPage('servicePackageForm')
+  }
+
+  const handleServicePackageDetailDelete = () => {
+    setServicePackagesRefreshKey((prev) => prev + 1)
+    setServicesRefreshKey((prev) => prev + 1)
+    setServicePackageDetailId(null)
+    // If we came from service detail, go back there
+    if (servicePackageDetailBackPage === 'serviceDetail' && servicePackageDetailBackId) {
+      setServiceDetailId(servicePackageDetailBackId)
+      setCurrentPage('serviceDetail')
+    } else {
+      setCurrentPage(servicePackageDetailBackPage || 'servicePackages')
+    }
+    setServicePackageDetailBackPage('servicePackages')
+    setServicePackageDetailBackId(null)
+  }
+
+  const handleServicePackageDetailViewService = (service) => {
+    setServiceDetailId(service.id)
+    setServicePackageDetailId(null)
+    setCurrentPage('serviceDetail')
   }
 
 
@@ -532,6 +790,7 @@ function App() {
               }
               openTransactionForm(transaction)
             }}
+            onViewOrder={(order) => openOrderDetail(order, 'customerDetail', customerDetailId)}
             user={user}
           />
         )
@@ -650,6 +909,114 @@ function App() {
             user={user}
           />
         )
+      case 'orders':
+        return (
+          <Orders
+            refreshKey={ordersRefreshKey}
+            user={user}
+            onAddOrder={() => openOrderForm(null)}
+            onEditOrder={(order) => openOrderDetail(order, 'orders')}
+            onViewOrder={(order) => openOrderDetail(order, 'orders')}
+          />
+        )
+      case 'orderDetail':
+        return (
+          <OrderDetail
+            orderId={orderDetailId}
+            onBack={handleOrderDetailBack}
+            onEdit={handleOrderDetailEdit}
+            onDelete={handleOrderDetailDelete}
+            user={user}
+          />
+        )
+      case 'products':
+        return (
+          <Products
+            refreshKey={productsRefreshKey}
+            user={user}
+            onAddProduct={() => openProductForm(null)}
+            onEditProduct={(product) => openProductForm(product)}
+            onViewProduct={(product) => openProductDetail(product)}
+          />
+        )
+      case 'productForm':
+        return (
+          <ProductForm
+            product={productFormProduct}
+            onCancel={handleProductFormCancel}
+            onSaved={handleProductFormSaved}
+          />
+        )
+      case 'productDetail':
+        return (
+          <ProductDetail
+            productId={productDetailId}
+            onBack={handleProductDetailBack}
+            onEdit={handleProductDetailEdit}
+            onDelete={handleProductDetailDelete}
+            user={user}
+          />
+        )
+      case 'services':
+        return (
+          <Services
+            refreshKey={servicesRefreshKey}
+            user={user}
+            onAddService={() => openServiceForm(null)}
+            onEditService={(service) => openServiceForm(service)}
+            onViewService={(service) => openServiceDetail(service)}
+          />
+        )
+      case 'serviceForm':
+        return (
+          <ServiceForm
+            service={serviceFormService}
+            onCancel={handleServiceFormCancel}
+            onSaved={handleServiceFormSaved}
+          />
+        )
+      case 'serviceDetail':
+        return (
+          <ServiceDetail
+            serviceId={serviceDetailId}
+            onBack={handleServiceDetailBack}
+            onEdit={handleServiceDetailEdit}
+            onDelete={handleServiceDetailDelete}
+            onAddPackage={handleServiceDetailAddPackage}
+            onViewPackage={handleServiceDetailViewPackage}
+            user={user}
+          />
+        )
+      case 'servicePackages':
+        return (
+          <ServicePackages
+            refreshKey={servicePackagesRefreshKey}
+            user={user}
+            onAddPackage={() => openServicePackageForm(null, null)}
+            onEditPackage={(pkg) => openServicePackageForm(pkg, null)}
+            onViewPackage={(pkg) => openServicePackageDetail(pkg, 'servicePackages')}
+          />
+        )
+      case 'servicePackageForm':
+        return (
+          <ServicePackageForm
+            package={servicePackageFormPackage}
+            service={servicePackageFormService}
+            onCancel={handleServicePackageFormCancel}
+            onSaved={handleServicePackageFormSaved}
+          />
+        )
+      case 'servicePackageDetail':
+        return (
+          <ServicePackageDetail
+            packageId={servicePackageDetailId}
+            onBack={handleServicePackageDetailBack}
+            onEdit={handleServicePackageDetailEdit}
+            onDelete={handleServicePackageDetailDelete}
+            onViewService={handleServicePackageDetailViewService}
+            user={user}
+          />
+        )
       case 'companyAccountForm':
         return (
           <CompanyAccountForm
@@ -677,11 +1044,11 @@ function App() {
       default:
         return <Customers
           refreshKey={customersRefreshKey}
-          user={user}
+            user={user}
           onAddCustomer={() => openCustomerForm(null)}
           onEditCustomer={(customer) => openCustomerForm(customer)}
           onViewCustomer={(customer) => openCustomerDetail(customer)}
-        />
+          />
     }
   }
 

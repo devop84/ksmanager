@@ -12,7 +12,11 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
 
   const navItems = [
     { key: 'customers', label: t('nav.customers', 'Customers') },
+    { key: 'orders', label: t('nav.orders', 'Orders') },
     { key: 'transactions', label: t('nav.transactions', 'Transactions') },
+    { key: 'services', label: t('nav.services', 'Services') },
+    { key: 'servicePackages', label: t('nav.servicePackages', 'Service Packages') },
+    { key: 'products', label: t('nav.products', 'Products') },
     { key: 'companyAccounts', label: t('nav.companyAccounts', 'Company Accounts') },
     { key: 'instructors', label: t('nav.instructors', 'Instructors') },
     { key: 'staff', label: t('nav.staff', 'Staff') },
