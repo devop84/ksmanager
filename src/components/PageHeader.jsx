@@ -12,10 +12,10 @@ export default function PageHeader({
   canModifyFn = canModify 
 }) {
   return (
-    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between mb-6">
       <div>
         <h1 className="text-3xl font-bold text-gray-900">{title}</h1>
-        {description && <p className="text-gray-500 text-sm">{description}</p>}
+        {description && <p className="text-gray-500 text-sm mt-1">{description}</p>}
       </div>
       {onAdd && (
         <button

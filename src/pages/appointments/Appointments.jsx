@@ -33,7 +33,7 @@ const statusStyles = {
 
 function Appointments({ refreshKey = 0, user = null, onAddAppointment, onViewAppointment, onEditAppointment }) {
   const { t } = useTranslation()
-  const { formatDateTime, formatDate } = useSettings()
+  const { formatDateTime, formatDate, formatTime } = useSettings()
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -435,7 +435,7 @@ function Appointments({ refreshKey = 0, user = null, onAddAppointment, onViewApp
     <div className="px-4 py-6 sm:p-6 lg:p-8">
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">{t('schedule.title', 'Schedule / Agenda')}</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('schedule.title', 'Appointments')}</h1>
           <p className="text-gray-500 text-sm mt-1">{t('schedule.subtitle', 'Manage scheduled appointments and sessions.')}</p>
         </div>
         {canModify(user) && (
@@ -609,7 +609,7 @@ function Appointments({ refreshKey = 0, user = null, onAddAppointment, onViewApp
                     >
                       <td className="px-4 py-3 whitespace-nowrap text-sm">
                         <div className="font-medium text-gray-900">{formatDate(appointment.scheduled_start)}</div>
-                        <div className="text-gray-500">{formatDateTime(appointment.scheduled_start)}</div>
+                        <div className="text-gray-500">{formatTime(appointment.scheduled_start)}</div>
                       </td>
                       <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
                         {appointment.customer_name || '—'}

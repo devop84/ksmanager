@@ -341,12 +341,13 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onAddTransaction
   // Format status for display
   const formatStatusDisplay = (status, appointment) => {
     if (!appointment) {
-      return 'SCHEDULED'
+      return t('schedule.status.scheduled', 'SCHEDULED')
     }
     if (isInProgress(appointment)) {
-      return 'IN PROGRESS'
+      return t('schedule.status.inProgress', 'IN PROGRESS')
     }
-    return status?.replace(/_/g, ' ').toUpperCase() || 'SCHEDULED'
+    const statusKey = `schedule.status.${status || 'scheduled'}`
+    return t(statusKey, status?.replace(/_/g, ' ').toUpperCase() || 'SCHEDULED')
   }
 
   // Get credit status color
@@ -560,7 +561,7 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onAddTransaction
                         <ul className="text-xs text-amber-700 space-y-1">
                           {orphanedAppointments.map((orphan, idx) => (
                             <li key={idx}>
-                              • {orphan.service_name}: {Number(orphan.total_used || 0).toFixed(2)} {orphan.duration_unit} ({orphan.appointment_count} {orphan.appointment_count === 1 ? 'appointment' : 'appointments'})
+                              • {orphan.service_name}: {Number(orphan.total_used || 0).toFixed(2)} {orphan.duration_unit} ({t('customerDetail.credits.appointmentCount', { count: orphan.appointment_count })})
                             </li>
                           ))}
                         </ul>
@@ -621,7 +622,7 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onAddTransaction
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">
                                 <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${statusColor}`}>
-                                  {credit.status?.toUpperCase() || 'ACTIVE'}
+                                  {t(`customerDetail.credits.status.${credit.status || 'active'}`, credit.status?.toUpperCase() || 'ACTIVE')}
                                 </span>
                               </td>
                             </tr>
@@ -704,7 +705,7 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onAddTransaction
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap">
                                 <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${statusStyle}`}>
-                                  {order.status?.toUpperCase() || 'OPEN'}
+                                  {t(`orders.status.${order.status || 'open'}`, order.status?.toUpperCase() || 'OPEN')}
                                 </span>
                               </td>
                               <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">

@@ -45,6 +45,7 @@ import AppointmentDetail from './pages/appointments/AppointmentDetail'
 import Settings from './pages/Settings'
 import Landing from './pages/Landing'
 import Roadmap from './pages/Roadmap'
+import Dashboard from './pages/Dashboard'
 import { getSession, deleteSession } from './lib/auth.js'
 import { canModify } from './lib/permissions.js'
 import sql from './lib/neon'
@@ -132,6 +133,7 @@ function App() {
   const handleLogin = (userData) => {
     setUser(userData)
     setIsAuthenticated(true)
+    setCurrentPage('dashboard')
   }
 
   const handleSignup = (userData) => {
@@ -802,6 +804,17 @@ function App() {
 
   const renderPage = () => {
     switch (currentPage) {
+      case 'dashboard':
+        return (
+          <Dashboard
+            user={user}
+            onNavigate={handleNavigate}
+            onViewOrder={(order) => openOrderDetail(order, 'dashboard')}
+            onViewTransaction={(transaction) => openTransactionDetail(transaction)}
+            onViewAppointment={(appointment) => handleAppointmentView(appointment)}
+            onViewCustomer={(customer) => openCustomerDetail(customer)}
+          />
+        )
       case 'customers':
         return (
           <Customers
@@ -1189,13 +1202,14 @@ function App() {
       case 'roadmap':
         return <Roadmap />
       default:
-        return <Customers
-          refreshKey={customersRefreshKey}
-            user={user}
-          onAddCustomer={() => openCustomerForm(null)}
-          onEditCustomer={(customer) => openCustomerForm(customer)}
+        return <Dashboard
+          user={user}
+          onNavigate={handleNavigate}
+          onViewOrder={(order) => openOrderDetail(order, 'dashboard')}
+          onViewTransaction={(transaction) => openTransactionDetail(transaction)}
+          onViewAppointment={(appointment) => handleAppointmentView(appointment)}
           onViewCustomer={(customer) => openCustomerDetail(customer)}
-          />
+        />
     }
   }
 
