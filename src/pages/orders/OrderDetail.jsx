@@ -182,6 +182,15 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
     }
     try {
       setDeleting(true)
+      // Delete credits associated with this order's items (before deleting order)
+      // Note: Database CASCADE should handle this, but we're being explicit
+      await sql`
+        DELETE FROM customer_service_credits
+        WHERE order_item_id IN (
+          SELECT id FROM order_items WHERE order_id = ${orderId}
+        )
+      `
+      // Delete the order (this will also CASCADE delete order_items)
       await sql`DELETE FROM orders WHERE id = ${orderId}`
       onDelete?.()
     } catch (err) {
@@ -758,6 +767,13 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
         UPDATE orders 
         SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
         WHERE id = ${orderId}
+      `
+      // Delete all credits associated with this order's items
+      await sql`
+        DELETE FROM customer_service_credits
+        WHERE order_item_id IN (
+          SELECT id FROM order_items WHERE order_id = ${orderId}
+        )
       `
       // Reload order
       const orderResult = await sql`

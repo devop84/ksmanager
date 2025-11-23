@@ -141,6 +141,15 @@ function Orders({ onAddOrder = () => {}, onEditOrder = () => {}, onViewOrder = (
     if (!window.confirm(t('orders.confirm.delete', 'Are you sure you want to delete this order? This action cannot be undone.'))) return
     try {
       setDeletingId(orderId)
+      // Delete credits associated with this order's items (before deleting order)
+      // Note: Database CASCADE should handle this, but we're being explicit
+      await sql`
+        DELETE FROM customer_service_credits
+        WHERE order_item_id IN (
+          SELECT id FROM order_items WHERE order_id = ${orderId}
+        )
+      `
+      // Delete the order (this will also CASCADE delete order_items)
       await sql`DELETE FROM orders WHERE id = ${orderId}`
       setOrders((prev) => prev.filter((order) => order.id !== orderId))
       setTableData((prev) => prev.filter((order) => order.id !== orderId))

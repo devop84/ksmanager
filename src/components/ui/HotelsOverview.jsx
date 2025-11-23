@@ -116,3 +116,4 @@ function HotelsOverview({ hotels = [] }) {
 
 export default HotelsOverview
 
+

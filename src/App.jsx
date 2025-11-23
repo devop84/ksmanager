@@ -42,6 +42,7 @@ import ServicePackageDetail from './pages/services/ServicePackageDetail'
 import Appointments from './pages/appointments/Appointments'
 import AppointmentForm from './pages/appointments/AppointmentForm'
 import AppointmentDetail from './pages/appointments/AppointmentDetail'
+import Calendar from './pages/calendar/Calendar'
 import Settings from './pages/Settings'
 import Landing from './pages/Landing'
 import Roadmap from './pages/Roadmap'
@@ -1192,6 +1193,13 @@ function App() {
             onEdit={handleAppointmentDetailEdit}
             onDelete={handleAppointmentDetailDelete}
             user={user}
+          />
+        )
+      case 'calendar':
+        return (
+          <Calendar
+            onViewAppointment={(appointment) => handleAppointmentView(appointment, 'calendar')}
+            onAddAppointment={() => openAppointmentForm(null)}
           />
         )
       case 'companyAccountForm':

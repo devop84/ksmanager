@@ -147,6 +147,11 @@ function OrderForm({ order, customer, onCancel, onSaved }) {
       let orderId
 
       if (isEditing) {
+        // Check if status is changing from 'cancelled' to 'open' (reopening order)
+        const wasCancelled = order.status === 'cancelled'
+        const isNowOpen = formData.status === 'open'
+        const isReopening = wasCancelled && isNowOpen
+        
         // Update existing order
         await sql`
           UPDATE orders
@@ -157,9 +162,161 @@ function OrderForm({ order, customer, onCancel, onSaved }) {
               tax_amount = ${Number(formData.tax_amount || 0)},
               currency = ${formData.currency},
               note = ${formData.note || null},
-              updated_at = CURRENT_TIMESTAMP
+              updated_at = CURRENT_TIMESTAMP,
+              cancelled_at = CASE WHEN ${formData.status} = 'open' THEN NULL ELSE cancelled_at END
           WHERE id = ${order.id}
         `
+        
+        // If reopening order, recreate credits for all order items
+        if (isReopening) {
+          // Get all order items for this order
+          const orderItems = await sql`
+            SELECT id, item_type, item_id, quantity, order_id
+            FROM order_items
+            WHERE order_id = ${order.id}
+          `
+          
+          // Recreate credits for each order item
+          for (const item of orderItems || []) {
+            if (item.item_type === 'service_package') {
+              // Get service package details
+              const pkgResult = await sql`
+                SELECT sp.*, s.duration_unit, s.id as service_id
+                FROM service_packages sp
+                JOIN services s ON sp.service_id = s.id
+                WHERE sp.id = ${item.item_id}
+                LIMIT 1
+              `
+              
+              if (pkgResult && pkgResult.length > 0) {
+                const pkg = pkgResult[0]
+                
+                // Only create credit if duration_unit is not 'none'
+                if (pkg.duration_unit !== 'none') {
+                  let credit_total_hours = null
+                  let credit_total_days = null
+                  let credit_total_months = null
+                  
+                  // Determine which duration field to use
+                  if (pkg.duration_unit === 'hours') {
+                    credit_total_hours = Number(pkg.duration_hours || 0) * Number(item.quantity || 1)
+                  } else if (pkg.duration_unit === 'days') {
+                    credit_total_days = Number(pkg.duration_days || 0) * Number(item.quantity || 1)
+                  } else if (pkg.duration_unit === 'months') {
+                    credit_total_months = Number(pkg.duration_months || 0) * Number(item.quantity || 1)
+                  }
+                  
+                  // Create credit and get the credit ID
+                  const creditResult = await sql`
+                    INSERT INTO customer_service_credits (
+                      customer_id,
+                      order_item_id,
+                      service_package_id,
+                      service_id,
+                      total_hours,
+                      total_days,
+                      total_months,
+                      status
+                    )
+                    VALUES (
+                      ${Number(formData.customer_id)},
+                      ${item.id},
+                      ${pkg.id},
+                      ${pkg.service_id},
+                      ${credit_total_hours},
+                      ${credit_total_days},
+                      ${credit_total_months},
+                      'active'
+                    )
+                    RETURNING id
+                  `
+                  
+                  // Allocate orphaned appointments to this new credit
+                  if (creditResult && creditResult.length > 0) {
+                    const creditId = creditResult[0].id
+                    await sql`
+                      UPDATE scheduled_appointments
+                      SET credit_id = ${creditId}
+                      WHERE customer_id = ${Number(formData.customer_id)}
+                        AND service_id = ${pkg.service_id}
+                        AND credit_id IS NULL
+                        AND status IN ('scheduled', 'completed')
+                        AND cancelled_at IS NULL
+                    `
+                  }
+                }
+              }
+            } else if (item.item_type === 'service') {
+              // Get service details
+              const svcResult = await sql`
+                SELECT id as service_id, duration_unit
+                FROM services
+                WHERE id = ${item.item_id}
+                LIMIT 1
+              `
+              
+              if (svcResult && svcResult.length > 0) {
+                const svc = svcResult[0]
+                
+                // Only create credit if duration_unit is not 'none'
+                if (svc.duration_unit !== 'none') {
+                  let credit_total_hours = null
+                  let credit_total_days = null
+                  let credit_total_months = null
+                  
+                  // For direct services, use 1 unit per quantity
+                  if (svc.duration_unit === 'hours') {
+                    credit_total_hours = 1 * Number(item.quantity || 1)
+                  } else if (svc.duration_unit === 'days') {
+                    credit_total_days = 1 * Number(item.quantity || 1)
+                  } else if (svc.duration_unit === 'months') {
+                    credit_total_months = 1 * Number(item.quantity || 1)
+                  }
+                  
+                  // Create credit and get the credit ID
+                  const creditResult = await sql`
+                    INSERT INTO customer_service_credits (
+                      customer_id,
+                      order_item_id,
+                      service_package_id,
+                      service_id,
+                      total_hours,
+                      total_days,
+                      total_months,
+                      status
+                    )
+                    VALUES (
+                      ${Number(formData.customer_id)},
+                      ${item.id},
+                      NULL,
+                      ${svc.service_id},
+                      ${credit_total_hours},
+                      ${credit_total_days},
+                      ${credit_total_months},
+                      'active'
+                    )
+                    RETURNING id
+                  `
+                  
+                  // Allocate orphaned appointments to this new credit
+                  if (creditResult && creditResult.length > 0) {
+                    const creditId = creditResult[0].id
+                    await sql`
+                      UPDATE scheduled_appointments
+                      SET credit_id = ${creditId}
+                      WHERE customer_id = ${Number(formData.customer_id)}
+                        AND service_id = ${svc.service_id}
+                        AND credit_id IS NULL
+                        AND status IN ('scheduled', 'completed')
+                        AND cancelled_at IS NULL
+                    `
+                  }
+                }
+              }
+            }
+          }
+        }
+        
         orderId = order.id
       } else {
         // Check if customer already has an open order
