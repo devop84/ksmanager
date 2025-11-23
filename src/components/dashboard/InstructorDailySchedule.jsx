@@ -147,42 +147,42 @@ function InstructorDailySchedule({ onViewAppointment }) {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-900">
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <h2 className="text-base sm:text-lg font-semibold text-gray-900">
           {t('dashboard.instructorSchedule.title', 'Instructor Daily Schedule')}
         </h2>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <button
             onClick={() => changeDate(-1)}
-            className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+            className="p-1.5 sm:p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
             aria-label={t('dashboard.instructorSchedule.previousDay', 'Previous day')}
           >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
           </button>
-          <span className="text-sm font-medium text-gray-700 px-3 min-w-[120px] text-center">
+          <span className="text-xs sm:text-sm font-medium text-gray-700 px-2 sm:px-3 min-w-[100px] sm:min-w-[120px] text-center">
             {formatDate(selectedDate)}
           </span>
           <button
             onClick={() => setSelectedDate(new Date())}
             disabled={isToday}
-            className={`p-2 rounded-lg border border-gray-300 ${
+            className={`p-1.5 sm:p-2 rounded-lg border border-gray-300 ${
               isToday ? 'bg-gray-100 text-gray-400 cursor-not-allowed' : 'hover:bg-gray-50 text-gray-600'
             }`}
             aria-label={t('dashboard.instructorSchedule.goToToday', 'Go to today')}
           >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
           </button>
           <button
             onClick={() => changeDate(1)}
-            className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+            className="p-1.5 sm:p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
             aria-label={t('dashboard.instructorSchedule.nextDay', 'Next day')}
           >
-            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </button>
