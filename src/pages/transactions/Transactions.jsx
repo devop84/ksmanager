@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import sql from '../../lib/neon'
 import { canModify } from '../../lib/permissions'
@@ -20,6 +20,7 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
   const [paymentFilter, setPaymentFilter] = useState('all')
   const [typeOptions, setTypeOptions] = useState([])
   const [paymentOptions, setPaymentOptions] = useState([])
+  const [sortConfig, setSortConfig] = useState({ key: 'occurred_at', direction: 'desc' })
   const { formatCurrency, formatDateTime } = useSettings()
   const { t } = useTranslation()
 
@@ -102,7 +103,7 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
     fetchTransactions()
   }, [refreshKey, t])
 
-  const formatEntityName = (transaction, role = 'source') => {
+  const formatEntityName = useCallback((transaction, role = 'source') => {
     const typeKey = role === 'source' ? transaction.source_entity_type : transaction.destination_entity_type
     const idKey = role === 'source' ? transaction.source_entity_id : transaction.destination_entity_id
 
@@ -132,7 +133,7 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
       default:
         return fallback
     }
-  }
+  }, [entityTypeLabels])
 
   const filteredTransactions = useMemo(() => {
     return transactions.filter((transaction) => {
@@ -153,10 +154,70 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
         .filter(Boolean)
         .some((value) => value.toString().toLowerCase().includes(query))
     })
-  }, [transactions, typeFilter, directionFilter, paymentFilter, searchTerm])
+  }, [transactions, typeFilter, directionFilter, paymentFilter, searchTerm, formatEntityName])
+
+  const sortedTransactions = useMemo(() => {
+    const sorted = [...filteredTransactions]
+    
+    sorted.sort((a, b) => {
+      let aValue, bValue
+
+      // Handle different column types
+      switch (sortConfig.key) {
+        case 'occurred_at':
+          aValue = a.occurred_at ? new Date(a.occurred_at).getTime() : 0
+          bValue = b.occurred_at ? new Date(b.occurred_at).getTime() : 0
+          break
+        case 'amount':
+          aValue = Number(a.amount) || 0
+          bValue = Number(b.amount) || 0
+          break
+        case 'type_label':
+          aValue = (a.type_label || '').toLowerCase()
+          bValue = (b.type_label || '').toLowerCase()
+          break
+        case 'source':
+          aValue = formatEntityName(a, 'source').toLowerCase()
+          bValue = formatEntityName(b, 'source').toLowerCase()
+          break
+        case 'destination':
+          aValue = formatEntityName(a, 'destination').toLowerCase()
+          bValue = formatEntityName(b, 'destination').toLowerCase()
+          break
+        case 'payment_method_name':
+          aValue = (a.payment_method_name || '').toLowerCase()
+          bValue = (b.payment_method_name || '').toLowerCase()
+          break
+        case 'reference':
+          aValue = (a.reference || '').toLowerCase()
+          bValue = (b.reference || '').toLowerCase()
+          break
+        case 'note':
+          aValue = (a.note || '').toLowerCase()
+          bValue = (b.note || '').toLowerCase()
+          break
+        default:
+          aValue = ''
+          bValue = ''
+      }
+
+      if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1
+      if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1
+      return 0
+    })
+
+    return sorted
+  }, [filteredTransactions, sortConfig, formatEntityName])
+
+  const handleSort = (key) => {
+    setSortConfig((prev) => ({
+      key,
+      direction: prev.key === key && prev.direction === 'asc' ? 'desc' : 'asc'
+    }))
+  }
 
   const totals = useMemo(() => {
-    return filteredTransactions.reduce(
+    return sortedTransactions.reduce(
       (acc, txn) => {
         if (txn.type_direction === 'income') {
           acc.income += Number(txn.amount)
@@ -167,7 +228,7 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
       },
       { income: 0, expense: 0 }
     )
-  }, [filteredTransactions])
+  }, [sortedTransactions])
 
   const formatAmount = (amount, options) =>
     formatCurrency(Number(amount || 0), { minimumFractionDigits: 2, maximumFractionDigits: 2, ...options })
@@ -279,41 +340,121 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      {t('transactions.table.date', 'Date')}
+                    <th
+                      onClick={() => handleSort('occurred_at')}
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    >
+                      <div className="flex items-center gap-1">
+                        {t('transactions.table.date', 'Date')}
+                        {sortConfig.key === 'occurred_at' && (
+                          <span className="text-gray-400">
+                            {sortConfig.direction === 'asc' ? '▲' : '▼'}
+                          </span>
+                        )}
+                      </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      {t('transactions.table.type', 'Type')}
+                    <th
+                      onClick={() => handleSort('type_label')}
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    >
+                      <div className="flex items-center gap-1">
+                        {t('transactions.table.type', 'Type')}
+                        {sortConfig.key === 'type_label' && (
+                          <span className="text-gray-400">
+                            {sortConfig.direction === 'asc' ? '▲' : '▼'}
+                          </span>
+                        )}
+                      </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      {t('transactions.table.source', 'Source')}
+                    <th
+                      onClick={() => handleSort('source')}
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    >
+                      <div className="flex items-center gap-1">
+                        {t('transactions.table.source', 'Source')}
+                        {sortConfig.key === 'source' && (
+                          <span className="text-gray-400">
+                            {sortConfig.direction === 'asc' ? '▲' : '▼'}
+                          </span>
+                        )}
+                      </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      {t('transactions.table.destination', 'Destination')}
+                    <th
+                      onClick={() => handleSort('destination')}
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    >
+                      <div className="flex items-center gap-1">
+                        {t('transactions.table.destination', 'Destination')}
+                        {sortConfig.key === 'destination' && (
+                          <span className="text-gray-400">
+                            {sortConfig.direction === 'asc' ? '▲' : '▼'}
+                          </span>
+                        )}
+                      </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      {t('transactions.table.payment', 'Payment')}
+                    <th
+                      onClick={() => handleSort('payment_method_name')}
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    >
+                      <div className="flex items-center gap-1">
+                        {t('transactions.table.payment', 'Payment')}
+                        {sortConfig.key === 'payment_method_name' && (
+                          <span className="text-gray-400">
+                            {sortConfig.direction === 'asc' ? '▲' : '▼'}
+                          </span>
+                        )}
+                      </div>
                     </th>
-                    <th className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      {t('transactions.table.amount', 'Amount')}
+                    <th
+                      onClick={() => handleSort('amount')}
+                      className="px-4 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    >
+                      <div className="flex items-center justify-end gap-1">
+                        {t('transactions.table.amount', 'Amount')}
+                        {sortConfig.key === 'amount' && (
+                          <span className="text-gray-400">
+                            {sortConfig.direction === 'asc' ? '▲' : '▼'}
+                          </span>
+                        )}
+                      </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      {t('transactions.table.reference', 'Reference')}
+                    <th
+                      onClick={() => handleSort('reference')}
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    >
+                      <div className="flex items-center gap-1">
+                        {t('transactions.table.reference', 'Reference')}
+                        {sortConfig.key === 'reference' && (
+                          <span className="text-gray-400">
+                            {sortConfig.direction === 'asc' ? '▲' : '▼'}
+                          </span>
+                        )}
+                      </div>
                     </th>
-                    <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                      {t('transactions.table.note', 'Note')}
+                    <th
+                      onClick={() => handleSort('note')}
+                      className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                    >
+                      <div className="flex items-center gap-1">
+                        {t('transactions.table.note', 'Note')}
+                        {sortConfig.key === 'note' && (
+                          <span className="text-gray-400">
+                            {sortConfig.direction === 'asc' ? '▲' : '▼'}
+                          </span>
+                        )}
+                      </div>
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-100">
-                  {filteredTransactions.length === 0 ? (
+                  {sortedTransactions.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="px-6 py-10 text-center text-sm text-gray-500">
                         {t('transactions.empty', 'No transactions found. Try adjusting your filters.')}
                       </td>
                     </tr>
                   ) : (
-                    filteredTransactions.map((transaction) => (
+                    sortedTransactions.map((transaction) => (
                       <tr
                         key={transaction.id}
                         className="hover:bg-gray-50 cursor-pointer"
@@ -363,12 +504,12 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
             </div>
 
             <div className="md:hidden space-y-3">
-                {filteredTransactions.length === 0 ? (
+                {sortedTransactions.length === 0 ? (
                   <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
                     {t('transactions.empty', 'No transactions found. Try adjusting your filters.')}
                   </div>
                 ) : (
-                filteredTransactions.map((transaction) => (
+                sortedTransactions.map((transaction) => (
                   <div
                     key={transaction.id}
                     className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
