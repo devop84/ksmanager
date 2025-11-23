@@ -38,7 +38,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = nul
   const [error, setError] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [currentTime, setCurrentTime] = useState(new Date())
-  const { formatDateTime, formatDate } = useSettings()
+  const { formatDateTime, formatDate, formatTime } = useSettings()
   const { t } = useTranslation()
 
   const getDurationDisplay = () => {
@@ -422,22 +422,25 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = nul
             <div>
               {/* Customer Name and Attendee Name */}
               <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {appointment.customer_name 
-                  ? (
-                      <>
-                        {appointment.customer_name}
-                        {appointment.attendee_name && (
-                          <span className="text-gray-600 font-normal">
-                            {' - '}{appointment.attendee_name}
-                          </span>
-                        )}
-                      </>
-                    )
-                  : t('appointmentDetail.title', 'Appointment #{{id}}', { id: appointment.id })
-                }
+                {appointment.customer_name || t('appointmentDetail.title', 'Appointment #{{id}}', { id: appointment.id })}
+                {appointment.customer_name && appointment.attendee_name && (
+                  <span className="text-gray-600 font-normal">
+                    {' ('}{appointment.attendee_name}{')'}
+                  </span>
+                )}
               </h1>
               <p className="text-gray-500 text-sm">
-                {t('appointmentDetail.subtitle', 'Appointment #{{id}}', { id: appointment.id })}
+                {appointment.service_name || '—'}
+                {appointment.scheduled_start && appointment.scheduled_end && (
+                  <>
+                    {' • '}
+                    {formatTime(new Date(appointment.scheduled_start))}
+                    {' - '}
+                    {formatTime(new Date(appointment.scheduled_end))}
+                    {' • '}
+                    {getDurationDisplay()}
+                  </>
+                )}
               </p>
             </div>
             
