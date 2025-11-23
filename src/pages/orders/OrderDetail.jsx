@@ -233,20 +233,75 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
 
       setAddingItem(true)
 
-      // Insert order item
-      await sql`
-        INSERT INTO order_items (order_id, item_type, item_id, item_name, quantity, unit_price, subtotal, note)
-        VALUES (
-          ${orderId}, 
-          ${itemType}, 
-          ${Number(itemId)}, 
-          ${itemName}, 
-          ${quantity}, 
-          ${price}, 
-          ${quantity * price}, 
-          ${null}
-        )
-      `
+      // Insert order item with sequence fix retry logic
+      let insertSuccess = false
+      let retryAttempted = false
+      
+      while (!insertSuccess && !retryAttempted) {
+        try {
+          await sql`
+            INSERT INTO order_items (order_id, item_type, item_id, item_name, quantity, unit_price, subtotal, note)
+            VALUES (
+              ${orderId}, 
+              ${itemType}, 
+              ${Number(itemId)}, 
+              ${itemName}, 
+              ${quantity}, 
+              ${price}, 
+              ${quantity * price}, 
+              ${null}
+            )
+          `
+          insertSuccess = true
+        } catch (insertError) {
+          // Check for duplicate key error on order_items_pkey
+          const errorMessage = insertError.message || insertError.toString() || ''
+          const isDuplicateKey = errorMessage.includes('duplicate key') && 
+                                (errorMessage.includes('order_items_pkey') || errorMessage.includes('unique constraint'))
+          
+          if (isDuplicateKey && !retryAttempted) {
+            retryAttempted = true
+            try {
+              console.log('Duplicate key detected for order_items, fixing sequence...')
+              
+              // Fix the order_items sequence
+              const maxIdResult = await sql`
+                SELECT COALESCE(MAX(id), 0) as max_id FROM order_items
+              `
+              const maxId = maxIdResult[0]?.max_id || 0
+              
+              await sql`
+                SELECT setval('order_items_id_seq', ${maxId + 1}, false)
+              `
+              
+              console.log(`Order items sequence fixed to ${maxId + 1}, retrying insert...`)
+              
+              // Retry the insert
+              await sql`
+                INSERT INTO order_items (order_id, item_type, item_id, item_name, quantity, unit_price, subtotal, note)
+                VALUES (
+                  ${orderId}, 
+                  ${itemType}, 
+                  ${Number(itemId)}, 
+                  ${itemName}, 
+                  ${quantity}, 
+                  ${price}, 
+                  ${quantity * price}, 
+                  ${null}
+                )
+              `
+              
+              insertSuccess = true
+              console.log('Retry successful!')
+            } catch (retryError) {
+              console.error('Retry failed:', retryError)
+              throw insertError
+            }
+          } else {
+            throw insertError
+          }
+        }
+      }
 
       // Reload order items with service information
       const itemsResult = await sql`

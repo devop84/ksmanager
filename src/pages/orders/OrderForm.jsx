@@ -128,6 +128,12 @@ function OrderForm({ order, customer, onCancel, onSaved }) {
 
   const handleSubmit = async (event) => {
     event.preventDefault()
+    
+    // Prevent double submission
+    if (saving) {
+      return
+    }
+    
     setSaving(true)
     setError(null)
 
@@ -171,27 +177,126 @@ function OrderForm({ order, customer, onCancel, onSaved }) {
           return
         }
 
-        // Create new order
-        const result = await sql`
-          INSERT INTO orders (customer_id, status, agency_id, discount_amount, tax_amount, currency, note)
-          VALUES (
-            ${Number(formData.customer_id)},
-            ${formData.status},
-            ${formData.agency_id ? Number(formData.agency_id) : null},
-            ${Number(formData.discount_amount || 0)},
-            ${Number(formData.tax_amount || 0)},
-            ${formData.currency},
-            ${formData.note || null}
-          )
-          RETURNING id
-        `
-        orderId = result[0]?.id
+        // Create new order - explicitly don't set id to let the database auto-generate it
+        let result
+        let retryAttempted = false
+        
+        try {
+          result = await sql`
+            INSERT INTO orders (customer_id, status, agency_id, discount_amount, tax_amount, currency, note)
+            VALUES (
+              ${Number(formData.customer_id)},
+              ${formData.status},
+              ${formData.agency_id ? Number(formData.agency_id) : null},
+              ${Number(formData.discount_amount || 0)},
+              ${Number(formData.tax_amount || 0)},
+              ${formData.currency},
+              ${formData.note || null}
+            )
+            RETURNING id
+          `
+        } catch (insertError) {
+          // Check for duplicate key error (check both message and code if available)
+          const errorMessage = insertError.message || insertError.toString() || ''
+          const isDuplicateKey = errorMessage.includes('duplicate key') || 
+                                  errorMessage.includes('orders_pkey') ||
+                                  errorMessage.includes('orders_order_number_key') ||
+                                  errorMessage.includes('unique constraint')
+          
+          if (isDuplicateKey && !retryAttempted) {
+            retryAttempted = true
+            try {
+              console.log('Duplicate key detected, fixing sequences...')
+              
+              // Fix the ID sequence
+              const maxIdResult = await sql`
+                SELECT COALESCE(MAX(id), 0) as max_id FROM orders
+              `
+              const maxId = maxIdResult[0]?.max_id || 0
+              
+              await sql`
+                SELECT setval('orders_id_seq', ${maxId + 1}, false)
+              `
+              
+              // Fix the order_number sequence
+              // The order number format is ORD-YYYY-NNNNNN
+              // We need to find the highest sequence number used in the current year
+              const currentYear = new Date().getFullYear()
+              const orderNumberPattern = `ORD-${currentYear}-%`
+              
+              const maxOrderNumberResult = await sql`
+                SELECT order_number 
+                FROM orders 
+                WHERE order_number LIKE ${orderNumberPattern}
+                ORDER BY order_number DESC 
+                LIMIT 1
+              `
+              
+              let maxSequenceNum = 0
+              if (maxOrderNumberResult && maxOrderNumberResult.length > 0) {
+                const lastOrderNumber = maxOrderNumberResult[0].order_number
+                // Extract the sequence number from ORD-YYYY-NNNNNN
+                const match = lastOrderNumber.match(/ORD-\d{4}-(\d+)/)
+                if (match && match[1]) {
+                  maxSequenceNum = parseInt(match[1], 10) || 0
+                }
+              }
+              
+              // Set the order_number sequence to maxSequenceNum + 1
+              await sql`
+                SELECT setval('orders_order_number_seq', ${maxSequenceNum + 1}, false)
+              `
+              
+              console.log(`Sequences fixed: ID=${maxId + 1}, OrderNumber=${maxSequenceNum + 1}, retrying insert...`)
+              
+              // Retry the insert
+              result = await sql`
+                INSERT INTO orders (customer_id, status, agency_id, discount_amount, tax_amount, currency, note)
+                VALUES (
+                  ${Number(formData.customer_id)},
+                  ${formData.status},
+                  ${formData.agency_id ? Number(formData.agency_id) : null},
+                  ${Number(formData.discount_amount || 0)},
+                  ${Number(formData.tax_amount || 0)},
+                  ${formData.currency},
+                  ${formData.note || null}
+                )
+                RETURNING id
+              `
+              
+              console.log('Retry successful!')
+            } catch (retryError) {
+              console.error('Retry failed:', retryError)
+              // If retry also fails, throw the original error
+              throw insertError
+            }
+          } else {
+            // If it's a different error or we already retried, throw it
+            throw insertError
+          }
+        }
+        
+        if (!result || !result[0] || !result[0].id) {
+          throw new Error('Failed to create order: No ID returned')
+        }
+        
+        orderId = result[0].id
       }
 
       onSaved?.()
     } catch (err) {
       console.error('Failed to save order:', err)
-      setError(t('orderForm.errors.save', 'Unable to save order. Please try again.'))
+      
+      // Provide more specific error messages
+      if (err.message && err.message.includes('orders_order_number_key')) {
+        setError(t('orderForm.errors.duplicateOrderNumber', 'An order with this order number already exists. The system has attempted to fix this automatically. Please try again.'))
+      } else if (err.message && err.message.includes('duplicate key')) {
+        setError(t('orderForm.errors.duplicateKey', 'An order with this ID already exists. This may be a database sequence issue. Please refresh and try again.'))
+      } else if (err.message && err.message.includes('unique constraint')) {
+        setError(t('orderForm.errors.uniqueConstraint', 'This order already exists. Please refresh the page and try again.'))
+      } else {
+        setError(t('orderForm.errors.save', 'Unable to save order. Please try again.'))
+      }
     } finally {
       setSaving(false)
     }

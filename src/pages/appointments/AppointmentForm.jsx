@@ -166,63 +166,54 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
 
   const loadCustomerCredits = async (customerId) => {
     try {
-      // Try to use the function first
-      let result = await sql`
-        SELECT * FROM get_customer_credits(${customerId})
-        WHERE available > 0 AND status = 'active'
-        ORDER BY created_at DESC
-      `.catch(() => null)
-      
-      // Fallback if function doesn't work
-      if (!result) {
-        result = await sql`
-          SELECT 
-            csc.id as credit_id,
-            csc.customer_id,
-            csc.order_item_id,
-            csc.service_package_id,
-            csc.service_id,
-            s.name as service_name,
-            sp.name as package_name,
-            s.duration_unit,
-            CASE 
-              WHEN s.duration_unit = 'hours' THEN csc.total_hours
-              WHEN s.duration_unit = 'days' THEN csc.total_days
-              WHEN s.duration_unit = 'months' THEN csc.total_months::NUMERIC
-              ELSE 0
-            END as total,
-            CASE 
-              WHEN s.duration_unit = 'hours' THEN COALESCE(SUM(sa.duration_hours) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
-              WHEN s.duration_unit = 'days' THEN COALESCE(SUM(sa.duration_days) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
-              WHEN s.duration_unit = 'months' THEN COALESCE(SUM(sa.duration_months) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)::NUMERIC
-              ELSE 0
-            END as used,
-            CASE 
-              WHEN s.duration_unit = 'hours' THEN csc.total_hours - COALESCE(SUM(sa.duration_hours) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
-              WHEN s.duration_unit = 'days' THEN csc.total_days - COALESCE(SUM(sa.duration_days) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
-              WHEN s.duration_unit = 'months' THEN (csc.total_months::NUMERIC - COALESCE(SUM(sa.duration_months) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)::NUMERIC)
-              ELSE 0
-            END as available,
-            csc.status
-          FROM customer_service_credits csc
-          JOIN services s ON csc.service_id = s.id
-          JOIN service_packages sp ON csc.service_package_id = sp.id
-          LEFT JOIN scheduled_appointments sa ON sa.credit_id = csc.id
-          WHERE csc.customer_id = ${customerId}
-            AND csc.status = 'active'
-          GROUP BY csc.id, csc.customer_id, csc.order_item_id, csc.service_package_id, csc.service_id, 
-                   s.name, sp.name, s.duration_unit, csc.total_hours, csc.total_days, csc.total_months, csc.status
-          HAVING (
-            CASE 
-              WHEN s.duration_unit = 'hours' THEN csc.total_hours - COALESCE(SUM(sa.duration_hours) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
-              WHEN s.duration_unit = 'days' THEN csc.total_days - COALESCE(SUM(sa.duration_days) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
-              WHEN s.duration_unit = 'months' THEN (csc.total_months::NUMERIC - COALESCE(SUM(sa.duration_months) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)::NUMERIC)
-              ELSE 0
-            END
-          ) > 0
-          ORDER BY csc.created_at DESC
-        `
-      }
+      // Use the same query logic as CustomerDetail, but filter for available > 0
+      const result = await sql`
+        SELECT 
+          csc.id as credit_id,
+          csc.customer_id,
+          csc.order_item_id,
+          csc.service_package_id,
+          csc.service_id,
+          s.name as service_name,
+          COALESCE(sp.name, 'Direct Service') as package_name,
+          s.duration_unit,
+          CASE 
+            WHEN s.duration_unit = 'hours' THEN COALESCE(csc.total_hours, 0)
+            WHEN s.duration_unit = 'days' THEN COALESCE(csc.total_days, 0)
+            WHEN s.duration_unit = 'months' THEN COALESCE(csc.total_months, 0)::NUMERIC
+            ELSE 0
+          END as total,
+          CASE 
+            WHEN s.duration_unit = 'hours' THEN COALESCE(SUM(sa.duration_hours) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
+            WHEN s.duration_unit = 'days' THEN COALESCE(SUM(sa.duration_days) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
+            WHEN s.duration_unit = 'months' THEN COALESCE(SUM(sa.duration_months) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)::NUMERIC
+            ELSE 0
+          END as used,
+          CASE 
+            WHEN s.duration_unit = 'hours' THEN COALESCE(csc.total_hours, 0) - COALESCE(SUM(sa.duration_hours) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
+            WHEN s.duration_unit = 'days' THEN COALESCE(csc.total_days, 0) - COALESCE(SUM(sa.duration_days) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
+            WHEN s.duration_unit = 'months' THEN (COALESCE(csc.total_months, 0)::NUMERIC - COALESCE(SUM(sa.duration_months) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)::NUMERIC)
+            ELSE 0
+          END as available,
+          COALESCE(csc.status, 'active') as status
+        FROM customer_service_credits csc
+        JOIN services s ON csc.service_id = s.id
+        LEFT JOIN service_packages sp ON csc.service_package_id = sp.id
+        LEFT JOIN scheduled_appointments sa ON sa.credit_id = csc.id
+        WHERE csc.customer_id = ${customerId}
+          AND COALESCE(csc.status, 'active') = 'active'
+        GROUP BY csc.id, csc.customer_id, csc.order_item_id, csc.service_package_id, csc.service_id, 
+                 s.name, sp.name, s.duration_unit, csc.total_hours, csc.total_days, csc.total_months, csc.status
+        HAVING (
+          CASE 
+            WHEN s.duration_unit = 'hours' THEN COALESCE(csc.total_hours, 0) - COALESCE(SUM(sa.duration_hours) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
+            WHEN s.duration_unit = 'days' THEN COALESCE(csc.total_days, 0) - COALESCE(SUM(sa.duration_days) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)
+            WHEN s.duration_unit = 'months' THEN (COALESCE(csc.total_months, 0)::NUMERIC - COALESCE(SUM(sa.duration_months) FILTER (WHERE sa.status IN ('scheduled', 'completed') AND sa.cancelled_at IS NULL), 0)::NUMERIC)
+            ELSE 0
+          END
+        ) > 0
+        ORDER BY csc.created_at DESC
+      `
       
       setCustomerCredits(result || [])
     } catch (err) {
@@ -259,7 +250,7 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
       setSelectedCredit(credit || null)
       
       // Auto-fill service from credit
-      if (credit && !formData.service_id) {
+      if (credit && !formData.service_id && credit.service_id) {
         setFormData(prev => ({ ...prev, service_id: credit.service_id.toString() }))
       }
     } else {
@@ -318,8 +309,8 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
         setFormData(prev => ({
           ...prev,
           credit_id: creditId,
-          service_id: credit.service_id.toString(),
-          service_package_id: credit.service_package_id.toString()
+          service_id: credit.service_id ? credit.service_id.toString() : '',
+          service_package_id: credit.service_package_id ? credit.service_package_id.toString() : ''
         }))
         // The useEffect watching formData.service_id will handle setting selectedService
       }
