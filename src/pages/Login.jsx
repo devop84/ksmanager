@@ -8,6 +8,7 @@ function Login({ onLogin, onSwitchToSignup, onNavigate }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [copiedField, setCopiedField] = useState(null)
 
   const handleSubmit = async (e) => {
     e.preventDefault()
@@ -41,6 +42,41 @@ function Login({ onLogin, onSwitchToSignup, onNavigate }) {
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.')
       setLoading(false)
+    }
+  }
+
+  const handleCopy = async (text, field) => {
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopiedField(field)
+      setTimeout(() => {
+        setCopiedField(null)
+      }, 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      textArea.style.pointerEvents = 'none'
+      document.body.appendChild(textArea)
+      textArea.select()
+      try {
+        const successful = document.execCommand('copy')
+        if (successful) {
+          setCopiedField(field)
+          setTimeout(() => {
+            setCopiedField(null)
+          }, 2000)
+        } else {
+          console.error('Fallback copy command returned false')
+        }
+      } catch (fallbackErr) {
+        console.error('Fallback copy failed:', fallbackErr)
+      } finally {
+        document.body.removeChild(textArea)
+      }
     }
   }
 
@@ -123,11 +159,61 @@ function Login({ onLogin, onSwitchToSignup, onNavigate }) {
             </div>
             <div className="ml-3 flex-1">
               <h3 className="text-sm font-medium text-indigo-800">Demo Account</h3>
-              <div className="mt-2 text-sm text-indigo-700">
-                <p className="font-medium">Email:</p>
-                <p className="font-mono text-xs bg-white px-2 py-1 rounded mt-1 inline-block">viewonly@ksmanager.com</p>
-                <p className="font-medium mt-2">Password:</p>
-                <p className="font-mono text-xs bg-white px-2 py-1 rounded mt-1 inline-block">password</p>
+              <div className="mt-2 text-sm text-indigo-700 space-y-2">
+                <div>
+                  <p className="font-medium">Email:</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="font-mono text-xs bg-white px-2 py-1 rounded inline-block">viewonly@ksmanager.com</p>
+                    <button
+                      onClick={() => handleCopy('viewonly@ksmanager.com', 'email')}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-700 hover:text-indigo-900 hover:bg-indigo-100 rounded transition-colors"
+                      title="Copy email"
+                    >
+                      {copiedField === 'email' ? (
+                        <>
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <p className="font-medium">Password:</p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <p className="font-mono text-xs bg-white px-2 py-1 rounded inline-block">password</p>
+                    <button
+                      onClick={() => handleCopy('password', 'password')}
+                      className="inline-flex items-center gap-1 px-2 py-1 text-xs font-medium text-indigo-700 hover:text-indigo-900 hover:bg-indigo-100 rounded transition-colors"
+                      title="Copy password"
+                    >
+                      {copiedField === 'password' ? (
+                        <>
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          <span>Copied!</span>
+                        </>
+                      ) : (
+                        <>
+                          <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          <span>Copy</span>
+                        </>
+                      )}
+                    </button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
