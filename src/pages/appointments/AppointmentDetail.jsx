@@ -32,7 +32,7 @@ const statusStyles = {
   }
 }
 
-function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = null }) {
+function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCustomer, onViewInstructor, user = null }) {
   const [appointment, setAppointment] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -96,6 +96,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = nul
             c.email AS customer_email,
             s.name AS service_name,
             s.duration_unit AS service_duration_unit,
+            sc.name AS service_category_name,
             sp.name AS service_package_name,
             i.fullname AS instructor_name,
             st.fullname AS staff_name,
@@ -103,6 +104,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = nul
           FROM scheduled_appointments sa
           LEFT JOIN customers c ON sa.customer_id = c.id
           LEFT JOIN services s ON sa.service_id = s.id
+          LEFT JOIN service_categories sc ON s.category_id = sc.id
           LEFT JOIN service_packages sp ON sa.service_package_id = sp.id
           LEFT JOIN instructors i ON sa.instructor_id = i.id
           LEFT JOIN staff st ON sa.staff_id = st.id
@@ -177,6 +179,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = nul
           c.email AS customer_email,
           s.name AS service_name,
           s.duration_unit AS service_duration_unit,
+          sc.name AS service_category_name,
           sp.name AS service_package_name,
           i.fullname AS instructor_name,
           st.fullname AS staff_name,
@@ -184,6 +187,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = nul
         FROM scheduled_appointments sa
         LEFT JOIN customers c ON sa.customer_id = c.id
         LEFT JOIN services s ON sa.service_id = s.id
+        LEFT JOIN service_categories sc ON s.category_id = sc.id
         LEFT JOIN service_packages sp ON sa.service_package_id = sp.id
         LEFT JOIN instructors i ON sa.instructor_id = i.id
         LEFT JOIN staff st ON sa.staff_id = st.id
@@ -235,6 +239,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = nul
           c.email AS customer_email,
           s.name AS service_name,
           s.duration_unit AS service_duration_unit,
+          sc.name AS service_category_name,
           sp.name AS service_package_name,
           i.fullname AS instructor_name,
           st.fullname AS staff_name,
@@ -242,6 +247,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = nul
         FROM scheduled_appointments sa
         LEFT JOIN customers c ON sa.customer_id = c.id
         LEFT JOIN services s ON sa.service_id = s.id
+        LEFT JOIN service_categories sc ON s.category_id = sc.id
         LEFT JOIN service_packages sp ON sa.service_package_id = sp.id
         LEFT JOIN instructors i ON sa.instructor_id = i.id
         LEFT JOIN staff st ON sa.staff_id = st.id
@@ -297,6 +303,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = nul
           c.email AS customer_email,
           s.name AS service_name,
           s.duration_unit AS service_duration_unit,
+          sc.name AS service_category_name,
           sp.name AS service_package_name,
           i.fullname AS instructor_name,
           st.fullname AS staff_name,
@@ -304,6 +311,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = nul
         FROM scheduled_appointments sa
         LEFT JOIN customers c ON sa.customer_id = c.id
         LEFT JOIN services s ON sa.service_id = s.id
+        LEFT JOIN service_categories sc ON s.category_id = sc.id
         LEFT JOIN service_packages sp ON sa.service_package_id = sp.id
         LEFT JOIN instructors i ON sa.instructor_id = i.id
         LEFT JOIN staff st ON sa.staff_id = st.id
@@ -420,28 +428,9 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = nul
           
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
             <div>
-              {/* Customer Name and Attendee Name */}
-              <h1 className="text-3xl font-bold text-gray-900 mb-2">
-                {appointment.customer_name || t('appointmentDetail.title', 'Appointment #{{id}}', { id: appointment.id })}
-                {appointment.customer_name && appointment.attendee_name && (
-                  <span className="text-gray-600 font-normal">
-                    {' ('}{appointment.attendee_name}{')'}
-                  </span>
-                )}
+              <h1 className="text-3xl font-bold text-gray-900">
+                {t('appointmentDetail.title', 'Appointment #{{id}}', { id: appointment.id })}
               </h1>
-              <p className="text-gray-500 text-sm">
-                {appointment.service_name || '—'}
-                {appointment.scheduled_start && appointment.scheduled_end && (
-                  <>
-                    {' • '}
-                    {formatTime(new Date(appointment.scheduled_start))}
-                    {' - '}
-                    {formatTime(new Date(appointment.scheduled_end))}
-                    {' • '}
-                    {getDurationDisplay()}
-                  </>
-                )}
-              </p>
             </div>
             
             {/* Action Buttons */}
@@ -469,177 +458,135 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, user = nul
             )}
           </div>
           
-          {/* Main Content: Appointment Details (Left) and Info Card (Right) */}
+          {/* Main Content: Overview (Left) and Info Card (Right) */}
           <div className="flex flex-col lg:flex-row lg:items-start gap-6">
-            {/* Appointment Details Section - Left */}
-            <div className="flex-1 space-y-6">
-              {/* Status & Timing Card */}
+            {/* Overview Section - Left */}
+            <div className="flex-1">
               <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('appointmentDetail.details.title', 'Appointment Details')}
+                  {t('appointmentDetail.overview.title', 'Overview')}
                 </h2>
-                <dl className="space-y-4">
+                <dl className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Customer name (attendee name) */}
                   <div>
                     <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                      {t('appointmentDetail.status', 'Status')}
+                      {t('appointmentDetail.overview.customer', 'Customer')}
                     </dt>
-                    <dd>
+                    <dd className="mt-1 text-sm font-semibold text-gray-900 flex items-center gap-2">
+                      <span>{appointment.attendee_name || appointment.customer_name || '—'}</span>
+                      {appointment.customer_id && onViewCustomer && (
+                        <button
+                          onClick={() => onViewCustomer({ id: appointment.customer_id, fullname: appointment.customer_name })}
+                          className="inline-flex items-center justify-center p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                          title={t('appointmentDetail.overview.viewCustomer', 'View Customer')}
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                        </button>
+                      )}
+                    </dd>
+                  </div>
+
+                  {/* Services type */}
+                  <div>
+                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                      {t('appointmentDetail.overview.serviceType', 'Service Type')}
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-gray-900">
+                      {appointment.service_name || '—'}
+                    </dd>
+                  </div>
+
+                  {/* Date and time / Start and end date based on duration unit */}
+                  {appointment.service_duration_unit === 'hours' ? (
+                    <>
+                      <div>
+                        <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                          {t('appointmentDetail.overview.startTime', 'Start Time')}
+                        </dt>
+                        <dd className="mt-1 text-sm font-semibold text-gray-900">
+                          {appointment.scheduled_start ? formatDateTime(new Date(appointment.scheduled_start)) : '—'}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                          {t('appointmentDetail.overview.endTime', 'End Time')}
+                        </dt>
+                        <dd className="mt-1 text-sm font-semibold text-gray-900">
+                          {appointment.scheduled_end ? formatDateTime(new Date(appointment.scheduled_end)) : '—'}
+                        </dd>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                          {t('appointmentDetail.overview.startDate', 'Start Date')}
+                        </dt>
+                        <dd className="mt-1 text-sm font-semibold text-gray-900">
+                          {appointment.scheduled_start ? formatDate(new Date(appointment.scheduled_start)) : '—'}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                          {t('appointmentDetail.overview.endDate', 'End Date')}
+                        </dt>
+                        <dd className="mt-1 text-sm font-semibold text-gray-900">
+                          {appointment.scheduled_end ? formatDate(new Date(appointment.scheduled_end)) : '—'}
+                        </dd>
+                      </div>
+                    </>
+                  )}
+
+                  {/* Duration of appointment */}
+                  <div>
+                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                      {t('appointmentDetail.overview.duration', 'Duration')}
+                    </dt>
+                    <dd className="mt-1 text-sm font-semibold text-gray-900">
+                      {getDurationDisplay()}
+                    </dd>
+                  </div>
+
+                  {/* Instructor name (if lesson) */}
+                  {appointment.instructor_name && appointment.service_category_name && appointment.service_category_name.toLowerCase() === 'lessons' && (
+                    <div>
+                      <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                        {t('appointmentDetail.overview.instructor', 'Instructor')}
+                      </dt>
+                      <dd className="mt-1 text-sm font-semibold text-gray-900 flex items-center gap-2">
+                        <span>{appointment.instructor_name}</span>
+                        {appointment.instructor_id && onViewInstructor && (
+                          <button
+                            onClick={() => onViewInstructor({ id: appointment.instructor_id, fullname: appointment.instructor_name })}
+                            className="inline-flex items-center justify-center p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                            title={t('appointmentDetail.overview.viewInstructor', 'View Instructor')}
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                            </svg>
+                          </button>
+                        )}
+                      </dd>
+                    </div>
+                  )}
+
+                  {/* Status */}
+                  <div>
+                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                      {t('appointmentDetail.overview.status', 'Status')}
+                    </dt>
+                    <dd className="mt-1">
                       <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusStyle.pill}`}>
                         {formatStatusDisplay(displayStatus)}
                       </span>
                     </dd>
                   </div>
-                  <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                      {t('appointmentDetail.service.name', 'Service')}
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">{appointment.service_name || '—'}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                      {t('appointmentDetail.startTime', 'Start Time')}
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">{formatDateTime(appointment.scheduled_start)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                      {t('appointmentDetail.endTime', 'End Time')}
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">{formatDateTime(appointment.scheduled_end)}</dd>
-                  </div>
-                  <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                      {t('appointmentDetail.duration', 'Duration')}
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">{getDurationDisplay()}</dd>
-                  </div>
-                  {appointment.service_duration_unit && (
-                    <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                        {t('appointmentDetail.service.durationUnit', 'Duration Unit')}
-                      </dt>
-                      <dd className="mt-1 text-sm text-gray-900">{appointment.service_duration_unit}</dd>
-                    </div>
-                  )}
                 </dl>
               </div>
-
-              {/* Customer Information */}
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('appointmentDetail.customer.title', 'Customer Information')}
-                </h2>
-                <dl className="space-y-4">
-                  <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                      {t('appointmentDetail.customer.name', 'Name')}
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">{appointment.customer_name || '—'}</dd>
-                  </div>
-                  {appointment.attendee_name && (
-                    <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                        {t('appointmentDetail.customer.attendee', 'Attendee')}
-                      </dt>
-                      <dd className="mt-1 text-sm text-gray-900">{appointment.attendee_name}</dd>
-                    </div>
-                  )}
-                  {appointment.customer_phone && (
-                    <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                        {t('appointmentDetail.customer.phone', 'Phone')}
-                      </dt>
-                      <dd className="mt-1 text-sm text-gray-900">{appointment.customer_phone}</dd>
-                    </div>
-                  )}
-                  {appointment.customer_email && (
-                    <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                        {t('appointmentDetail.customer.email', 'Email')}
-                      </dt>
-                      <dd className="mt-1 text-sm text-gray-900 break-all">{appointment.customer_email}</dd>
-                    </div>
-                  )}
-                  <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                      {t('appointmentDetail.customer.id', 'Customer ID')}
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900 font-mono">#{appointment.customer_id || '—'}</dd>
-                  </div>
-                </dl>
-              </div>
-
-              {/* Service Information */}
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('appointmentDetail.service.title', 'Service Information')}
-                </h2>
-                <dl className="space-y-4">
-                  <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                      {t('appointmentDetail.service.name', 'Service Name')}
-                    </dt>
-                    <dd className="mt-1 text-sm text-gray-900">{appointment.service_name || '—'}</dd>
-                  </div>
-                  {appointment.service_package_name && (
-                    <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                        {t('appointmentDetail.service.package', 'Package')}
-                      </dt>
-                      <dd className="mt-1 text-sm text-gray-900">{appointment.service_package_name}</dd>
-                    </div>
-                  )}
-                  {appointment.service_duration_unit && (
-                    <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                        {t('appointmentDetail.service.durationUnit', 'Duration Unit')}
-                      </dt>
-                      <dd className="mt-1 text-sm text-gray-900">{appointment.service_duration_unit}</dd>
-                    </div>
-                  )}
-                  {appointment.credit_id && (
-                    <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                        {t('appointmentDetail.service.creditId', 'Credit ID')}
-                      </dt>
-                      <dd className="mt-1 text-sm text-gray-900 font-mono">#{appointment.credit_id}</dd>
-                    </div>
-                  )}
-                </dl>
-              </div>
-
-              {/* Instructor Information */}
-              {appointment.instructor_id && (
-                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    {t('appointmentDetail.instructor.title', 'Instructor Information')}
-                  </h2>
-                  <dl className="space-y-4">
-                    <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                        {t('appointmentDetail.instructor.name', 'Instructor Name')}
-                      </dt>
-                      <dd className="mt-1 text-sm text-gray-900">{appointment.instructor_name || '—'}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                        {t('appointmentDetail.instructor.id', 'Instructor ID')}
-                      </dt>
-                      <dd className="mt-1 text-sm text-gray-900 font-mono">#{appointment.instructor_id}</dd>
-                    </div>
-                  </dl>
-                </div>
-              )}
-
-              {/* Notes */}
-              {appointment.note && (
-                <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                    {t('appointmentDetail.notes.title', 'Notes')}
-                  </h2>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap">{appointment.note}</p>
-                </div>
-              )}
             </div>
 
             {/* Appointment Info Card - Right */}

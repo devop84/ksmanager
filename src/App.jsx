@@ -105,6 +105,8 @@ function App() {
   const [appointmentFormCustomer, setAppointmentFormCustomer] = useState(null)
   const [appointmentDetailId, setAppointmentDetailId] = useState(null)
   const [appointmentDetailBackPage, setAppointmentDetailBackPage] = useState('appointments')
+  const [customerDetailBackPage, setCustomerDetailBackPage] = useState('customers')
+  const [instructorDetailBackPage, setInstructorDetailBackPage] = useState('instructors')
   const [usersRefreshKey, setUsersRefreshKey] = useState(0)
   const [userFormUser, setUserFormUser] = useState(null)
 
@@ -186,8 +188,9 @@ function App() {
     setCurrentPage('customerForm')
   }
 
-  const openCustomerDetail = (customer) => {
+  const openCustomerDetail = (customer, backPage = 'customers') => {
     setCustomerDetailId(customer.id)
+    setCustomerDetailBackPage(backPage)
     setCurrentPage('customerDetail')
   }
 
@@ -204,7 +207,8 @@ function App() {
 
   const handleCustomerDetailBack = () => {
     setCustomerDetailId(null)
-    setCurrentPage('customers')
+    setCurrentPage(customerDetailBackPage || 'customers')
+    setCustomerDetailBackPage('customers')
   }
 
   const handleCustomerDetailEdit = (customer) => {
@@ -216,7 +220,8 @@ function App() {
   const handleCustomerDetailDelete = () => {
     setCustomersRefreshKey((prev) => prev + 1)
     setCustomerDetailId(null)
-    setCurrentPage('customers')
+    setCurrentPage(customerDetailBackPage || 'customers')
+    setCustomerDetailBackPage('customers')
   }
 
   const openOrders = () => {
@@ -566,14 +571,16 @@ function App() {
     setCurrentPage('instructors')
   }
 
-  const openInstructorDetail = (instructor) => {
+  const openInstructorDetail = (instructor, backPage = 'instructors') => {
     setInstructorDetailId(instructor.id)
+    setInstructorDetailBackPage(backPage)
     setCurrentPage('instructorDetail')
   }
 
   const handleInstructorDetailBack = () => {
     setInstructorDetailId(null)
-    setCurrentPage('instructors')
+    setCurrentPage(instructorDetailBackPage || 'instructors')
+    setInstructorDetailBackPage('instructors')
   }
 
   const handleInstructorDetailDelete = async () => {
@@ -584,7 +591,8 @@ function App() {
       await sql`DELETE FROM instructors WHERE id = ${instructorDetailId}`
       setInstructorsRefreshKey((prev) => prev + 1)
       setInstructorDetailId(null)
-      setCurrentPage('instructors')
+      setCurrentPage(instructorDetailBackPage || 'instructors')
+      setInstructorDetailBackPage('instructors')
     } catch (err) {
       console.error('Failed to delete instructor:', err)
       alert(t('instructors.error.delete', 'Failed to delete instructor'))
@@ -1192,6 +1200,8 @@ function App() {
             onBack={handleAppointmentDetailBack}
             onEdit={handleAppointmentDetailEdit}
             onDelete={handleAppointmentDetailDelete}
+            onViewCustomer={(customer) => openCustomerDetail(customer, 'appointmentDetail')}
+            onViewInstructor={(instructor) => openInstructorDetail(instructor, 'appointmentDetail')}
             user={user}
           />
         )
