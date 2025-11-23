@@ -859,43 +859,41 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
             </svg>
             {t('orderDetail.back', 'Back')}
           </button>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">
                 {t('orderDetail.title', 'Order {{orderNumber}}', { orderNumber: order.order_number })}
               </h1>
               <p className="text-gray-500 text-sm mt-1">
                 {t('orderDetail.subtitle', 'Full details for this customer order.')}
               </p>
             </div>
-            <div className="flex items-center gap-2 flex-wrap">
-              {order.status === 'open' && canModify(user) && (
-                <>
-                  <button
-                    onClick={handleCloseOrder}
-                    disabled={Math.abs(Number(order.balance_due || 0)) > 0.01}
-                    className="inline-flex items-center justify-center rounded-lg border border-emerald-300 px-3 py-2 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-                    title={Math.abs(Number(order.balance_due || 0)) > 0.01 ? t('orderDetail.buttons.closeDisabled', 'Cannot close order. Balance due must be zero. Current balance: {{balance}}', { balance: formatAmount(order.balance_due) }) : t('orderDetail.buttons.close', 'Close Order')}
-                  >
-                    {t('orderDetail.buttons.close', 'Close Order')}
-                  </button>
-                  <button
-                    onClick={handleCancelOrder}
-                    className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors"
-                  >
-                    {t('orderDetail.buttons.cancel', 'Cancel')}
-                  </button>
-                </>
-              )}
-            </div>
+            {order.status === 'open' && canModify(user) && (
+              <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+                <button
+                  onClick={handleCloseOrder}
+                  disabled={Math.abs(Number(order.balance_due || 0)) > 0.01}
+                  className="inline-flex items-center justify-center rounded-lg border border-emerald-300 px-3 py-2 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white whitespace-nowrap"
+                  title={Math.abs(Number(order.balance_due || 0)) > 0.01 ? t('orderDetail.buttons.closeDisabled', 'Cannot close order. Balance due must be zero. Current balance: {{balance}}', { balance: formatAmount(order.balance_due) }) : t('orderDetail.buttons.close', 'Close Order')}
+                >
+                  {t('orderDetail.buttons.close', 'Close Order')}
+                </button>
+                <button
+                  onClick={handleCancelOrder}
+                  className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors whitespace-nowrap"
+                >
+                  {t('orderDetail.buttons.cancel', 'Cancel')}
+                </button>
+              </div>
+            )}
           </div>
         </div>
 
-        <div className="grid gap-6 xl:grid-cols-4">
-          <div className="xl:col-span-3 space-y-6">
+        <div className="grid gap-6 lg:grid-cols-4">
+          <div className="lg:col-span-3 space-y-6">
             {/* Order Summary */}
-            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-              <div className="flex flex-wrap items-center gap-4 mb-4">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 shadow-sm">
+              <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <div>
                   <p className="text-xs font-semibold uppercase text-gray-500">
                     {t('orderDetail.status', 'Status')}
@@ -908,7 +906,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                   <p className="text-xs font-semibold uppercase text-gray-500">
                     {t('orderDetail.totalAmount', 'Total Amount')}
                   </p>
-                  <p className="text-3xl font-bold text-gray-900">
+                  <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 break-words">
                     {formatAmount(order.total_amount)}
                   </p>
                 </div>
@@ -916,7 +914,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                   <p className="text-xs font-semibold uppercase text-gray-500">
                     {t('orderDetail.balanceDue', 'Balance Due')}
                   </p>
-                  <p className={`text-2xl font-bold ${order.balance_due > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
+                  <p className={`text-xl sm:text-2xl font-bold break-words ${order.balance_due > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
                     {formatAmount(order.balance_due)}
                   </p>
                 </div>
@@ -924,7 +922,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                   <p className="text-xs font-semibold uppercase text-gray-500">
                     {t('orderDetail.totalPaid', 'Total Paid')}
                   </p>
-                  <p className="text-2xl font-bold text-gray-900">
+                  <p className="text-xl sm:text-2xl font-bold text-gray-900 break-words">
                     {formatAmount(order.total_paid)}
                   </p>
                 </div>
@@ -958,7 +956,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
               {/* Add Item Form */}
               {showAddItem && canModify(user) && order?.status === 'open' && (
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-gray-700">
                         {t('orderDetail.itemFields.type', 'Type')}
@@ -1053,8 +1051,58 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
               {orderItems.length === 0 ? (
                 <p className="text-gray-500 text-sm">{t('orderDetail.items.empty', 'No items in this order.')}</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
+                <>
+                  {/* Mobile Card View */}
+                  <div className="block sm:hidden space-y-3">
+                    {orderItems.map((item) => (
+                      <div key={item.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 break-words">
+                              {item.item_name}
+                            </div>
+                            {item.service_name && item.item_type === 'service_package' && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {t('orderDetail.items.service', 'Service')}: {item.service_name}
+                              </div>
+                            )}
+                            <div className="text-xs text-gray-500 mt-1 capitalize">
+                              {item.item_type.replace('_', ' ')}
+                            </div>
+                          </div>
+                          {order.status === 'open' && canModify(user) && (
+                            <button
+                              onClick={() => handleRemoveItem(item.id)}
+                              className="ml-2 inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors flex-shrink-0"
+                              title={t('orderDetail.items.remove', 'Remove Item')}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 mt-3 text-sm">
+                          <div>
+                            <span className="text-gray-500">{t('orderDetail.items.quantity', 'Qty')}: </span>
+                            <span className="font-medium text-gray-900">{item.quantity}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-gray-500">{t('orderDetail.items.unitPrice', 'Unit Price')}: </span>
+                            <span className="font-medium text-gray-900">{formatAmount(item.unit_price)}</span>
+                          </div>
+                          <div className="col-span-2 text-right pt-2 border-t border-gray-200">
+                            <span className="text-gray-500">{t('orderDetail.items.subtotal', 'Subtotal')}: </span>
+                            <span className="font-semibold text-gray-900">{formatAmount(item.subtotal)}</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Desktop Table View */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1162,8 +1210,9 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                         {order.status === 'open' && canModify(user) && <td></td>}
                       </tr>
                     </tfoot>
-                  </table>
-                </div>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
 
@@ -1194,7 +1243,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
               {/* Add Payment Form */}
               {showAddPayment && canModify(user) && order?.status === 'open' && (
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-gray-700">
                         {t('orderDetail.paymentFields.amount', 'Amount *')}
@@ -1270,8 +1319,51 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
               {orderPayments.length === 0 ? (
                 <p className="text-gray-500 text-sm">{t('orderDetail.payments.empty', 'No payments recorded for this order.')}</p>
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="min-w-full divide-y divide-gray-200">
+                <>
+                  {/* Mobile Card View */}
+                  <div className="block sm:hidden space-y-3">
+                    {orderPayments.map((payment) => (
+                      <div key={payment.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900">
+                              {formatAmount(payment.amount)}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {formatDateTime(payment.occurred_at)}
+                            </div>
+                          </div>
+                          {order.status === 'open' && canModify(user) && (
+                            <button
+                              onClick={() => handleRemovePayment(payment.id)}
+                              className="ml-2 inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors flex-shrink-0"
+                              title={t('orderDetail.payments.remove', 'Remove Payment')}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                        <div className="mt-2 space-y-1 text-sm">
+                          <div>
+                            <span className="text-gray-500">{t('orderDetail.payments.method', 'Payment Method')}: </span>
+                            <span className="text-gray-900">{payment.payment_method_name || '—'}</span>
+                          </div>
+                          {payment.company_account_name && (
+                            <div>
+                              <span className="text-gray-500">{t('orderDetail.payments.account', 'Account')}: </span>
+                              <span className="text-gray-900">{payment.company_account_name}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Desktop Table View */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1335,17 +1427,18 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                         {order.status === 'open' && canModify(user) && <td></td>}
                       </tr>
                     </tfoot>
-                  </table>
-                </div>
+                    </table>
+                  </div>
+                </>
               )}
             </div>
 
             {/* Order Details */}
-            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+            <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 shadow-sm">
               <h2 className="text-lg font-semibold text-gray-900 mb-4">
                 {t('orderDetail.details.title', 'Order Details')}
               </h2>
-              <dl className="grid gap-4 md:grid-cols-2">
+              <dl className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <dt className="text-xs font-semibold uppercase text-gray-500">
                     {t('orderDetail.details.customer', 'Customer')}
@@ -1373,7 +1466,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
           </div>
 
           {/* Sidebar */}
-          <div className="xl:col-span-1">
+          <div className="lg:col-span-1">
             <DetailInfoPanel
               title={t('orderDetail.info.title', 'Order Information')}
               onEdit={() => onEdit?.(order)}
