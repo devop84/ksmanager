@@ -3,9 +3,11 @@ import { useTranslation } from 'react-i18next'
 import sql from '../../lib/neon'
 import { canModify } from '../../lib/permissions'
 import { useDataTable } from '../../hooks/useDataTable'
-import DataTable from '../../components/DataTable'
-import PageHeader from '../../components/PageHeader'
-import SearchBar from '../../components/SearchBar'
+import DataTable from '../../components/ui/DataTable'
+import PageHeader from '../../components/layout/PageHeader'
+import SearchBar from '../../components/ui/SearchBar'
+import MobileCardView from '../../components/ui/MobileCardView'
+import HotelsOverview from '../../components/ui/HotelsOverview'
 
 function Hotels({ onAddHotel = () => {}, onEditHotel = () => {}, onViewHotel = () => {}, refreshKey = 0, user = null }) {
   const [hotels, setHotels] = useState([])
@@ -33,7 +35,6 @@ function Hotels({ onAddHotel = () => {}, onEditHotel = () => {}, onViewHotel = (
     handleSort,
     handleSearchChange
   } = useDataTable(hotels, {
-    searchFields: ['name', 'phone', 'address', 'note'],
     defaultSortKey: 'name'
   })
 
@@ -87,11 +88,13 @@ function Hotels({ onAddHotel = () => {}, onEditHotel = () => {}, onViewHotel = (
           canModifyFn={canModify}
         />
 
+        <HotelsOverview hotels={hotels} />
+
         <div className="flex flex-col gap-4">
           <SearchBar
             value={searchTerm}
             onChange={handleSearchChange}
-            placeholder={t('hotels.search', 'Search hotels by name, phone, or address...')}
+            placeholder={t('hotels.search', 'Search all columns...')}
           />
 
           {loading && <div className="text-gray-600 text-sm">{t('hotels.loading', 'Loading hotels...')}</div>}
@@ -112,40 +115,33 @@ function Hotels({ onAddHotel = () => {}, onEditHotel = () => {}, onViewHotel = (
               </div>
 
               {/* Mobile Card View */}
-              <div className="md:hidden space-y-3">
-                {filteredData.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    {t('hotels.empty', 'No hotels found. Try adjusting your search or filters.')}
-                  </div>
-                ) : (
-                  filteredData.map((hotel) => (
-                    <div
-                      key={hotel.id}
-                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => onViewHotel(hotel)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-base font-semibold text-gray-900">{hotel.name || '—'}</p>
-                          <p className="text-sm text-gray-500">{hotel.phone || '—'}</p>
-                        </div>
+              <MobileCardView
+                data={filteredData}
+                emptyMessage={t('hotels.empty', 'No hotels found. Try adjusting your search or filters.')}
+                onItemClick={onViewHotel}
+                renderCard={(hotel) => (
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-semibold text-gray-900">{hotel.name || '—'}</p>
+                        <p className="text-sm text-gray-500">{hotel.phone || '—'}</p>
                       </div>
-                      <dl className="mt-4 space-y-2 text-sm text-gray-600">
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">
-                            {t('hotels.mobile.address', 'Address')}
-                          </dt>
-                          <dd>{hotel.address || '—'}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('hotels.mobile.note', 'Note')}</dt>
-                          <dd>{hotel.note || '—'}</dd>
-                        </div>
-                      </dl>
                     </div>
-                  ))
+                    <dl className="mt-4 space-y-2 text-sm text-gray-600">
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">
+                          {t('hotels.mobile.address', 'Address')}
+                        </dt>
+                        <dd>{hotel.address || '—'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('hotels.mobile.note', 'Note')}</dt>
+                        <dd>{hotel.note || '—'}</dd>
+                      </div>
+                    </dl>
+                  </>
                 )}
-              </div>
+              />
             </>
           )}
         </div>

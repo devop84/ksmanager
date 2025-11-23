@@ -1,4 +1,4 @@
-import { canModify } from '../lib/permissions'
+import { canModify } from '../../lib/permissions'
 
 /**
  * Reusable page header component with title, description, and add button

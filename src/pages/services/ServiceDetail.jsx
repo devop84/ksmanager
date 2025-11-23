@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import sql from '../../lib/neon'
 import { canModify } from '../../lib/permissions'
 import { useSettings } from '../../context/SettingsContext'
-import DetailInfoPanel from '../../components/DetailInfoPanel'
+import DetailInfoPanel from '../../components/ui/DetailInfoPanel'
 
 function ServiceDetail({ serviceId, onEdit, onDelete, onBack, onAddPackage = () => {}, onViewPackage = () => {}, user = null }) {
   const { t } = useTranslation()

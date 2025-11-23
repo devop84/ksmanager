@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettings } from '../context/SettingsContext'
-import FeedbackForm from '../components/FeedbackForm'
+import FeedbackForm from '../components/forms/FeedbackForm'
 
 function Landing({ onNavigate, isAuthenticated = false }) {
   const { t } = useTranslation()

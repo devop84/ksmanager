@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next'
 import sql from '../../lib/neon'
 import { canModify } from '../../lib/permissions'
 import { useDataTable } from '../../hooks/useDataTable'
-import DataTable from '../../components/DataTable'
-import PageHeader from '../../components/PageHeader'
-import SearchBar from '../../components/SearchBar'
+import DataTable from '../../components/ui/DataTable'
+import PageHeader from '../../components/layout/PageHeader'
+import SearchBar from '../../components/ui/SearchBar'
+import MobileCardView from '../../components/ui/MobileCardView'
 
 function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdParty = () => {}, onViewThirdParty = () => {}, user = null }) {
   const { t } = useTranslation()
@@ -33,7 +34,6 @@ function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdP
     handleSort,
     handleSearchChange
   } = useDataTable(thirdParties, {
-    searchFields: ['name', 'category_name', 'phone', 'email', 'note'],
     defaultSortKey: 'name'
   })
 
@@ -101,42 +101,35 @@ function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdP
                 />
               </div>
 
-              <div className="md:hidden space-y-3">
-                {filteredData.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    {t('thirdParties.table.empty')}
-                  </div>
-                ) : (
-                  filteredData.map((tp) => (
-                    <div
-                      key={tp.id}
-                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => onViewThirdParty(tp)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-base font-semibold text-gray-900">{tp.name || '—'}</p>
-                          <p className="text-sm text-gray-500">{tp.category_name || '—'}</p>
-                        </div>
+              <MobileCardView
+                data={filteredData}
+                emptyMessage={t('thirdParties.table.empty')}
+                onItemClick={onViewThirdParty}
+                renderCard={(tp) => (
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-semibold text-gray-900">{tp.name || '—'}</p>
+                        <p className="text-sm text-gray-500">{tp.category_name || '—'}</p>
                       </div>
-                      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm text-gray-600">
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('thirdParties.mobile.phone')}</dt>
-                          <dd>{tp.phone || '—'}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('thirdParties.mobile.email')}</dt>
-                          <dd>{tp.email || '—'}</dd>
-                        </div>
-                        <div className="md:col-span-2">
-                          <dt className="text-gray-400 text-xs uppercase">{t('thirdParties.mobile.note')}</dt>
-                          <dd>{tp.note || '—'}</dd>
-                        </div>
-                      </dl>
                     </div>
-                  ))
+                    <dl className="mt-4 grid grid-cols-2 gap-3 text-sm text-gray-600">
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('thirdParties.mobile.phone')}</dt>
+                        <dd>{tp.phone || '—'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('thirdParties.mobile.email')}</dt>
+                        <dd>{tp.email || '—'}</dd>
+                      </div>
+                      <div className="md:col-span-2">
+                        <dt className="text-gray-400 text-xs uppercase">{t('thirdParties.mobile.note')}</dt>
+                        <dd>{tp.note || '—'}</dd>
+                      </div>
+                    </dl>
+                  </>
                 )}
-              </div>
+              />
             </>
           )}
         </div>

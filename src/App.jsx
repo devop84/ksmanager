@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import Sidebar from './components/Sidebar'
+import Sidebar from './components/layout/Sidebar'
 import Customers from './pages/customers/Customers'
 import Hotels from './pages/hotels/Hotels'
 import Agencies from './pages/agencies/Agencies'

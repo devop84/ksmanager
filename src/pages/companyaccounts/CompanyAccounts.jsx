@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next'
 import sql from '../../lib/neon'
 import { canModify } from '../../lib/permissions'
 import { useDataTable } from '../../hooks/useDataTable'
-import DataTable from '../../components/DataTable'
-import PageHeader from '../../components/PageHeader'
-import SearchBar from '../../components/SearchBar'
+import DataTable from '../../components/ui/DataTable'
+import PageHeader from '../../components/layout/PageHeader'
+import SearchBar from '../../components/ui/SearchBar'
+import MobileCardView from '../../components/ui/MobileCardView'
 
 function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccount = () => {}, onViewAccount = () => {}, user = null }) {
   const { t } = useTranslation()
@@ -31,7 +32,6 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
     handleSort,
     handleSearchChange
   } = useDataTable(accounts, {
-    searchFields: ['name', 'details', 'note'],
     defaultSortKey: 'name'
   })
 
@@ -95,38 +95,31 @@ function CompanyAccounts({ refreshKey = 0, onAddAccount = () => {}, onEditAccoun
               </div>
 
               {/* Mobile Card View */}
-              <div className="md:hidden space-y-3">
-                {filteredData.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    {t('companyAccounts.table.empty')}
-                  </div>
-                ) : (
-                  filteredData.map((account) => (
-                    <div
-                      key={account.id}
-                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => onViewAccount(account)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-base font-semibold text-gray-900">{account.name || '—'}</p>
-                          <p className="text-sm text-gray-500">{account.details?.slice(0, 80) || '—'}</p>
-                        </div>
+              <MobileCardView
+                data={filteredData}
+                emptyMessage={t('companyAccounts.table.empty')}
+                onItemClick={onViewAccount}
+                renderCard={(account) => (
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-semibold text-gray-900">{account.name || '—'}</p>
+                        <p className="text-sm text-gray-500">{account.details?.slice(0, 80) || '—'}</p>
                       </div>
-                      <dl className="mt-4 space-y-3 text-sm text-gray-600">
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('companyAccounts.mobile.details')}</dt>
-                          <dd>{account.details || '—'}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('companyAccounts.mobile.note')}</dt>
-                          <dd>{account.note || '—'}</dd>
-                        </div>
-                      </dl>
                     </div>
-                  ))
+                    <dl className="mt-4 space-y-3 text-sm text-gray-600">
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('companyAccounts.mobile.details')}</dt>
+                        <dd>{account.details || '—'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('companyAccounts.mobile.note')}</dt>
+                        <dd>{account.note || '—'}</dd>
+                      </div>
+                    </dl>
+                  </>
                 )}
-              </div>
+              />
             </>
           )}
         </div>

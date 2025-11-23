@@ -3,9 +3,10 @@ import { useTranslation } from 'react-i18next'
 import sql from '../../lib/neon'
 import { canModify } from '../../lib/permissions'
 import { useDataTable } from '../../hooks/useDataTable'
-import DataTable from '../../components/DataTable'
-import PageHeader from '../../components/PageHeader'
-import SearchBar from '../../components/SearchBar'
+import DataTable from '../../components/ui/DataTable'
+import PageHeader from '../../components/layout/PageHeader'
+import SearchBar from '../../components/ui/SearchBar'
+import MobileCardView from '../../components/ui/MobileCardView'
 
 function Users({ onAddUser = () => {}, onEditUser = () => {}, onViewUser = () => {}, refreshKey = 0, user = null }) {
   const { t } = useTranslation()
@@ -33,7 +34,6 @@ function Users({ onAddUser = () => {}, onEditUser = () => {}, onViewUser = () =>
     handleSort,
     handleSearchChange
   } = useDataTable(users, {
-    searchFields: ['name', 'email', 'role'],
     defaultSortKey: 'name'
   })
 
@@ -224,58 +224,51 @@ function Users({ onAddUser = () => {}, onEditUser = () => {}, onViewUser = () =>
                 </div>
               </div>
 
-              <div className="md:hidden space-y-3">
-                {filteredData.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    {t('users.table.empty', 'No users found')}
-                  </div>
-                ) : (
-                  filteredData.map((userRow) => (
-                    <div
-                      key={userRow.id}
-                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => onViewUser?.(userRow)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-base font-semibold text-gray-900">{userRow.name || '—'}</p>
-                          <p className="text-sm text-gray-500">{userRow.email || '—'}</p>
-                          <p className="text-sm text-gray-500">{getRoleLabel(userRow.role)}</p>
-                        </div>
-                        {canModify(user) && (
-                          <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                onEditUser(userRow)
-                              }}
-                              className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
-                            >
-                              {t('users.actions.edit', 'Edit')}
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                handleDelete(userRow.id)
-                              }}
-                              disabled={deletingId === userRow.id || (user && userRow.id === user.id)}
-                              className="rounded-lg border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                            >
-                              {deletingId === userRow.id ? t('users.actions.deleting', 'Deleting...') : t('users.actions.delete', 'Delete')}
-                            </button>
-                          </div>
-                        )}
+              <MobileCardView
+                data={filteredData}
+                emptyMessage={t('users.table.empty', 'No users found')}
+                onItemClick={onViewUser}
+                renderCard={(userRow) => (
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-semibold text-gray-900">{userRow.name || '—'}</p>
+                        <p className="text-sm text-gray-500">{userRow.email || '—'}</p>
+                        <p className="text-sm text-gray-500">{getRoleLabel(userRow.role)}</p>
                       </div>
-                      <dl className="mt-4 grid grid-cols-1 gap-2 text-sm text-gray-600">
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('users.mobile.createdAt', 'Created')}</dt>
-                          <dd>{formatDate(userRow.created_at)}</dd>
+                      {canModify(user) && (
+                        <div className="flex gap-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              onEditUser(userRow)
+                            }}
+                            className="rounded-lg border border-gray-300 px-3 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            {t('users.actions.edit', 'Edit')}
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              handleDelete(userRow.id)
+                            }}
+                            disabled={deletingId === userRow.id || (user && userRow.id === user.id)}
+                            className="rounded-lg border border-red-300 px-3 py-1 text-xs font-medium text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            {deletingId === userRow.id ? t('users.actions.deleting', 'Deleting...') : t('users.actions.delete', 'Delete')}
+                          </button>
                         </div>
-                      </dl>
+                      )}
                     </div>
-                  ))
+                    <dl className="mt-4 grid grid-cols-1 gap-2 text-sm text-gray-600">
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('users.mobile.createdAt', 'Created')}</dt>
+                        <dd>{formatDate(userRow.created_at)}</dd>
+                      </div>
+                    </dl>
+                  </>
                 )}
-              </div>
+              />
             </>
           )}
         </div>

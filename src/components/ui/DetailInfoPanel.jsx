@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import { canModify } from '../lib/permissions'
+import { canModify } from '../../lib/permissions'
 
 /**
  * Reusable component for the right sidebar information panel in detail pages

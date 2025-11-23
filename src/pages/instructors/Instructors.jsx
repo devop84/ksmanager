@@ -4,9 +4,11 @@ import sql from '../../lib/neon'
 import { canModify } from '../../lib/permissions'
 import { useSettings } from '../../context/SettingsContext'
 import { useDataTable } from '../../hooks/useDataTable'
-import DataTable from '../../components/DataTable'
-import PageHeader from '../../components/PageHeader'
-import SearchBar from '../../components/SearchBar'
+import DataTable from '../../components/ui/DataTable'
+import PageHeader from '../../components/layout/PageHeader'
+import SearchBar from '../../components/ui/SearchBar'
+import MobileCardView from '../../components/ui/MobileCardView'
+import InstructorsOverview from '../../components/ui/InstructorsOverview'
 
 function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, onViewInstructor = () => {}, refreshKey = 0, user = null }) {
   const { t } = useTranslation()
@@ -39,7 +41,6 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
     handleSort,
     handleSearchChange
   } = useDataTable(instructors, {
-    searchFields: ['fullname', 'phone', 'email', 'bankdetail', 'hourlyrate', 'commission', 'monthlyfix', 'note'],
     defaultSortKey: 'fullname'
   })
 
@@ -116,6 +117,8 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
           canModifyFn={canModify}
         />
 
+        <InstructorsOverview instructors={instructors} />
+
         <div className="flex flex-col gap-4">
           <SearchBar
             value={searchTerm}
@@ -139,57 +142,50 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
                 />
               </div>
 
-              <div className="md:hidden space-y-3">
-                {filteredData.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    {t('instructors.table.empty')}
-                  </div>
-                ) : (
-                  filteredData.map((instructor) => (
-                    <div
-                      key={instructor.id}
-                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => onViewInstructor(instructor)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-base font-semibold text-gray-900">{instructor.fullname || '—'}</p>
-                          <p className="text-sm text-gray-500">{instructor.email || instructor.phone || '—'}</p>
-                        </div>
-                        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
-                          {displayCurrency(instructor.hourlyrate)}
-                        </span>
+              <MobileCardView
+                data={filteredData}
+                emptyMessage={t('instructors.table.empty')}
+                onItemClick={onViewInstructor}
+                renderCard={(instructor) => (
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-semibold text-gray-900">{instructor.fullname || '—'}</p>
+                        <p className="text-sm text-gray-500">{instructor.email || instructor.phone || '—'}</p>
                       </div>
-                      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm text-gray-600">
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.phone')}</dt>
-                          <dd>{instructor.phone || '—'}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.bankdetail')}</dt>
-                          <dd>{instructor.bankdetail || '—'}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.hourly')}</dt>
-                          <dd>{displayCurrency(instructor.hourlyrate)}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.commission')}</dt>
-                          <dd>{formatPercent(instructor.commission)}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.monthly')}</dt>
-                          <dd>{displayCurrency(instructor.monthlyfix)}</dd>
-                        </div>
-                        <div className="md:col-span-2">
-                          <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.note')}</dt>
-                          <dd>{instructor.note || '—'}</dd>
-                        </div>
-                      </dl>
+                      <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                        {displayCurrency(instructor.hourlyrate)}
+                      </span>
                     </div>
-                  ))
+                    <dl className="mt-4 grid grid-cols-2 gap-3 text-sm text-gray-600">
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.phone')}</dt>
+                        <dd>{instructor.phone || '—'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.bankdetail')}</dt>
+                        <dd>{instructor.bankdetail || '—'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.hourly')}</dt>
+                        <dd>{displayCurrency(instructor.hourlyrate)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.commission')}</dt>
+                        <dd>{formatPercent(instructor.commission)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.monthly')}</dt>
+                        <dd>{displayCurrency(instructor.monthlyfix)}</dd>
+                      </div>
+                      <div className="md:col-span-2">
+                        <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.note')}</dt>
+                        <dd>{instructor.note || '—'}</dd>
+                      </div>
+                    </dl>
+                  </>
                 )}
-              </div>
+              />
             </>
           )}
         </div>

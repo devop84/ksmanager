@@ -4,9 +4,10 @@ import sql from '../../lib/neon'
 import { canModify } from '../../lib/permissions'
 import { useSettings } from '../../context/SettingsContext'
 import { useDataTable } from '../../hooks/useDataTable'
-import DataTable from '../../components/DataTable'
-import PageHeader from '../../components/PageHeader'
-import SearchBar from '../../components/SearchBar'
+import DataTable from '../../components/ui/DataTable'
+import PageHeader from '../../components/layout/PageHeader'
+import SearchBar from '../../components/ui/SearchBar'
+import MobileCardView from '../../components/ui/MobileCardView'
 
 function Staff({ onAddStaff = () => {}, onEditStaff = () => {}, onViewStaff = () => {}, refreshKey = 0, user = null }) {
   const { t } = useTranslation()
@@ -40,7 +41,6 @@ function Staff({ onAddStaff = () => {}, onEditStaff = () => {}, onViewStaff = ()
     handleSort,
     handleSearchChange
   } = useDataTable(staff, {
-    searchFields: ['fullname', 'role', 'phone', 'email', 'bankdetail', 'hourlyrate', 'commission', 'monthlyfix', 'note'],
     defaultSortKey: 'fullname'
   })
 
@@ -147,58 +147,51 @@ function Staff({ onAddStaff = () => {}, onEditStaff = () => {}, onViewStaff = ()
                 />
               </div>
 
-              <div className="md:hidden space-y-3">
-                {filteredData.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    {t('staff.table.empty')}
-                  </div>
-                ) : (
-                  filteredData.map((member) => (
-                    <div
-                      key={member.id}
-                      className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => onViewStaff(member)}
-                    >
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <p className="text-base font-semibold text-gray-900">{member.fullname || '—'}</p>
-                          <p className="text-sm text-gray-500">{getRoleLabel(member.role)}</p>
-                          <p className="text-sm text-gray-500">{member.email || member.phone || '—'}</p>
-                        </div>
-                        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
-                          {displayCurrency(member.hourlyrate)}
-                        </span>
+              <MobileCardView
+                data={filteredData}
+                emptyMessage={t('staff.table.empty')}
+                onItemClick={onViewStaff}
+                renderCard={(member) => (
+                  <>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-base font-semibold text-gray-900">{member.fullname || '—'}</p>
+                        <p className="text-sm text-gray-500">{getRoleLabel(member.role)}</p>
+                        <p className="text-sm text-gray-500">{member.email || member.phone || '—'}</p>
                       </div>
-                      <dl className="mt-4 grid grid-cols-2 gap-3 text-sm text-gray-600">
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.phone')}</dt>
-                          <dd>{member.phone || '—'}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.bankdetail')}</dt>
-                          <dd>{member.bankdetail || '—'}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.hourly')}</dt>
-                          <dd>{displayCurrency(member.hourlyrate)}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.commission')}</dt>
-                          <dd>{formatPercent(member.commission)}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.monthly')}</dt>
-                          <dd>{displayCurrency(member.monthlyfix)}</dd>
-                        </div>
-                        <div className="md:col-span-2">
-                          <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.note')}</dt>
-                          <dd>{member.note || '—'}</dd>
-                        </div>
-                      </dl>
+                      <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
+                        {displayCurrency(member.hourlyrate)}
+                      </span>
                     </div>
-                  ))
+                    <dl className="mt-4 grid grid-cols-2 gap-3 text-sm text-gray-600">
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.phone')}</dt>
+                        <dd>{member.phone || '—'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.bankdetail')}</dt>
+                        <dd>{member.bankdetail || '—'}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.hourly')}</dt>
+                        <dd>{displayCurrency(member.hourlyrate)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.commission')}</dt>
+                        <dd>{formatPercent(member.commission)}</dd>
+                      </div>
+                      <div>
+                        <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.monthly')}</dt>
+                        <dd>{displayCurrency(member.monthlyfix)}</dd>
+                      </div>
+                      <div className="md:col-span-2">
+                        <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.note')}</dt>
+                        <dd>{member.note || '—'}</dd>
+                      </div>
+                    </dl>
+                  </>
                 )}
-              </div>
+              />
             </>
           )}
         </div>

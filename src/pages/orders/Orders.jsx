@@ -1,8 +1,14 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import sql from '../../lib/neon'
 import { canModify } from '../../lib/permissions'
 import { useSettings } from '../../context/SettingsContext'
+import { useDataTable } from '../../hooks/useDataTable'
+import DataTable from '../../components/ui/DataTable'
+import PageHeader from '../../components/layout/PageHeader'
+import SearchBar from '../../components/ui/SearchBar'
+import MobileCardView from '../../components/ui/MobileCardView'
+import OrdersOverview from '../../components/ui/OrdersOverview'
 
 const statusStyles = {
   open: 'text-blue-700 bg-blue-50 border-blue-100',
@@ -14,9 +20,6 @@ function Orders({ onAddOrder = () => {}, onEditOrder = () => {}, onViewOrder = (
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
-  const [sortConfig, setSortConfig] = useState({ key: 'created_at', direction: 'desc' })
   const [deletingId, setDeletingId] = useState(null)
   const { formatCurrency, formatDateTime } = useSettings()
   const { t } = useTranslation()
@@ -61,6 +64,7 @@ function Orders({ onAddOrder = () => {}, onEditOrder = () => {}, onViewOrder = (
           ORDER BY o.created_at DESC
         `
         setOrders(result || [])
+        setTableData(result || [])
       } catch (err) {
         console.error('Failed to load orders:', err)
         setError(t('orders.error.load', 'Unable to load orders. Please try again later.'))
@@ -70,25 +74,30 @@ function Orders({ onAddOrder = () => {}, onEditOrder = () => {}, onViewOrder = (
     }
 
     fetchOrders()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshKey, t])
 
-  const filteredOrders = useMemo(() => {
-    return orders.filter((order) => {
-      if (statusFilter !== 'all' && order.status !== statusFilter) return false
-      if (!searchTerm.trim()) return true
-      const query = searchTerm.toLowerCase()
-      return [
-        order.order_number,
-        order.customer_name,
-        order.id?.toString()
-      ]
-        .filter((value) => value !== null && value !== undefined)
-        .some((value) => value.toString().toLowerCase().includes(query))
+  // Custom filter function that searches all columns
+  const customFilterFn = useCallback((data, searchTerm) => {
+    if (!data || !Array.isArray(data)) return []
+    
+    // If no search term, return all data
+    if (!searchTerm || !searchTerm.trim()) return data
+    
+    const query = searchTerm.toLowerCase()
+    
+    return data.filter((order) => {
+      if (!order) return false
+      
+      // Search across all fields
+      return Object.values(order)
+        .filter(value => value != null && value !== undefined)
+        .some(value => value.toString().toLowerCase().includes(query))
     })
-  }, [orders, searchTerm, statusFilter])
+  }, [])
 
-  const sortedOrders = useMemo(() => {
-    const sorted = [...filteredOrders]
+  // Custom sort function
+  const customSortFn = useCallback((sorted, sortConfig) => {
     sorted.sort((a, b) => {
       let aValue = a[sortConfig.key] ?? ''
       let bValue = b[sortConfig.key] ?? ''
@@ -110,20 +119,22 @@ function Orders({ onAddOrder = () => {}, onEditOrder = () => {}, onViewOrder = (
       return 0
     })
     return sorted
-  }, [filteredOrders, sortConfig])
+  }, [])
 
-  const handleSort = (key) => {
-    setSortConfig((prev) => {
-      if (prev.key === key) {
-        return { key, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
-      }
-      return { key, direction: 'asc' }
-    })
-  }
-
-  const handleSearchChange = (event) => {
-    setSearchTerm(event.target.value)
-  }
+  const {
+    data: tableData,
+    setData: setTableData,
+    searchTerm,
+    sortConfig,
+    filteredData,
+    handleSort,
+    handleSearchChange
+  } = useDataTable(orders, {
+    defaultSortKey: 'created_at',
+    defaultSortDirection: 'desc',
+    customFilterFn,
+    customSortFn
+  })
 
   const handleDelete = async (orderId, event) => {
     event.stopPropagation()
@@ -132,6 +143,7 @@ function Orders({ onAddOrder = () => {}, onEditOrder = () => {}, onViewOrder = (
       setDeletingId(orderId)
       await sql`DELETE FROM orders WHERE id = ${orderId}`
       setOrders((prev) => prev.filter((order) => order.id !== orderId))
+      setTableData((prev) => prev.filter((order) => order.id !== orderId))
     } catch (err) {
       console.error('Failed to delete order:', err)
       alert(t('orders.error.delete', 'Unable to delete order. Please try again.'))
@@ -140,193 +152,132 @@ function Orders({ onAddOrder = () => {}, onEditOrder = () => {}, onViewOrder = (
     }
   }
 
+  const renderCell = (key, row) => {
+    if (!row) return '—'
+    
+    const statusStyle = statusStyles[row.status] || statusStyles.open
+    
+    switch (key) {
+      case 'order_number':
+        return row.order_number || `#${row.id}`
+      case 'status':
+        return (
+          <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${statusStyle}`}>
+            {row.status?.toUpperCase() || 'OPEN'}
+          </span>
+        )
+      case 'total_amount':
+        return formatCurrency(Number(row.total_amount || 0))
+      case 'total_paid':
+        return formatCurrency(Number(row.total_paid || 0))
+      case 'balance_due':
+        return (
+          <span className={`font-semibold ${
+            Number(row.balance_due || 0) > 0 ? 'text-rose-700' : 'text-emerald-700'
+          }`}>
+            {formatCurrency(Number(row.balance_due || 0))}
+          </span>
+        )
+      case 'created_at':
+        return formatDateTime(row.created_at)
+      default:
+        return row[key] ?? '—'
+    }
+  }
+
   return (
     <div className="px-4 py-6 sm:p-6 lg:p-8">
       <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">{t('orders.title', 'Orders')}</h1>
-            <p className="text-gray-500 text-sm">
-              {t('orders.description', 'View and manage all customer orders with status, payments, and balances.')}
-            </p>
-          </div>
-          <button
-            onClick={onAddOrder}
-            disabled={!canModify(user)}
-            className="inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold shadow-sm transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-indigo-600 text-white hover:bg-indigo-500 disabled:bg-gray-400 disabled:hover:bg-gray-400"
-          >
-            <svg
-              className="w-4 h-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-            </svg>
-            {t('orders.add', 'Add order')}
-          </button>
-        </div>
+        <PageHeader
+          title={t('orders.title', 'Orders')}
+          description={t('orders.description', 'View and manage all customer orders with status, payments, and balances.')}
+          onAdd={onAddOrder}
+          addLabel={t('orders.add', 'Add order')}
+          user={user}
+          canModifyFn={canModify}
+        />
+
+        <OrdersOverview orders={orders} />
 
         <div className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={handleSearchChange}
-              placeholder={t('orders.search', 'Search orders by order number, customer name, or ID...')}
-              className="flex-1 rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-shadow"
-            />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-            >
-              <option value="all">{t('orders.filters.allStatus', 'All Status')}</option>
-              <option value="open">{t('orders.filters.open', 'Open')}</option>
-              <option value="closed">{t('orders.filters.closed', 'Closed')}</option>
-              <option value="cancelled">{t('orders.filters.cancelled', 'Cancelled')}</option>
-            </select>
-          </div>
+          {/* Search */}
+          <SearchBar
+            value={searchTerm}
+            onChange={handleSearchChange}
+            placeholder={t('orders.search', 'Search all columns...')}
+          />
 
           {loading && <div className="text-gray-600 text-sm">{t('orders.loading', 'Loading orders...')}</div>}
           {error && <div className="text-red-600 text-sm">{error}</div>}
+          
           {!loading && !error && (
-            <div className="flex flex-col gap-4">
-              <div className="hidden md:block overflow-x-auto border border-gray-200 rounded-xl">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      {columns.map((column) => {
-                        const isActive = sortConfig.key === column.key
-                        const direction = isActive ? sortConfig.direction : null
-                        return (
-                          <th
-                            key={column.key}
-                            onClick={() => handleSort(column.key)}
-                            className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer select-none hover:text-gray-900"
-                          >
-                            <div className="flex items-center gap-1">
-                              {column.label}
-                              {isActive && (
-                                <span className="text-gray-400">
-                                  {direction === 'asc' ? '▲' : '▼'}
-                                </span>
-                              )}
-                            </div>
-                          </th>
-                        )
-                      })}
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-100">
-                    {sortedOrders.length === 0 ? (
-                      <tr>
-                        <td colSpan={columns.length} className="px-6 py-10 text-center text-sm text-gray-500">
-                          {t('orders.empty', 'No orders found. Try adjusting your search or filters.')}
-                        </td>
-                      </tr>
-                    ) : (
-                      sortedOrders.map((order) => {
-                        const statusStyle = statusStyles[order.status] || statusStyles.open
-                        return (
-                          <tr
-                            key={order.id}
-                            className="hover:bg-gray-50 cursor-pointer"
-                            onClick={() => onViewOrder(order)}
-                          >
-                            <td className="px-4 py-3 text-sm font-medium text-gray-900">
-                              {order.order_number || `#${order.id}`}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900">
-                              {order.customer_name || '—'}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap">
-                              <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${statusStyle}`}>
-                                {order.status?.toUpperCase() || 'OPEN'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-900 text-right">
-                              {formatCurrency(Number(order.total_amount || 0))}
-                            </td>
-                            <td className="px-4 py-3 text-sm text-gray-600 text-right">
-                              {formatCurrency(Number(order.total_paid || 0))}
-                            </td>
-                            <td className={`px-4 py-3 text-sm font-semibold text-right ${
-                              Number(order.balance_due || 0) > 0 ? 'text-rose-700' : 'text-emerald-700'
-                            }`}>
-                              {formatCurrency(Number(order.balance_due || 0))}
-                            </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                              {formatDateTime(order.created_at)}
-                            </td>
-                          </tr>
-                        )
-                      })
-                    )}
-                  </tbody>
-                </table>
+            <>
+              {/* Desktop Table View */}
+              <div className="hidden md:block">
+                <DataTable
+                  columns={columns}
+                  data={filteredData}
+                  sortConfig={sortConfig}
+                  onSort={handleSort}
+                  onRowClick={onViewOrder}
+                  renderCell={renderCell}
+                  emptyMessage={t('orders.empty', 'No orders found. Try adjusting your search or filters.')}
+                />
               </div>
 
-              <div className="md:hidden space-y-3">
-                {sortedOrders.length === 0 ? (
-                  <div className="rounded-lg border border-dashed border-gray-300 px-4 py-6 text-center text-sm text-gray-500">
-                    {t('orders.empty', 'No orders found. Try adjusting your search or filters.')}
-                  </div>
-                ) : (
-                  sortedOrders.map((order) => {
-                    const statusStyle = statusStyles[order.status] || statusStyles.open
-                    return (
-                      <div
-                        key={order.id}
-                        className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
-                        onClick={() => onViewOrder(order)}
-                      >
-                        <div className="flex items-start justify-between gap-3">
-                          <div>
-                            <p className="text-base font-semibold text-gray-900">
-                              {order.order_number || `#${order.id}`}
-                            </p>
-                            <p className="text-sm text-gray-500">{order.customer_name || '—'}</p>
-                          </div>
-                          <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${statusStyle}`}>
-                            {order.status?.toUpperCase() || 'OPEN'}
-                          </span>
+              {/* Mobile Card View */}
+              <MobileCardView
+                data={filteredData}
+                emptyMessage={t('orders.empty', 'No orders found. Try adjusting your search or filters.')}
+                onItemClick={onViewOrder}
+                renderCard={(order) => {
+                  const statusStyle = statusStyles[order.status] || statusStyles.open
+                  return (
+                    <>
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-base font-semibold text-gray-900">
+                            {order.order_number || `#${order.id}`}
+                          </p>
+                          <p className="text-sm text-gray-500">{order.customer_name || '—'}</p>
                         </div>
-                        <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-600">
-                          <div>
-                            <dt className="text-gray-400 text-xs uppercase">{t('orders.mobile.total', 'Total')}</dt>
-                            <dd className="font-semibold">{formatCurrency(Number(order.total_amount || 0))}</dd>
-                          </div>
-                          <div>
-                            <dt className="text-gray-400 text-xs uppercase">{t('orders.mobile.paid', 'Paid')}</dt>
-                            <dd>{formatCurrency(Number(order.total_paid || 0))}</dd>
-                          </div>
-                          <div>
-                            <dt className="text-gray-400 text-xs uppercase">{t('orders.mobile.balance', 'Balance')}</dt>
-                            <dd className={`font-semibold ${
-                              Number(order.balance_due || 0) > 0 ? 'text-rose-700' : 'text-emerald-700'
-                            }`}>
-                              {formatCurrency(Number(order.balance_due || 0))}
-                            </dd>
-                          </div>
-                          <div>
-                            <dt className="text-gray-400 text-xs uppercase">{t('orders.mobile.date', 'Date')}</dt>
-                            <dd>{formatDateTime(order.created_at)}</dd>
-                          </div>
-                          {order.item_count > 0 && (
-                            <div className="col-span-2">
-                              <dt className="text-gray-400 text-xs uppercase">{t('orders.mobile.items', 'Items')}</dt>
-                              <dd>{order.item_count} {order.item_count === 1 ? t('orders.item', 'item') : t('orders.items', 'items')}</dd>
-                            </div>
-                          )}
-                        </dl>
+                        <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${statusStyle}`}>
+                          {order.status?.toUpperCase() || 'OPEN'}
+                        </span>
                       </div>
-                    )
-                  })
-                )}
-              </div>
-            </div>
+                      <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-600">
+                        <div>
+                          <dt className="text-gray-400 text-xs uppercase">{t('orders.mobile.total', 'Total')}</dt>
+                          <dd className="font-semibold">{formatCurrency(Number(order.total_amount || 0))}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-400 text-xs uppercase">{t('orders.mobile.paid', 'Paid')}</dt>
+                          <dd>{formatCurrency(Number(order.total_paid || 0))}</dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-400 text-xs uppercase">{t('orders.mobile.balance', 'Balance')}</dt>
+                          <dd className={`font-semibold ${
+                            Number(order.balance_due || 0) > 0 ? 'text-rose-700' : 'text-emerald-700'
+                          }`}>
+                            {formatCurrency(Number(order.balance_due || 0))}
+                          </dd>
+                        </div>
+                        <div>
+                          <dt className="text-gray-400 text-xs uppercase">{t('orders.mobile.date', 'Date')}</dt>
+                          <dd>{formatDateTime(order.created_at)}</dd>
+                        </div>
+                        {order.item_count > 0 && (
+                          <div className="col-span-2">
+                            <dt className="text-gray-400 text-xs uppercase">{t('orders.mobile.items', 'Items')}</dt>
+                            <dd>{order.item_count} {order.item_count === 1 ? t('orders.item', 'item') : t('orders.items', 'items')}</dd>
+                          </div>
+                        )}
+                      </dl>
+                    </>
+                  )
+                }}
+              />
+            </>
           )}
         </div>
       </div>

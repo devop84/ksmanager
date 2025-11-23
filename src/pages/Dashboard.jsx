@@ -1,5 +1,5 @@
 import { useTranslation } from 'react-i18next'
-import PageHeader from '../components/PageHeader'
+import PageHeader from '../components/layout/PageHeader'
 import DailyAppointments from '../components/dashboard/DailyAppointments'
 import PaymentsDueAndOpenOrders from '../components/dashboard/PaymentsDueAndOpenOrders'
 

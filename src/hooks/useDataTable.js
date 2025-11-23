@@ -38,15 +38,23 @@ export function useDataTable(initialData = [], options = {}) {
     // Custom filter function
     if (customFilterFn) {
       filtered = customFilterFn(filtered, searchTerm)
-    } else if (searchTerm.trim() && searchFields.length > 0) {
-      // Default search across specified fields
+    } else if (searchTerm.trim()) {
+      // Search across all fields if searchFields not specified, otherwise use specified fields
       const query = searchTerm.toLowerCase()
-      filtered = filtered.filter((item) =>
-        searchFields
-          .map(field => item[field])
-          .filter(value => value != null && value !== undefined)
-          .some(value => value.toString().toLowerCase().includes(query))
-      )
+      filtered = filtered.filter((item) => {
+        if (searchFields.length > 0) {
+          // Search only specified fields
+          return searchFields
+            .map(field => item[field])
+            .filter(value => value != null && value !== undefined)
+            .some(value => value.toString().toLowerCase().includes(query))
+        } else {
+          // Search all fields (all object values)
+          return Object.values(item)
+            .filter(value => value != null && value !== undefined)
+            .some(value => value.toString().toLowerCase().includes(query))
+        }
+      })
     }
 
     return filtered

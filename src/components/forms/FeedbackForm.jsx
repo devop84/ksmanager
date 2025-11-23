@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
-import sql from '../lib/neon'
-import { getSession } from '../lib/auth'
+import sql from '../../lib/neon'
+import { getSession } from '../../lib/auth'
 
 function FeedbackForm({ onSuccess }) {
   const { t } = useTranslation()
