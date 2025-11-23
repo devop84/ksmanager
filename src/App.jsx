@@ -103,6 +103,7 @@ function App() {
   const [appointmentFormAppointment, setAppointmentFormAppointment] = useState(null)
   const [appointmentFormCustomer, setAppointmentFormCustomer] = useState(null)
   const [appointmentDetailId, setAppointmentDetailId] = useState(null)
+  const [appointmentDetailBackPage, setAppointmentDetailBackPage] = useState('appointments')
   const [usersRefreshKey, setUsersRefreshKey] = useState(0)
   const [userFormUser, setUserFormUser] = useState(null)
 
@@ -775,8 +776,9 @@ function App() {
     }
   }
 
-  const handleAppointmentView = (appointment) => {
+  const handleAppointmentView = (appointment, backPage = 'appointments') => {
     setAppointmentDetailId(appointment.id)
+    setAppointmentDetailBackPage(backPage)
     setCurrentPage('appointmentDetail')
   }
 
@@ -786,7 +788,8 @@ function App() {
 
   const handleAppointmentDetailBack = () => {
     setAppointmentDetailId(null)
-    setCurrentPage('appointments')
+    setCurrentPage(appointmentDetailBackPage || 'appointments')
+    setAppointmentDetailBackPage('appointments')
   }
 
   const handleAppointmentDetailEdit = (appointment) => {
@@ -796,7 +799,8 @@ function App() {
   const handleAppointmentDetailDelete = () => {
     setAppointmentsRefreshKey((prev) => prev + 1)
     setAppointmentDetailId(null)
-    setCurrentPage('appointments')
+    setCurrentPage(appointmentDetailBackPage || 'appointments')
+    setAppointmentDetailBackPage('appointments')
   }
 
   const handleUserFormSaved = () => {
@@ -824,7 +828,7 @@ function App() {
             onNavigate={handleNavigate}
             onViewOrder={(order) => openOrderDetail(order, 'dashboard')}
             onViewTransaction={(transaction) => openTransactionDetail(transaction)}
-            onViewAppointment={(appointment) => handleAppointmentView(appointment)}
+            onViewAppointment={(appointment) => handleAppointmentView(appointment, 'dashboard')}
             onViewCustomer={(customer) => openCustomerDetail(customer)}
           />
         )
@@ -914,7 +918,7 @@ function App() {
             onBack={handleCustomerDetailBack}
             onEdit={handleCustomerDetailEdit}
             onDelete={handleCustomerDetailDelete}
-            onViewAppointment={handleAppointmentView}
+            onViewAppointment={(appointment) => handleAppointmentView(appointment, 'customerDetail')}
             onAddAppointment={(customer) => openAppointmentForm(null, customer)}
             onAddTransaction={(customer) => {
               const transaction = {
@@ -1167,7 +1171,7 @@ function App() {
             refreshKey={appointmentsRefreshKey}
             user={user}
             onAddAppointment={() => openAppointmentForm(null)}
-            onViewAppointment={handleAppointmentView}
+            onViewAppointment={(appointment) => handleAppointmentView(appointment, 'appointments')}
             onEditAppointment={handleAppointmentEdit}
           />
         )
@@ -1228,7 +1232,7 @@ function App() {
           onNavigate={handleNavigate}
           onViewOrder={(order) => openOrderDetail(order, 'dashboard')}
           onViewTransaction={(transaction) => openTransactionDetail(transaction)}
-          onViewAppointment={(appointment) => handleAppointmentView(appointment)}
+          onViewAppointment={(appointment) => handleAppointmentView(appointment, 'dashboard')}
           onViewCustomer={(customer) => openCustomerDetail(customer)}
         />
     }
