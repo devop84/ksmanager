@@ -436,39 +436,40 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onAddTransaction
             {/* Schedule and Orders Section - Left */}
             <div className="flex-1 space-y-6">
               {/* Schedule Section */}
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">
+              <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">
                     {t('customerDetail.schedule.title', 'Schedule')}
                   </h2>
                   {canModify(user) && (
                     <button
                       onClick={() => onAddAppointment?.(customer)}
-                      className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors"
+                      className="inline-flex items-center justify-center gap-2 rounded-lg bg-indigo-600 px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold text-white shadow-sm hover:bg-indigo-500 transition-colors"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                      {t('customerDetail.schedule.add', 'Add Appointment')}
+                      <span className="hidden sm:inline">{t('customerDetail.schedule.add', 'Add Appointment')}</span>
+                      <span className="sm:hidden">{t('customerDetail.schedule.add', 'Add')}</span>
                     </button>
                   )}
                 </div>
                 {orphanedAppointments.length > 0 && (
-                  <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 p-4">
+                  <div className="mb-3 sm:mb-4 rounded-lg border border-amber-200 bg-amber-50 p-3 sm:p-4">
                     <div className="flex items-start gap-2">
-                      <svg className="w-5 h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5 text-amber-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-amber-800 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-semibold text-amber-800 mb-1">
                           {t('customerDetail.schedule.orphanedWarning', 'Orphaned Appointments Detected')}
                         </p>
                         <p className="text-xs text-amber-700 mb-2">
                           {t('customerDetail.schedule.orphanedDescription', 'Some appointments are not linked to any credit. Add a package for the following service(s) to transfer usage:')}
                         </p>
-                        <ul className="text-xs text-amber-700 space-y-1">
+                        <ul className="text-xs text-amber-700 space-y-1 break-words">
                           {orphanedAppointments.map((orphan, idx) => (
-                            <li key={idx}>
+                            <li key={idx} className="break-words">
                               • {orphan.service_name}: {Number(orphan.total_used || 0).toFixed(2)} {orphan.duration_unit} ({orphan.appointment_count} {orphan.appointment_count === 1 ? t('customerDetail.schedule.appointment', 'appointment') : t('customerDetail.schedule.appointments', 'appointments')})
                             </li>
                           ))}
@@ -478,21 +479,21 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onAddTransaction
                   </div>
                 )}
                 {negativeCredits.length > 0 && (
-                  <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-4">
+                  <div className="mb-3 sm:mb-4 rounded-lg border border-red-200 bg-red-50 p-3 sm:p-4">
                     <div className="flex items-start gap-2">
-                      <svg className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                       </svg>
-                      <div className="flex-1">
-                        <p className="text-sm font-semibold text-red-800 mb-1">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs sm:text-sm font-semibold text-red-800 mb-1">
                           {t('customerDetail.schedule.negativeCreditsWarning', 'Negative Credits Detected')}
                         </p>
                         <p className="text-xs text-red-700 mb-2">
                           {t('customerDetail.schedule.negativeCreditsDescription', 'Some credits have negative balances. This means more appointments have been scheduled than available credits:')}
                         </p>
-                        <ul className="text-xs text-red-700 space-y-1">
+                        <ul className="text-xs text-red-700 space-y-1 break-words">
                           {negativeCredits.map((credit, idx) => (
-                            <li key={idx}>
+                            <li key={idx} className="break-words">
                               • {credit.service_name} {credit.package_name && `(${credit.package_name})`}: {Number(credit.available || 0).toFixed(2)} {credit.duration_unit}
                             </li>
                           ))}
@@ -502,71 +503,82 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onAddTransaction
                   </div>
                 )}
                 {loadingAppointments ? (
-                  <div className="text-gray-600 text-sm">{t('customerDetail.schedule.loading', 'Loading appointments...')}</div>
+                  <div className="text-gray-600 text-xs sm:text-sm">{t('customerDetail.schedule.loading', 'Loading appointments...')}</div>
                 ) : appointments.length === 0 ? (
-                  <p className="text-gray-500 text-sm">{t('customerDetail.schedule.empty', 'No appointments found for this customer.')}</p>
+                  <p className="text-gray-500 text-xs sm:text-sm">{t('customerDetail.schedule.empty', 'No appointments found for this customer.')}</p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t('customerDetail.schedule.service', 'Service')}
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t('customerDetail.schedule.startTime', 'Start Time')}
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t('customerDetail.schedule.endTime', 'End Time')}
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t('customerDetail.schedule.duration', 'Duration')}
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t('customerDetail.schedule.status', 'Status')}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {appointments.map((appointment) => {
-                          if (!appointment || !appointment.id) return null
-                          const displayStatus = isInProgress(appointment) ? 'in_progress' : (appointment.status || 'scheduled')
-                          const statusStyle = statusStyles[displayStatus] || statusStyles.scheduled
-                          return (
-                            <tr 
-                              key={appointment.id}
-                              onClick={() => onViewAppointment?.(appointment)}
-                              className="hover:bg-gray-50 cursor-pointer transition-colors"
-                            >
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <div className="text-sm font-medium text-gray-900">
-                                  {appointment.service_name || '—'}
-                                </div>
-                                {appointment.attendee_name && (
-                                  <div className="text-xs text-gray-500">
-                                    {t('customerDetail.schedule.attendee', 'Attendee: {{name}}', { name: appointment.attendee_name })}
+                  <div className="overflow-x-auto -mx-3 sm:mx-0">
+                    <div className="inline-block min-w-full align-middle">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {t('customerDetail.schedule.service', 'Service')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                              {t('customerDetail.schedule.startTime', 'Start Time')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                              {t('customerDetail.schedule.endTime', 'End Time')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                              {t('customerDetail.schedule.duration', 'Duration')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {t('customerDetail.schedule.status', 'Status')}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {appointments.map((appointment) => {
+                            if (!appointment || !appointment.id) return null
+                            const displayStatus = isInProgress(appointment) ? 'in_progress' : (appointment.status || 'scheduled')
+                            const statusStyle = statusStyles[displayStatus] || statusStyles.scheduled
+                            return (
+                              <tr 
+                                key={appointment.id}
+                                onClick={() => onViewAppointment?.(appointment)}
+                                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                              >
+                                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                  <div className="text-xs sm:text-sm font-medium text-gray-900 break-words">
+                                    {appointment.service_name || '—'}
                                   </div>
-                                )}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                                {appointment.scheduled_start ? formatDateTime(appointment.scheduled_start) : '—'}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                                {appointment.scheduled_end ? formatDateTime(appointment.scheduled_end) : '—'}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                                {getDurationDisplay(appointment)}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${statusStyle.pill}`}>
-                                  {formatStatusDisplay(appointment.status, appointment)}
-                                </span>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
+                                  {appointment.attendee_name && (
+                                    <div className="text-xs text-gray-500 mt-0.5">
+                                      {t('customerDetail.schedule.attendee', 'Attendee: {{name}}', { name: appointment.attendee_name })}
+                                    </div>
+                                  )}
+                                  <div className="text-xs text-gray-500 sm:hidden mt-1 space-y-0.5">
+                                    {appointment.scheduled_start && (
+                                      <div>Start: {formatDateTime(appointment.scheduled_start)}</div>
+                                    )}
+                                    {appointment.scheduled_end && (
+                                      <div>End: {formatDateTime(appointment.scheduled_end)}</div>
+                                    )}
+                                    <div>Duration: {getDurationDisplay(appointment)}</div>
+                                  </div>
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 hidden sm:table-cell">
+                                  {appointment.scheduled_start ? formatDateTime(appointment.scheduled_start) : '—'}
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 hidden md:table-cell">
+                                  {appointment.scheduled_end ? formatDateTime(appointment.scheduled_end) : '—'}
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 hidden lg:table-cell">
+                                  {getDurationDisplay(appointment)}
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                  <span className={`inline-flex items-center rounded-full border px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold ${statusStyle.pill}`}>
+                                    {formatStatusDisplay(appointment.status, appointment)}
+                                  </span>
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                 )}
               </div>
@@ -586,79 +598,86 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onAddTransaction
                   formatDateTime={formatDateTime}
                 />
               ) : (
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold text-gray-900">
+              <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-6 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">
                       {t('customerDetail.orders.title', 'Orders')}
                   </h2>
                   {canModify(user) && (
                     <button
                         onClick={() => onAddOrder?.(customer)}
-                        className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm transition-colors bg-indigo-600 text-white hover:bg-indigo-500"
+                        className="inline-flex items-center justify-center gap-2 rounded-lg px-2 sm:px-3 py-1.5 text-xs sm:text-sm font-semibold shadow-sm transition-colors bg-indigo-600 text-white hover:bg-indigo-500"
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                       </svg>
-                        {t('customerDetail.orders.add', 'Add Order')}
+                        <span className="hidden sm:inline">{t('customerDetail.orders.add', 'Add Order')}</span>
+                        <span className="sm:hidden">{t('customerDetail.orders.add', 'Add')}</span>
                     </button>
                   )}
                 </div>
                   {orders.filter(order => order.status !== 'open').length > 0 ? (
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              {t('customerDetail.orders.orderNumber', 'Order Number')}
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              {t('customerDetail.orders.status', 'Status')}
-                          </th>
-                            <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              {t('customerDetail.orders.items', 'Items')}
-                          </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              {t('customerDetail.orders.total', 'Total')}
-                          </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              {t('customerDetail.orders.balance', 'Balance')}
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                              {t('customerDetail.orders.date', 'Date')}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                          {orders.filter(order => order.status !== 'open').map((order) => {
-                            const statusStyle = order.status === 'closed'
-                              ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
-                              : 'text-rose-700 bg-rose-50 border-rose-100'
+                  <div className="overflow-x-auto -mx-3 sm:mx-0">
+                    <div className="inline-block min-w-full align-middle">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {t('customerDetail.orders.orderNumber', 'Order Number')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {t('customerDetail.orders.status', 'Status')}
+                            </th>
+                              <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                                {t('customerDetail.orders.items', 'Items')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                                {t('customerDetail.orders.total', 'Total')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                {t('customerDetail.orders.balance', 'Balance')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                                {t('customerDetail.orders.date', 'Date')}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                            {orders.filter(order => order.status !== 'open').map((order) => {
+                              const statusStyle = order.status === 'closed'
+                                ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                                : 'text-rose-700 bg-rose-50 border-rose-100'
                           return (
                               <tr 
                                 key={order.id}
                                 onClick={() => onViewOrder?.(order)}
                                 className="hover:bg-gray-50 cursor-pointer transition-colors"
                               >
-                              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                                  {order.order_number || `#${order.id}`}
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-900">
+                                  <div className="break-words">{order.order_number || `#${order.id}`}</div>
+                                  <div className="text-xs text-gray-500 sm:hidden mt-0.5 space-y-0.5">
+                                    <div>Items: {order.item_count || 0}</div>
+                                    <div>Total: {formatCurrency(Number(order.total_amount || 0))}</div>
+                                    <div>Date: {formatDateTime(order.created_at)}</div>
+                                  </div>
                                 </td>
-                                <td className="px-4 py-3 whitespace-nowrap">
-                                  <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${statusStyle}`}>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                  <span className={`inline-flex items-center rounded-full border px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold ${statusStyle}`}>
                                     {t(`orders.status.${order.status || 'open'}`, order.status?.toUpperCase() || 'OPEN')}
                                   </span>
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 hidden sm:table-cell">
                                   {order.item_count || 0}
                               </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
+                              <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 text-right hidden md:table-cell">
                                   {formatCurrency(Number(order.total_amount || 0))}
                               </td>
-                              <td className={`px-4 py-3 whitespace-nowrap text-sm font-semibold text-right ${
+                              <td className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold text-right ${
                                   order.balance_due > 0 ? 'text-rose-700' : 'text-emerald-700'
                               }`}>
                                   {formatCurrency(Number(order.balance_due || 0))}
                               </td>
-                                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 hidden lg:table-cell">
                                   {formatDateTime(order.created_at)}
                               </td>
                             </tr>
@@ -666,81 +685,89 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onAddTransaction
                         })}
                       </tbody>
                     </table>
+                    </div>
                   </div>
                   ) : (
-                    <p className="text-gray-500 text-sm">{t('customerDetail.orders.empty', 'No orders found for this customer.')}</p>
+                    <p className="text-gray-500 text-xs sm:text-sm">{t('customerDetail.orders.empty', 'No orders found for this customer.')}</p>
                 )}
               </div>
               )}
 
               {/* Other Orders (Closed and Cancelled) - Only show if there's an open order */}
               {openOrder && orders.filter(order => order.status !== 'open').length > 0 && (
-              <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-6 shadow-sm">
+                  <h2 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">
                     {t('customerDetail.orders.otherOrders', 'Other Orders')}
                   </h2>
-                  <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
-                      <thead className="bg-gray-50">
-                        <tr>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t('customerDetail.orders.orderNumber', 'Order Number')}
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t('customerDetail.orders.status', 'Status')}
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t('customerDetail.orders.items', 'Items')}
-                          </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t('customerDetail.orders.total', 'Total')}
-                          </th>
-                          <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t('customerDetail.orders.balance', 'Balance')}
-                          </th>
-                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t('customerDetail.orders.date', 'Date')}
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody className="bg-white divide-y divide-gray-200">
-                        {orders.filter(order => order.status !== 'open').map((order) => {
-                          const statusStyle = order.status === 'closed'
-                            ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
-                            : 'text-rose-700 bg-rose-50 border-rose-100'
-                          return (
-                            <tr 
-                              key={order.id}
-                              onClick={() => onViewOrder?.(order)}
-                              className="hover:bg-gray-50 cursor-pointer transition-colors"
-                            >
-                              <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900">
-                                {order.order_number || `#${order.id}`}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap">
-                                <span className={`inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold ${statusStyle}`}>
-                                  {t(`orders.status.${order.status || 'open'}`, order.status?.toUpperCase() || 'OPEN')}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                                {order.item_count || 0}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
-                                {formatCurrency(Number(order.total_amount || 0))}
-                              </td>
-                              <td className={`px-4 py-3 whitespace-nowrap text-sm font-semibold text-right ${
-                                order.balance_due > 0 ? 'text-rose-700' : 'text-emerald-700'
-                              }`}>
-                                {formatCurrency(Number(order.balance_due || 0))}
-                              </td>
-                              <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
-                                {formatDateTime(order.created_at)}
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
+                  <div className="overflow-x-auto -mx-3 sm:mx-0">
+                    <div className="inline-block min-w-full align-middle">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {t('customerDetail.orders.orderNumber', 'Order Number')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {t('customerDetail.orders.status', 'Status')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden sm:table-cell">
+                              {t('customerDetail.orders.items', 'Items')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider hidden md:table-cell">
+                              {t('customerDetail.orders.total', 'Total')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {t('customerDetail.orders.balance', 'Balance')}
+                            </th>
+                            <th className="px-2 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">
+                              {t('customerDetail.orders.date', 'Date')}
+                            </th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {orders.filter(order => order.status !== 'open').map((order) => {
+                            const statusStyle = order.status === 'closed'
+                              ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                              : 'text-rose-700 bg-rose-50 border-rose-100'
+                            return (
+                              <tr 
+                                key={order.id}
+                                onClick={() => onViewOrder?.(order)}
+                                className="hover:bg-gray-50 cursor-pointer transition-colors"
+                              >
+                                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-medium text-gray-900">
+                                  <div className="break-words">{order.order_number || `#${order.id}`}</div>
+                                  <div className="text-xs text-gray-500 sm:hidden mt-0.5 space-y-0.5">
+                                    <div>Items: {order.item_count || 0}</div>
+                                    <div>Total: {formatCurrency(Number(order.total_amount || 0))}</div>
+                                    <div>Date: {formatDateTime(order.created_at)}</div>
+                                  </div>
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3">
+                                  <span className={`inline-flex items-center rounded-full border px-1.5 sm:px-2 py-0.5 sm:py-1 text-xs font-semibold ${statusStyle}`}>
+                                    {t(`orders.status.${order.status || 'open'}`, order.status?.toUpperCase() || 'OPEN')}
+                                  </span>
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 hidden sm:table-cell">
+                                  {order.item_count || 0}
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-900 text-right hidden md:table-cell">
+                                  {formatCurrency(Number(order.total_amount || 0))}
+                                </td>
+                                <td className={`px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm font-semibold text-right ${
+                                  order.balance_due > 0 ? 'text-rose-700' : 'text-emerald-700'
+                                }`}>
+                                  {formatCurrency(Number(order.balance_due || 0))}
+                                </td>
+                                <td className="px-2 sm:px-4 py-2 sm:py-3 text-xs sm:text-sm text-gray-500 hidden lg:table-cell">
+                                  {formatDateTime(order.created_at)}
+                                </td>
+                              </tr>
+                            )
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
                   </div>
                 )}

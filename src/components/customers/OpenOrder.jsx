@@ -468,12 +468,12 @@ function OpenOrder({
   }
 
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
-      <div className="flex items-center justify-between mb-4">
-        <div>
+    <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-6 shadow-sm">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">
+        <div className="flex-1 min-w-0">
           <h2 
             onClick={() => onViewOrder?.(openOrder)}
-            className="text-lg font-semibold text-gray-900 cursor-pointer hover:text-indigo-600 transition-colors"
+            className="text-base sm:text-lg font-semibold text-gray-900 cursor-pointer hover:text-indigo-600 transition-colors break-words"
           >
             {t('customerDetail.orders.openOrder', 'Open Order')}: {openOrder.order_number || `#${openOrder.id}`}
           </h2>
@@ -482,32 +482,53 @@ function OpenOrder({
           </p>
         </div>
         {canModify(user) && (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleCloseOrder}
               disabled={Math.abs(Number(openOrder.balance_due || 0)) > 0.01}
-              className="inline-flex items-center justify-center rounded-lg border border-emerald-300 px-3 py-2 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+              className="inline-flex items-center justify-center rounded-lg border border-emerald-300 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
               title={Math.abs(Number(openOrder.balance_due || 0)) > 0.01 ? t('customerDetail.orders.closeDisabled', 'Cannot close order. Balance due must be zero.') : t('customerDetail.orders.close', 'Close Order')}
             >
-              {t('customerDetail.orders.close', 'Close Order')}
+              <span className="hidden sm:inline">{t('customerDetail.orders.close', 'Close Order')}</span>
+              <span className="sm:hidden">{t('customerDetail.orders.close', 'Close')}</span>
             </button>
             <button
               onClick={handleCancelOrder}
-              className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors"
+              className="inline-flex items-center justify-center rounded-lg border border-red-300 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors"
             >
               {t('customerDetail.orders.cancel', 'Cancel')}
             </button>
             <button
-              onClick={() => setShowAddItem(true)}
-              className="inline-flex items-center justify-center rounded-lg border border-indigo-300 px-3 py-2 text-sm font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 transition-colors"
+              onClick={() => {
+                if (showAddItem) {
+                  // If item form is open, close it
+                  setShowAddItem(false)
+                } else {
+                  // Close payment form if open, then open item form
+                  setShowAddPayment(false)
+                  setShowAddItem(true)
+                }
+              }}
+              className="inline-flex items-center justify-center rounded-lg border border-indigo-300 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-indigo-700 shadow-sm hover:bg-indigo-50 transition-colors"
             >
-              {t('customerDetail.orders.buttons.addItem', 'Add Item')}
+              <span className="hidden sm:inline">{t('customerDetail.orders.buttons.addItem', 'Add Item')}</span>
+              <span className="sm:hidden">+ {t('customerDetail.orders.itemFields.item', 'Item')}</span>
             </button>
             <button
-              onClick={() => setShowAddPayment(true)}
-              className="inline-flex items-center justify-center rounded-lg border border-emerald-300 px-3 py-2 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 transition-colors"
+              onClick={() => {
+                if (showAddPayment) {
+                  // If payment form is open, close it
+                  setShowAddPayment(false)
+                } else {
+                  // Close item form if open, then open payment form
+                  setShowAddItem(false)
+                  setShowAddPayment(true)
+                }
+              }}
+              className="inline-flex items-center justify-center rounded-lg border border-emerald-300 px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 transition-colors"
             >
-              {t('customerDetail.orders.buttons.addPayment', 'Add Payment')}
+              <span className="hidden sm:inline">{t('customerDetail.orders.buttons.addPayment', 'Add Payment')}</span>
+              <span className="sm:hidden">+ {t('customerDetail.orders.payments', 'Payment')}</span>
             </button>
           </div>
         )}
@@ -517,8 +538,8 @@ function OpenOrder({
       <div className="space-y-4 mb-6">
         {/* Add Item Form */}
         {showAddItem && canModify(user) && (
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+          <div className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">
                   {t('customerDetail.orders.itemFields.type', 'Type')}
@@ -612,8 +633,8 @@ function OpenOrder({
 
         {/* Add Payment Form */}
         {showAddPayment && canModify(user) && (
-          <div className="p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="p-3 sm:p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-4">
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-700">
                   {t('customerDetail.orders.paymentFields.amount', 'Amount *')}
@@ -693,255 +714,271 @@ function OpenOrder({
       ) : (
         <>
           {openOrderItems.filter(item => item.item_type === 'service' || item.item_type === 'service_package').length > 0 && (
-            <div className="mb-6">
-              <div className="overflow-x-auto">
-                <table className="w-full divide-y divide-gray-200 table-fixed">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-48">
-                        {t('customerDetail.orders.services', 'Services')}
-                      </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-32">
-                        {t('customerDetail.orders.category', 'Category')}
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-16">
-                        {t('customerDetail.orders.quantity', 'Qty')}
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-24">
-                        {t('customerDetail.orders.creditTotal', 'Credit Total')}
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-20">
-                        {t('customerDetail.orders.creditUsed', 'Used')}
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-24">
-                        {t('customerDetail.orders.creditAvailable', 'Available')}
-                      </th>
-                      {canModify(user) && (
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-700 uppercase w-20">
-                          {t('customerDetail.orders.actions', 'Actions')}
+            <div className="mb-4 sm:mb-6">
+              <div className="overflow-x-auto -mx-3 sm:mx-0">
+                <div className="inline-block min-w-full align-middle">
+                  <table className="min-w-full divide-y divide-gray-200 table-fixed">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-48">
+                          {t('customerDetail.orders.services', 'Services')}
                         </th>
-                      )}
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-28">
-                        {t('customerDetail.orders.price', 'Price')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {openOrderItems.filter(item => item.item_type === 'service' || item.item_type === 'service_package').map((item) => {
-                      const displayName = item.service_package_name || item.service_name || item.item_name
-                      const durationUnit = item.duration_unit || ''
-                      return (
-                        <tr key={item.id}>
-                          <td className="px-3 py-2 text-sm font-medium text-gray-900 w-48">
-                            {displayName}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-500 w-32">
-                            {item.service_category || '—'}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-900 text-right w-16">
-                            {item.quantity || 0}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-900 text-right w-24">
-                            {Number(item.credit_total || 0).toFixed(2)} {durationUnit}
-                          </td>
-                          <td className="px-3 py-2 text-sm text-gray-700 text-right w-20">
-                            {Number(item.credit_used || 0).toFixed(2)} {durationUnit}
-                          </td>
-                          <td className="px-3 py-2 text-sm font-semibold text-right w-24">
-                            <span className={Number(item.credit_available || 0) > 0 ? 'text-emerald-700' : 'text-rose-700'}>
-                              {Number(item.credit_available || 0).toFixed(2)} {durationUnit}
-                            </span>
-                          </td>
-                          {canModify(user) && (
-                            <td className="px-3 py-2 text-center w-20">
-                              <button
-                                onClick={(e) => {
-                                  e.preventDefault()
-                                  e.stopPropagation()
-                                  handleDeleteItem(item.id)
-                                }}
-                                className="inline-flex items-center justify-center rounded-lg p-1.5 text-red-600 hover:bg-red-50 transition-colors"
-                                title={t('customerDetail.orders.deleteItem', 'Delete item')}
-                              >
-                                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                              </button>
+                        <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-32 hidden sm:table-cell">
+                          {t('customerDetail.orders.category', 'Category')}
+                        </th>
+                        <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-16">
+                          {t('customerDetail.orders.quantity', 'Qty')}
+                        </th>
+                        <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-24 hidden md:table-cell">
+                          {t('customerDetail.orders.creditTotal', 'Credit Total')}
+                        </th>
+                        <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-20 hidden md:table-cell">
+                          {t('customerDetail.orders.creditUsed', 'Used')}
+                        </th>
+                        <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-24 hidden lg:table-cell">
+                          {t('customerDetail.orders.creditAvailable', 'Available')}
+                        </th>
+                        {canModify(user) && (
+                          <th className="px-2 sm:px-3 py-2 text-center text-xs font-medium text-gray-700 uppercase w-20">
+                            {t('customerDetail.orders.actions', 'Actions')}
+                          </th>
+                        )}
+                        <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-28">
+                          {t('customerDetail.orders.price', 'Price')}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {openOrderItems.filter(item => item.item_type === 'service' || item.item_type === 'service_package').map((item) => {
+                        const displayName = item.service_package_name || item.service_name || item.item_name
+                        const durationUnit = item.duration_unit || ''
+                        return (
+                          <tr key={item.id}>
+                            <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium text-gray-900 w-48">
+                              <div className="break-words">{displayName}</div>
+                              <div className="text-xs text-gray-500 sm:hidden mt-0.5">{item.service_category || '—'}</div>
                             </td>
-                          )}
-                          <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium w-28">
-                            {formatCurrency(Number(item.subtotal || 0))}
-                          </td>
-                        </tr>
-                      )
-                    })}
-                  </tbody>
-                </table>
+                            <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-500 w-32 hidden sm:table-cell">
+                              {item.service_category || '—'}
+                            </td>
+                            <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-900 text-right w-16">
+                              {item.quantity || 0}
+                            </td>
+                            <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-900 text-right w-24 hidden md:table-cell">
+                              {Number(item.credit_total || 0).toFixed(2)} {durationUnit}
+                            </td>
+                            <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-700 text-right w-20 hidden md:table-cell">
+                              {Number(item.credit_used || 0).toFixed(2)} {durationUnit}
+                            </td>
+                            <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-semibold text-right w-24 hidden lg:table-cell">
+                              <span className={Number(item.credit_available || 0) > 0 ? 'text-emerald-700' : 'text-rose-700'}>
+                                {Number(item.credit_available || 0).toFixed(2)} {durationUnit}
+                              </span>
+                            </td>
+                            {canModify(user) && (
+                              <td className="px-2 sm:px-3 py-2 text-center w-20">
+                                <button
+                                  onClick={(e) => {
+                                    e.preventDefault()
+                                    e.stopPropagation()
+                                    handleDeleteItem(item.id)
+                                  }}
+                                  className="inline-flex items-center justify-center rounded-lg p-1 sm:p-1.5 text-red-600 hover:bg-red-50 transition-colors"
+                                  title={t('customerDetail.orders.deleteItem', 'Delete item')}
+                                >
+                                  <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </td>
+                            )}
+                            <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-900 text-right font-medium w-28">
+                              {formatCurrency(Number(item.subtotal || 0))}
+                            </td>
+                          </tr>
+                        )
+                      })}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
 
           {/* Products Table */}
           {openOrderItems.filter(item => item.item_type === 'product').length > 0 && (
-            <div className="mb-6">
-              <div className="overflow-x-auto">
-                <table className="w-full divide-y divide-gray-200 table-fixed">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-48">
-                        {t('customerDetail.orders.products', 'Products')}
-                      </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-32">
-                        {t('customerDetail.orders.category', 'Category')}
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-16">
-                        {t('customerDetail.orders.quantity', 'Qty')}
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-24">
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-20">
-                      </th>
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-24">
-                      </th>
-                      {canModify(user) && (
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-700 uppercase w-20">
-                          {t('customerDetail.orders.actions', 'Actions')}
+            <div className="mb-4 sm:mb-6">
+              <div className="overflow-x-auto -mx-3 sm:mx-0">
+                <div className="inline-block min-w-full align-middle">
+                  <table className="min-w-full divide-y divide-gray-200 table-fixed">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-48">
+                          {t('customerDetail.orders.products', 'Products')}
                         </th>
-                      )}
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-28">
-                        {t('customerDetail.orders.price', 'Price')}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {openOrderItems.filter(item => item.item_type === 'product').map((item) => (
-                      <tr key={item.id}>
-                        <td className="px-3 py-2 text-sm font-medium text-gray-900 w-48">
-                          {item.product_name || item.item_name}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-500 w-32">
-                          {item.product_category || '—'}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-900 text-right w-16">
-                          {item.quantity || 0}
-                        </td>
-                        <td className="px-3 py-2 text-sm w-24"></td>
-                        <td className="px-3 py-2 text-sm w-20"></td>
-                        <td className="px-3 py-2 text-sm w-24"></td>
+                        <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-32 hidden sm:table-cell">
+                          {t('customerDetail.orders.category', 'Category')}
+                        </th>
+                        <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-16">
+                          {t('customerDetail.orders.quantity', 'Qty')}
+                        </th>
+                        <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-24 hidden md:table-cell">
+                        </th>
+                        <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-20 hidden md:table-cell">
+                        </th>
+                        <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-24 hidden lg:table-cell">
+                        </th>
                         {canModify(user) && (
-                          <td className="px-3 py-2 text-center w-20">
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                handleDeleteItem(item.id)
-                              }}
-                              className="inline-flex items-center justify-center rounded-lg p-1.5 text-red-600 hover:bg-red-50 transition-colors"
-                              title={t('customerDetail.orders.deleteItem', 'Delete item')}
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </td>
+                          <th className="px-2 sm:px-3 py-2 text-center text-xs font-medium text-gray-700 uppercase w-20">
+                            {t('customerDetail.orders.actions', 'Actions')}
+                          </th>
                         )}
-                        <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium w-28">
-                          {formatCurrency(Number(item.subtotal || 0))}
-                        </td>
+                        <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-28">
+                          {t('customerDetail.orders.price', 'Price')}
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {openOrderItems.filter(item => item.item_type === 'product').map((item) => (
+                        <tr key={item.id}>
+                          <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm font-medium text-gray-900 w-48">
+                            <div className="break-words">{item.product_name || item.item_name}</div>
+                            <div className="text-xs text-gray-500 sm:hidden mt-0.5">{item.product_category || '—'}</div>
+                          </td>
+                          <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-500 w-32 hidden sm:table-cell">
+                            {item.product_category || '—'}
+                          </td>
+                          <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-900 text-right w-16">
+                            {item.quantity || 0}
+                          </td>
+                          <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm w-24 hidden md:table-cell"></td>
+                          <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm w-20 hidden md:table-cell"></td>
+                          <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm w-24 hidden lg:table-cell"></td>
+                          {canModify(user) && (
+                            <td className="px-2 sm:px-3 py-2 text-center w-20">
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleDeleteItem(item.id)
+                                }}
+                                className="inline-flex items-center justify-center rounded-lg p-1 sm:p-1.5 text-red-600 hover:bg-red-50 transition-colors"
+                                title={t('customerDetail.orders.deleteItem', 'Delete item')}
+                              >
+                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </td>
+                          )}
+                          <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-900 text-right font-medium w-28">
+                            {formatCurrency(Number(item.subtotal || 0))}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
 
           {/* Payments Table */}
           {orderPayments.length > 0 && (
-            <div className="mb-6">
-              <div className="overflow-x-auto">
-                <table className="w-full divide-y divide-gray-200 table-fixed">
-                  <thead className="bg-gray-100">
-                    <tr>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-48">
-                        {t('customerDetail.orders.payments', 'Payments')}
-                      </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-40">
-                        Date
-                      </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-32">
-                        Payment Method
-                      </th>
-                      <th className="px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-32">
-                        Account
-                      </th>
-                      {canModify(user) && (
-                        <th className="px-3 py-2 text-center text-xs font-medium text-gray-700 uppercase w-20">
-                          {t('customerDetail.orders.actions', 'Actions')}
+            <div className="mb-4 sm:mb-6">
+              <div className="overflow-x-auto -mx-3 sm:mx-0">
+                <div className="inline-block min-w-full align-middle">
+                  <table className="min-w-full divide-y divide-gray-200 table-fixed">
+                    <thead className="bg-gray-100">
+                      <tr>
+                        <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-48">
+                          {t('customerDetail.orders.payments', 'Payments')}
                         </th>
-                      )}
-                      <th className="px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-28">
-                        Amount
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {orderPayments.map((payment) => (
-                      <tr key={payment.id}>
-                        <td className="px-3 py-2 text-sm text-gray-900 w-48">
-                          Payment-{payment.id}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-500 w-40">
-                          {formatDateTime(payment.occurred_at)}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-500 w-32">
-                          {payment.payment_method_name || '—'}
-                        </td>
-                        <td className="px-3 py-2 text-sm text-gray-500 w-32">
-                          {payment.company_account_name || '—'}
-                        </td>
+                        <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-40 hidden sm:table-cell">
+                          Date
+                        </th>
+                        <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-32 hidden md:table-cell">
+                          Payment Method
+                        </th>
+                        <th className="px-2 sm:px-3 py-2 text-left text-xs font-medium text-gray-700 uppercase w-32 hidden md:table-cell">
+                          Account
+                        </th>
                         {canModify(user) && (
-                          <td className="px-3 py-2 text-center w-20">
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault()
-                                e.stopPropagation()
-                                handleDeletePayment(payment.id)
-                              }}
-                              className="inline-flex items-center justify-center rounded-lg p-1.5 text-red-600 hover:bg-red-50 transition-colors"
-                              title={t('customerDetail.orders.deletePayment', 'Delete payment')}
-                            >
-                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                              </svg>
-                            </button>
-                          </td>
+                          <th className="px-2 sm:px-3 py-2 text-center text-xs font-medium text-gray-700 uppercase w-20">
+                            {t('customerDetail.orders.actions', 'Actions')}
+                          </th>
                         )}
-                        <td className="px-3 py-2 text-sm text-gray-900 text-right font-medium w-28">
-                          {formatCurrency(Number(payment.amount || 0))}
-                        </td>
+                        <th className="px-2 sm:px-3 py-2 text-right text-xs font-medium text-gray-700 uppercase w-28">
+                          Amount
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {orderPayments.map((payment) => (
+                        <tr key={payment.id}>
+                          <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-900 w-48">
+                            <div className="break-words">Payment-{payment.id}</div>
+                            <div className="text-xs text-gray-500 sm:hidden mt-0.5">
+                              {formatDateTime(payment.occurred_at)}
+                              {payment.payment_method_name && ` • ${payment.payment_method_name}`}
+                              {payment.company_account_name && ` • ${payment.company_account_name}`}
+                            </div>
+                          </td>
+                          <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-500 w-40 hidden sm:table-cell">
+                            {formatDateTime(payment.occurred_at)}
+                          </td>
+                          <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-500 w-32 hidden md:table-cell">
+                            {payment.payment_method_name || '—'}
+                          </td>
+                          <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-500 w-32 hidden md:table-cell">
+                            {payment.company_account_name || '—'}
+                          </td>
+                          {canModify(user) && (
+                            <td className="px-2 sm:px-3 py-2 text-center w-20">
+                              <button
+                                onClick={(e) => {
+                                  e.preventDefault()
+                                  e.stopPropagation()
+                                  handleDeletePayment(payment.id)
+                                }}
+                                className="inline-flex items-center justify-center rounded-lg p-1 sm:p-1.5 text-red-600 hover:bg-red-50 transition-colors"
+                                title={t('customerDetail.orders.deletePayment', 'Delete payment')}
+                              >
+                                <svg className="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                              </button>
+                            </td>
+                          )}
+                          <td className="px-2 sm:px-3 py-2 text-xs sm:text-sm text-gray-900 text-right font-medium w-28">
+                            {formatCurrency(Number(payment.amount || 0))}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
           )}
 
           {/* Totals at the bottom */}
           <div className="border-t border-gray-300 pt-3 mt-3">
-            <div className="flex justify-end space-x-8">
-              <div className="text-right">
-                <div className="text-sm font-semibold text-gray-900">
-                  {t('customerDetail.orders.total', 'Total')}: {formatCurrency(Number(openOrder.total_amount || 0))}
+            <div className="flex flex-col sm:flex-row sm:justify-end gap-2 sm:gap-0 sm:space-x-8">
+              <div className="text-left sm:text-right w-full sm:w-auto">
+                <div className="text-xs sm:text-sm font-semibold text-gray-900 flex justify-between sm:block">
+                  <span className="sm:hidden">{t('customerDetail.orders.total', 'Total')}:</span>
+                  <span>{formatCurrency(Number(openOrder.total_amount || 0))}</span>
                 </div>
-                <div className="text-sm font-semibold text-gray-900 mt-1">
-                  {t('customerDetail.orders.totalPaid', 'Total Paid')}: {formatCurrency(orderPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0))}
+                <div className="text-xs sm:text-sm font-semibold text-gray-900 mt-1 flex justify-between sm:block">
+                  <span className="sm:hidden">{t('customerDetail.orders.totalPaid', 'Total Paid')}:</span>
+                  <span>{formatCurrency(orderPayments.reduce((sum, p) => sum + Number(p.amount || 0), 0))}</span>
                 </div>
-                <div className={`text-sm font-semibold mt-1 ${
+                <div className={`text-xs sm:text-sm font-semibold mt-1 flex justify-between sm:block ${
                   Number(openOrder.balance_due || 0) > 0 ? 'text-rose-700' : 'text-emerald-700'
                 }`}>
-                  {t('customerDetail.orders.balance', 'Balance Due')}: {formatCurrency(Number(openOrder.balance_due || 0))}
+                  <span className="sm:hidden">{t('customerDetail.orders.balance', 'Balance Due')}:</span>
+                  <span>{formatCurrency(Number(openOrder.balance_due || 0))}</span>
                 </div>
               </div>
             </div>
