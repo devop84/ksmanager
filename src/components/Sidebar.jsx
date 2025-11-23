@@ -14,7 +14,7 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
     { key: 'dashboard', label: t('nav.dashboard', 'Dashboard') },
     { key: 'customers', label: t('nav.customers', 'Customers') },
     { key: 'orders', label: t('nav.orders', 'Orders') },
-    { key: 'appointments', label: t('nav.schedule', 'Appointments') },
+    { key: 'appointments', label: t('nav.appointments', 'Appointments') },
     { key: 'transactions', label: t('nav.transactions', 'Transactions') },
     { key: 'services', label: t('nav.services', 'Services') },
     { key: 'servicePackages', label: t('nav.servicePackages', 'Service Packages') },
