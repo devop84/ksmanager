@@ -189,30 +189,12 @@ function ThirdPartyDetail({ thirdPartyId, onBack, onEdit, onDelete, user = null 
             </svg>
             {t('thirdPartyDetail.back')}
           </button>
-          <div className="flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">{thirdParty.name}</h1>
-              <p className="text-gray-500 text-sm mt-1">
-                {(thirdParty.category_name || t('thirdPartyDetail.category.uncategorized'))} •{' '}
-                {t('thirdPartyDetail.description')}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onEdit?.(thirdParty)}
-                disabled={!canModify(user)}
-                className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-              >
-                {t('thirdPartyDetail.actions.edit')}
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting || !canModify(user)}
-                className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-              >
-                {deleting ? t('thirdPartyDetail.buttons.deleting') : t('thirdPartyDetail.buttons.delete')}
-              </button>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">{thirdParty.name}</h1>
+            <p className="text-gray-500 text-sm mt-1">
+              {(thirdParty.category_name || t('thirdPartyDetail.category.uncategorized'))} •{' '}
+              {t('thirdPartyDetail.description')}
+            </p>
           </div>
         </div>
 

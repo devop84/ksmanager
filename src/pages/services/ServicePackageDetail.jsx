@@ -148,58 +148,32 @@ function ServicePackageDetail({ packageId, onEdit, onDelete, onBack, onViewServi
             {t('servicePackageDetail.back', 'Back')}
           </button>
           
-          <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-6">
-            <div className="flex-1">
-              <div className="flex items-center gap-4 mb-2">
-                <h1 className="text-3xl font-bold text-gray-900">{pkg.name || t('servicePackages.title', 'Service Package')}</h1>
-                <span
-                  className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
-                    isActive
-                      ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
-                      : 'text-gray-700 bg-gray-50 border-gray-200'
-                  }`}
-                >
-                  {isActive ? t('servicePackageDetail.status.active', 'Active') : t('servicePackageDetail.status.inactive', 'Inactive')}
-                </span>
-              </div>
-              {pkg.service_name && (
-                <button
-                  onClick={() => onViewService?.({ id: pkg.service_id, name: pkg.service_name })}
-                  className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
-                >
-                  {t('servicePackageDetail.service', 'Service')}: <span className="underline">{pkg.service_name}</span>
-                </button>
-              )}
-              {pkg.category_name && (
-                <p className="text-gray-500 text-sm mt-1">
-                  {t('servicePackageDetail.category', 'Category')}: <span className="font-medium">{pkg.category_name}</span>
-                </p>
-              )}
-            </div>
-
-            {/* Actions */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onEdit?.(pkg)}
-                disabled={!canModify(user)}
-                className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-300 bg-white text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title={t('servicePackageDetail.actions.edit', 'Edit package')}
+          <div>
+            <div className="flex items-center gap-4 mb-2">
+              <h1 className="text-3xl font-bold text-gray-900">{pkg.name || t('servicePackages.title', 'Service Package')}</h1>
+              <span
+                className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                  isActive
+                    ? 'text-emerald-700 bg-emerald-50 border-emerald-100'
+                    : 'text-gray-700 bg-gray-50 border-gray-200'
+                }`}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536M16.732 3.732a2.5 2.5 0 113.536 3.536L7.5 20.036H4v-3.572L16.732 3.732z" />
-                </svg>
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting || !canModify(user)}
-                className="inline-flex items-center justify-center p-2 rounded-lg border border-red-300 bg-white text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                title={t('servicePackageDetail.actions.delete', 'Delete package')}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
+                {isActive ? t('servicePackageDetail.status.active', 'Active') : t('servicePackageDetail.status.inactive', 'Inactive')}
+              </span>
             </div>
+            {pkg.service_name && (
+              <button
+                onClick={() => onViewService?.({ id: pkg.service_id, name: pkg.service_name })}
+                className="text-indigo-600 hover:text-indigo-900 text-sm font-medium"
+              >
+                {t('servicePackageDetail.service', 'Service')}: <span className="underline">{pkg.service_name}</span>
+              </button>
+            )}
+            {pkg.category_name && (
+              <p className="text-gray-500 text-sm mt-1">
+                {t('servicePackageDetail.category', 'Category')}: <span className="font-medium">{pkg.category_name}</span>
+              </p>
+            )}
           </div>
         </div>
 

@@ -206,31 +206,13 @@ function TransactionDetail({ transactionId, onBack, onEdit, onDelete, user = nul
             </svg>
             {t('transactionDetail.backToList', 'Back to Transactions')}
           </button>
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">
-                {t('transactionDetail.title', 'Transaction #{{id}}', { id: transaction.id })}
-              </h1>
-              <p className="text-gray-500 text-sm mt-1">
-                {t('transactionDetail.subtitle', 'Full audit trail for this transaction entry.')}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => onEdit?.(transaction)}
-                disabled={!canModify(user)}
-                className="inline-flex items-center justify-center rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 shadow-sm hover:bg-gray-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-              >
-                {t('transactionDetail.buttons.edit', 'Edit')}
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting || !canModify(user)}
-                className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
-              >
-                {deleting ? t('transactionDetail.buttons.deleting', 'Deleting…') : t('transactionDetail.buttons.delete', 'Delete')}
-              </button>
-            </div>
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">
+              {t('transactionDetail.title', 'Transaction #{{id}}', { id: transaction.id })}
+            </h1>
+            <p className="text-gray-500 text-sm mt-1">
+              {t('transactionDetail.subtitle', 'Full audit trail for this transaction entry.')}
+            </p>
           </div>
         </div>
 
