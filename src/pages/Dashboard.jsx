@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import PageHeader from '../components/PageHeader'
 import DailyAppointments from '../components/dashboard/DailyAppointments'
+import PaymentsDueAndOpenOrders from '../components/dashboard/PaymentsDueAndOpenOrders'
 
 function Dashboard({ user, onNavigate, onViewOrder, onViewTransaction, onViewAppointment, onViewCustomer }) {
   const { t } = useTranslation()
@@ -8,7 +9,8 @@ function Dashboard({ user, onNavigate, onViewOrder, onViewTransaction, onViewApp
   // TODO: Role-based module visibility will be implemented later
   // For now, show all modules
   const visibleModules = [
-    'dailyAppointments'
+    'dailyAppointments',
+    'paymentsDueAndOpenOrders'
     // Future modules will be added here based on user role
   ]
 
@@ -26,6 +28,15 @@ function Dashboard({ user, onNavigate, onViewOrder, onViewTransaction, onViewApp
             <DailyAppointments
               user={user}
               onViewAppointment={onViewAppointment}
+            />
+          </div>
+        )}
+        {visibleModules.includes('paymentsDueAndOpenOrders') && (
+          <div className="lg:col-span-2 xl:col-span-3">
+            <PaymentsDueAndOpenOrders
+              user={user}
+              onViewOrder={onViewOrder}
+              onViewCustomer={onViewCustomer}
             />
           </div>
         )}
