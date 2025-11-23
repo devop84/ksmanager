@@ -1,6 +1,7 @@
 import { useTranslation } from 'react-i18next'
 import PageHeader from '../components/layout/PageHeader'
 import DailyAppointments from '../components/dashboard/DailyAppointments'
+import InstructorDailySchedule from '../components/dashboard/InstructorDailySchedule'
 import PaymentsDueAndOpenOrders from '../components/dashboard/PaymentsDueAndOpenOrders'
 
 function Dashboard({ user, onNavigate, onViewOrder, onViewTransaction, onViewAppointment, onViewCustomer }) {
@@ -10,6 +11,7 @@ function Dashboard({ user, onNavigate, onViewOrder, onViewTransaction, onViewApp
   // For now, show all modules
   const visibleModules = [
     'dailyAppointments',
+    'instructorSchedule',
     'paymentsDueAndOpenOrders'
     // Future modules will be added here based on user role
   ]
@@ -22,23 +24,29 @@ function Dashboard({ user, onNavigate, onViewOrder, onViewTransaction, onViewApp
       />
 
       {/* Dashboard Modules Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mt-6">
-        {visibleModules.includes('dailyAppointments') && (
-          <div className="lg:col-span-2 xl:col-span-3">
+      <div className="mt-6 space-y-6">
+        {/* Two Column Layout for Appointments */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {visibleModules.includes('dailyAppointments') && (
             <DailyAppointments
               user={user}
               onViewAppointment={onViewAppointment}
             />
-          </div>
-        )}
-        {visibleModules.includes('paymentsDueAndOpenOrders') && (
-          <div className="lg:col-span-2 xl:col-span-3">
-            <PaymentsDueAndOpenOrders
-              user={user}
-              onViewOrder={onViewOrder}
-              onViewCustomer={onViewCustomer}
+          )}
+          {visibleModules.includes('instructorSchedule') && (
+            <InstructorDailySchedule
+              onViewAppointment={onViewAppointment}
             />
-          </div>
+          )}
+        </div>
+        
+        {/* Full Width Modules */}
+        {visibleModules.includes('paymentsDueAndOpenOrders') && (
+          <PaymentsDueAndOpenOrders
+            user={user}
+            onViewOrder={onViewOrder}
+            onViewCustomer={onViewCustomer}
+          />
         )}
         {/* Future modules will be added here */}
       </div>
