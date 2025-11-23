@@ -103,6 +103,8 @@ function App() {
   const [appointmentFormAppointment, setAppointmentFormAppointment] = useState(null)
   const [appointmentFormCustomer, setAppointmentFormCustomer] = useState(null)
   const [appointmentDetailId, setAppointmentDetailId] = useState(null)
+  const [usersRefreshKey, setUsersRefreshKey] = useState(0)
+  const [userFormUser, setUserFormUser] = useState(null)
 
   // Check if user is logged in on mount using session
   useEffect(() => {
@@ -797,6 +799,17 @@ function App() {
     setCurrentPage('appointments')
   }
 
+  const handleUserFormSaved = () => {
+    setUsersRefreshKey((prev) => prev + 1)
+    setUserFormUser(null)
+    // Stay on settings page
+  }
+
+  const handleUserFormCancel = () => {
+    setUserFormUser(null)
+    // Stay on settings page
+  }
+
 
   const closeSidebar = () => {
     setIsSidebarOpen(false)
@@ -1196,7 +1209,15 @@ function App() {
           />
         )
       case 'settings':
-        return <Settings />
+        return (
+          <Settings
+            user={user}
+            usersRefreshKey={usersRefreshKey}
+            userFormUser={userFormUser}
+            onUserFormSaved={handleUserFormSaved}
+            onUserFormCancel={handleUserFormCancel}
+          />
+        )
       case 'landing':
         return <Landing onNavigate={handleNavigate} isAuthenticated={isAuthenticated} />
       case 'roadmap':

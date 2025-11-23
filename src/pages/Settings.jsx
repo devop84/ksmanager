@@ -1,6 +1,9 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettings } from '../context/SettingsContext'
+import { isAdmin } from '../lib/permissions'
+import Users from './users/Users'
+import UserForm from './users/UserForm'
 
 const languages = [
   { value: 'en-US', label: 'English (US)' },
@@ -13,10 +16,12 @@ const currencies = [
   { value: 'BRL', label: 'BRL • Real Brasileiro' },
 ]
 
-function Settings() {
+function Settings({ user = null, onUserFormSaved = () => {}, onUserFormCancel = () => {}, usersRefreshKey = 0, userFormUser = null }) {
   const { language, currency, timezone, setLanguage, setCurrency, setTimezone, formatCurrency, formatDateTime } =
     useSettings()
   const { t } = useTranslation()
+  const [showUserForm, setShowUserForm] = useState(false)
+  const [editingUser, setEditingUser] = useState(null)
 
   const timezoneOptions = useMemo(() => {
     try {
@@ -27,6 +32,40 @@ function Settings() {
       return ['UTC', 'America/New_York', 'America/Sao_Paulo', 'Europe/Lisbon']
     }
   }, [])
+
+  // Handle user form open/edit
+  const handleAddUser = () => {
+    setEditingUser(null)
+    setShowUserForm(true)
+    onUserFormCancel()
+  }
+
+  const handleEditUser = (userToEdit) => {
+    setEditingUser(userToEdit)
+    setShowUserForm(true)
+    onUserFormCancel()
+  }
+
+  const handleUserFormSaved = () => {
+    setShowUserForm(false)
+    setEditingUser(null)
+    onUserFormSaved()
+  }
+
+  const handleUserFormCancel = () => {
+    setShowUserForm(false)
+    setEditingUser(null)
+    onUserFormCancel()
+  }
+
+  // Show user form if requested via props or internal state
+  const currentUserToEdit = userFormUser || editingUser
+  const shouldShowUserForm = showUserForm || Boolean(userFormUser)
+
+  // If user form should be shown, render it
+  if (shouldShowUserForm) {
+    return <UserForm user={currentUserToEdit} onCancel={handleUserFormCancel} onSaved={handleUserFormSaved} />
+  }
 
   return (
     <div className="px-4 py-6 sm:p-6 lg:p-8 space-y-6">
@@ -92,6 +131,16 @@ function Settings() {
           </div>
         </div>
       </section>
+
+      {/* User Management Section - Admin Only */}
+      {isAdmin(user) && (
+        <Users
+          onAddUser={handleAddUser}
+          onEditUser={handleEditUser}
+          refreshKey={usersRefreshKey}
+          user={user}
+        />
+      )}
     </div>
   )
 }

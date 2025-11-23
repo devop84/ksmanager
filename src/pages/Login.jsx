@@ -113,6 +113,25 @@ function Login({ onLogin, onSwitchToSignup, onNavigate }) {
             </button>
           </div>
         </form>
+        
+        <div className="mt-6 rounded-lg border border-indigo-200 bg-indigo-50 p-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0">
+              <svg className="h-5 w-5 text-indigo-400" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <div className="ml-3 flex-1">
+              <h3 className="text-sm font-medium text-indigo-800">Demo Account</h3>
+              <div className="mt-2 text-sm text-indigo-700">
+                <p className="font-medium">Email:</p>
+                <p className="font-mono text-xs bg-white px-2 py-1 rounded mt-1 inline-block">viewonly@ksmanager.com</p>
+                <p className="font-medium mt-2">Password:</p>
+                <p className="font-mono text-xs bg-white px-2 py-1 rounded mt-1 inline-block">password</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
