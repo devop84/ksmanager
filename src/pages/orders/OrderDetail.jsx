@@ -49,6 +49,15 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
   const [paymentMethods, setPaymentMethods] = useState([])
   const [companyAccounts, setCompanyAccounts] = useState([])
   const [addingPayment, setAddingPayment] = useState(false)
+  
+  // For adding refunds
+  const [orderRefunds, setOrderRefunds] = useState([])
+  const [showAddRefund, setShowAddRefund] = useState(false)
+  const [refundAmount, setRefundAmount] = useState('')
+  const [refundMethodId, setRefundMethodId] = useState('')
+  const [refundCompanyAccountId, setRefundCompanyAccountId] = useState('')
+  const [addingRefund, setAddingRefund] = useState(false)
+  const [serviceCredits, setServiceCredits] = useState([])
 
   useEffect(() => {
     if (!orderId) return
@@ -144,6 +153,27 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
         `
         setOrderPayments(paymentsResult || [])
         
+        // Fetch order refunds
+        const refundsResult = await sql`
+          SELECT 
+            orf.id,
+            orf.amount,
+            orf.currency,
+            orf.payment_method_id,
+            orf.occurred_at,
+            orf.note,
+            orf.transaction_id,
+            orf.created_at,
+            pm.name AS payment_method_name,
+            ca.name AS company_account_name
+          FROM order_refunds orf
+          LEFT JOIN payment_methods pm ON orf.payment_method_id = pm.id
+          LEFT JOIN company_accounts ca ON orf.company_account_id = ca.id
+          WHERE orf.order_id = ${orderId}
+          ORDER BY orf.occurred_at ASC
+        `
+        setOrderRefunds(refundsResult || [])
+        
         // Load dropdown options for adding items and payments
         const [servicesResult, packagesResult, productsResult, paymentMethodsResult, accountsResult] = await Promise.all([
           sql`SELECT id, name, base_price FROM services WHERE is_active = true ORDER BY name ASC`,
@@ -164,6 +194,21 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
         setPaymentMethods(paymentMethodsResult || [])
         setCompanyAccounts(accountsResult || [])
 
+        // Load service credit balances for this order (for both open and closed orders)
+        if (orderResult && orderResult.length > 0) {
+          try {
+            const creditsResult = await sql`
+              SELECT * FROM get_order_all_service_credits(${orderId})
+            `
+            setServiceCredits(creditsResult || [])
+          } catch (creditErr) {
+            console.error('Failed to load service credits:', creditErr)
+            setServiceCredits([])
+          }
+        } else {
+          setServiceCredits([])
+        }
+
       } catch (err) {
         console.error('Failed to load order details:', err)
         setError(t('orderDetail.error.load', 'Unable to load order details. Please try again later.'))
@@ -175,13 +220,61 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
     fetchOrder()
   }, [orderId, t])
 
+  // Helper function to reload service credits
+  const reloadServiceCredits = async () => {
+    if (!orderId || !order) {
+      setServiceCredits([])
+      return
+    }
+    try {
+      const creditsResult = await sql`
+        SELECT * FROM get_order_all_service_credits(${orderId})
+      `
+      setServiceCredits(creditsResult || [])
+    } catch (creditErr) {
+      console.error('Failed to load service credits:', creditErr)
+      setServiceCredits([])
+    }
+  }
+
   const handleDelete = async () => {
     if (!orderId) return
-    if (!window.confirm(t('orderDetail.confirm.delete', 'Are you sure you want to delete this order? This action cannot be undone.'))) {
+    
+    // Count all appointments (including completed) that will be deleted
+    // This works for both open and closed orders
+    const allAppointments = await sql`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE status = 'completed') as completed,
+        COUNT(*) FILTER (WHERE status IN ('scheduled', 'rescheduled', 'no_show')) as scheduled
+      FROM scheduled_appointments
+      WHERE order_id = ${orderId}
+    `
+    const totalCount = allAppointments?.[0]?.total || 0
+    const completedCount = allAppointments?.[0]?.completed || 0
+    const scheduledCount = allAppointments?.[0]?.scheduled || 0
+    
+    // Show warning message for both open and closed orders
+    let confirmMessage
+    if (totalCount > 0) {
+      if (completedCount > 0) {
+        confirmMessage = t('orderDetail.confirm.deleteWithCompleted', 'WARNING: This order has {{total}} appointment(s) including {{completed}} completed appointment(s). Deleting will PERMANENTLY DELETE ALL appointments (including completed ones), remove credits, and delete the order. This action cannot be undone. Are you sure?', { 
+          total: totalCount, 
+          completed: completedCount 
+        })
+      } else {
+        confirmMessage = t('orderDetail.confirm.deleteWithAppointments', 'This order has {{count}} appointment(s). Deleting will PERMANENTLY DELETE ALL appointments, remove credits, and delete the order. This action cannot be undone. Are you sure?', { count: totalCount })
+      }
+    } else {
+      confirmMessage = t('orderDetail.confirm.delete', 'Are you sure you want to delete this order? This will remove all credits and delete the order. This action cannot be undone.')
+    }
+    
+    if (!window.confirm(confirmMessage)) {
       return
     }
     try {
       setDeleting(true)
+      
       // Delete credits associated with this order's items (before deleting order)
       // Note: Database CASCADE should handle this, but we're being explicit
       await sql`
@@ -190,7 +283,11 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
           SELECT id FROM order_items WHERE order_id = ${orderId}
         )
       `
-      // Delete the order (this will also CASCADE delete order_items)
+      
+      // Delete the order
+      // All appointments (including completed) will be automatically deleted via CASCADE
+      // (scheduled_appointments.order_id has ON DELETE CASCADE constraint)
+      // Order items will also be deleted via CASCADE
       await sql`DELETE FROM orders WHERE id = ${orderId}`
       onDelete?.()
     } catch (err) {
@@ -372,6 +469,9 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
         setOrder(orderResult[0])
       }
 
+      // Reload service credits after adding item
+      await reloadServiceCredits()
+
       // Reset form
       setItemType('service')
       setItemId('')
@@ -400,8 +500,8 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
     }
 
     try {
-      if (!paymentAmount || !paymentMethodId) {
-        alert(t('orderDetail.errors.paymentRequired', 'Please fill in payment amount and method.'))
+      if (!paymentAmount || !paymentMethodId || !paymentCompanyAccountId) {
+        alert(t('orderDetail.errors.paymentRequired', 'Please fill in payment amount, method, and company account.'))
         return
       }
 
@@ -422,7 +522,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
             ${amount},
             ${order.currency || 'BRL'},
             ${Number(paymentMethodId)},
-            ${paymentCompanyAccountId ? Number(paymentCompanyAccountId) : null},
+            ${Number(paymentCompanyAccountId)},
             ${new Date().toISOString()},
             ${null}
           )
@@ -581,6 +681,9 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
       `
       setOrderItems(itemsResult || [])
 
+      // Reload service credits after removing item
+      await reloadServiceCredits()
+
       // Reload order to get updated totals
       const orderResult = await sql`
         SELECT 
@@ -702,14 +805,362 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
     }
   }
 
+  const handleAddRefund = async (e) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
+    if (!orderId || !order) return
+
+    // Double-submission protection
+    if (addingRefund) {
+      return
+    }
+
+    try {
+      if (!refundAmount || !refundMethodId || !refundCompanyAccountId) {
+        alert(t('orderDetail.errors.refundRequired', 'Please fill in refund amount, method, and company account.'))
+        return
+      }
+
+      const amount = Number(refundAmount)
+      if (amount <= 0) {
+        alert(t('orderDetail.errors.invalidRefund', 'Refund amount must be greater than 0.'))
+        return
+      }
+
+      setAddingRefund(true)
+
+      const occurredAt = new Date().toISOString()
+
+      // Get the CUSTOMER_REFUND transaction type
+      const refundTypeResult = await sql`
+        SELECT id FROM transaction_types WHERE code = 'CUSTOMER_REFUND' LIMIT 1
+      `
+      
+      if (!refundTypeResult || refundTypeResult.length === 0) {
+        throw new Error('CUSTOMER_REFUND transaction type not found')
+      }
+      
+      const refundTypeId = refundTypeResult[0].id
+
+      // Create transaction for the refund
+      let transactionId = null
+      try {
+        const transactionResult = await sql`
+          INSERT INTO transactions (
+            occurred_at,
+            amount,
+            currency,
+            type_id,
+            payment_method_id,
+            source_entity_type,
+            source_entity_id,
+            destination_entity_type,
+            destination_entity_id,
+            reference,
+            note,
+            created_by
+          ) VALUES (
+            ${occurredAt},
+            ${amount},
+            ${order.currency || 'BRL'},
+            ${refundTypeId},
+            ${Number(refundMethodId)},
+            'company_account',
+            ${Number(refundCompanyAccountId)},
+            'customer',
+            ${order.customer_id},
+            ${order.order_number || null},
+            ${null},
+            ${user?.id || null}
+          )
+          RETURNING id
+        `
+        transactionId = transactionResult?.[0]?.id
+      } catch (transactionError) {
+        console.error('Error creating refund transaction:', transactionError)
+        throw transactionError
+      }
+
+      // Insert refund with transaction_id
+      try {
+        await sql`
+          INSERT INTO order_refunds (order_id, amount, currency, payment_method_id, company_account_id, occurred_at, note, transaction_id)
+          VALUES (
+            ${orderId},
+            ${amount},
+            ${order.currency || 'BRL'},
+            ${Number(refundMethodId)},
+            ${Number(refundCompanyAccountId)},
+            ${occurredAt},
+            ${null},
+            ${transactionId}
+          )
+        `
+      } catch (insertError) {
+        // If refund insert fails, delete the transaction we just created
+        if (transactionId) {
+          try {
+            await sql`DELETE FROM transactions WHERE id = ${transactionId}`
+          } catch (deleteError) {
+            console.error('Error deleting transaction after refund insert failure:', deleteError)
+          }
+        }
+        
+        // Check if it's a duplicate key error
+        if (insertError.message && insertError.message.includes('duplicate key value violates unique constraint "order_refunds_pkey"')) {
+          // Reset the sequence and retry once
+          try {
+            await sql`
+              SELECT setval('order_refunds_id_seq', COALESCE((SELECT MAX(id) FROM order_refunds), 0) + 1, false)
+            `
+            // Recreate transaction for retry
+            const retryTransactionResult = await sql`
+              INSERT INTO transactions (
+                occurred_at,
+                amount,
+                currency,
+                type_id,
+                payment_method_id,
+                source_entity_type,
+                source_entity_id,
+                destination_entity_type,
+                destination_entity_id,
+                reference,
+                note,
+                created_by
+              ) VALUES (
+                ${occurredAt},
+                ${-amount},
+                ${order.currency || 'BRL'},
+                ${refundTypeId},
+                ${Number(refundMethodId)},
+                'company_account',
+                ${Number(refundCompanyAccountId)},
+                'customer',
+                ${order.customer_id},
+                ${order.order_number || null},
+                ${null},
+                ${user?.id || null}
+              )
+              RETURNING id
+            `
+            transactionId = retryTransactionResult?.[0]?.id
+            
+            // Retry the insert
+            await sql`
+              INSERT INTO order_refunds (order_id, amount, currency, payment_method_id, company_account_id, occurred_at, note, transaction_id)
+              VALUES (
+                ${orderId},
+                ${amount},
+                ${order.currency || 'BRL'},
+                ${Number(refundMethodId)},
+                ${Number(refundCompanyAccountId)},
+                ${occurredAt},
+                ${null},
+                ${transactionId}
+              )
+            `
+          } catch (retryError) {
+            // If retry also fails, delete the transaction
+            if (transactionId) {
+              try {
+                await sql`DELETE FROM transactions WHERE id = ${transactionId}`
+              } catch (deleteError) {
+                console.error('Error deleting transaction after retry failure:', deleteError)
+              }
+            }
+            // Throw the original error
+            throw insertError
+          }
+        } else {
+          // If it's a different error, throw it
+          throw insertError
+        }
+      }
+
+      // Reload refunds
+      const refundsResult = await sql`
+        SELECT 
+          orf.id,
+          orf.amount,
+          orf.currency,
+          orf.payment_method_id,
+          orf.occurred_at,
+          orf.note,
+          orf.transaction_id,
+          orf.created_at,
+          pm.name AS payment_method_name,
+          ca.name AS company_account_name
+        FROM order_refunds orf
+        LEFT JOIN payment_methods pm ON orf.payment_method_id = pm.id
+        LEFT JOIN company_accounts ca ON orf.company_account_id = ca.id
+        WHERE orf.order_id = ${orderId}
+        ORDER BY orf.occurred_at ASC
+      `
+      setOrderRefunds(refundsResult || [])
+
+      // Reload order to get updated totals
+      const orderResult = await sql`
+        SELECT 
+          o.id,
+          o.order_number,
+          o.customer_id,
+          o.status,
+          o.subtotal,
+          o.tax_amount,
+          o.discount_amount,
+          o.total_amount,
+          o.currency,
+          o.total_paid,
+          o.balance_due,
+          o.created_at,
+          o.updated_at,
+          o.closed_at,
+          o.cancelled_at,
+          o.agency_id,
+          o.note,
+          c.fullname AS customer_name,
+          a.name AS agency_name,
+          u.name AS created_by_name
+        FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.id
+        LEFT JOIN agencies a ON o.agency_id = a.id
+        LEFT JOIN users u ON o.created_by = u.id
+        WHERE o.id = ${orderId}
+        LIMIT 1
+      `
+      if (orderResult && orderResult.length > 0) {
+        setOrder(orderResult[0])
+      }
+
+      // Reset form
+      setRefundAmount('')
+      setRefundMethodId('')
+      setRefundCompanyAccountId('')
+      setShowAddRefund(false)
+    } catch (error) {
+      console.error('Error adding refund:', error)
+      alert(t('orderDetail.errors.addRefundFailed', 'Failed to add refund. Please try again.'))
+    } finally {
+      setAddingRefund(false)
+    }
+  }
+
+  const handleRemoveRefund = async (refundId) => {
+    if (!orderId) return
+    if (!window.confirm(t('orderDetail.confirm.removeRefund', 'Are you sure you want to remove this refund? The associated transaction will also be deleted. This action cannot be undone.'))) {
+      return
+    }
+    try {
+      // First, get the refund to check for transaction_id
+      const refundResult = await sql`
+        SELECT transaction_id FROM order_refunds WHERE id = ${refundId}
+        LIMIT 1
+      `
+      
+      const transactionId = refundResult?.[0]?.transaction_id
+
+      // Delete the refund
+      await sql`DELETE FROM order_refunds WHERE id = ${refundId}`
+
+      // If there's an associated transaction, delete it
+      if (transactionId) {
+        await sql`DELETE FROM transactions WHERE id = ${transactionId}`
+      }
+
+      // Reload refunds
+      const refundsResult = await sql`
+        SELECT 
+          orf.id,
+          orf.amount,
+          orf.currency,
+          orf.payment_method_id,
+          orf.occurred_at,
+          orf.note,
+          orf.transaction_id,
+          orf.created_at,
+          pm.name AS payment_method_name,
+          ca.name AS company_account_name
+        FROM order_refunds orf
+        LEFT JOIN payment_methods pm ON orf.payment_method_id = pm.id
+        LEFT JOIN company_accounts ca ON orf.company_account_id = ca.id
+        WHERE orf.order_id = ${orderId}
+        ORDER BY orf.occurred_at ASC
+      `
+      setOrderRefunds(refundsResult || [])
+
+      // Reload order to get updated totals
+      const orderResult = await sql`
+        SELECT 
+          o.id,
+          o.order_number,
+          o.customer_id,
+          o.status,
+          o.subtotal,
+          o.tax_amount,
+          o.discount_amount,
+          o.total_amount,
+          o.currency,
+          o.total_paid,
+          o.balance_due,
+          o.created_at,
+          o.updated_at,
+          o.closed_at,
+          o.cancelled_at,
+          o.agency_id,
+          o.note,
+          c.fullname AS customer_name,
+          a.name AS agency_name,
+          u.name AS created_by_name
+        FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.id
+        LEFT JOIN agencies a ON o.agency_id = a.id
+        LEFT JOIN users u ON o.created_by = u.id
+        WHERE o.id = ${orderId}
+        LIMIT 1
+      `
+      if (orderResult && orderResult.length > 0) {
+        setOrder(orderResult[0])
+      }
+    } catch (err) {
+      console.error('Failed to remove refund:', err)
+      alert(t('orderDetail.error.removeRefund', 'Unable to remove refund. Please try again.'))
+    }
+  }
+
   const handleCloseOrder = async () => {
     if (!orderId || !order) return
     
     // Prevent closing if balance is not zero (allowing for small floating point differences)
-    const balanceDue = Number(order.balance_due || 0)
-    if (Math.abs(balanceDue) > 0.01) {
-      alert(t('orderDetail.error.cannotCloseWithBalance', 'Cannot close order. The balance due must be zero. Current balance: {{balance}}', { balance: formatAmount(balanceDue) }))
+    // Recalculate balance including refunds: total_amount - total_paid + total_refunded
+    const totalRefunded = orderRefunds.reduce((sum, r) => sum + Number(r.amount || 0), 0)
+    const calculatedBalance = Number(order.total_amount || 0) - Number(order.total_paid || 0) + totalRefunded
+    if (Math.abs(calculatedBalance) > 0.01) {
+      alert(t('orderDetail.error.cannotCloseWithBalance', 'Cannot close order. The balance due must be zero. Current balance: {{balance}}', { balance: formatAmount(calculatedBalance) }))
       return
+    }
+    
+    // Check if all service credits are zero
+    try {
+      const creditBalances = await sql`
+        SELECT * FROM get_order_all_service_credits(${orderId})
+      `
+      
+      const nonZeroCredits = creditBalances.filter(c => Math.abs(Number(c.balance || 0)) > 0.01)
+      
+      if (nonZeroCredits.length > 0) {
+        const creditDetails = nonZeroCredits.map(c => 
+          `${c.service_name}: ${Number(c.balance).toFixed(2)} ${c.duration_unit}`
+        ).join('\n')
+        alert(t('orderDetail.error.cannotCloseWithCredits', 'Cannot close order. All service credits must be zero.\n\nNon-zero credits:\n{{credits}}', { credits: creditDetails }))
+        return
+      }
+    } catch (creditErr) {
+      console.error('Failed to check credit balances:', creditErr)
+      // Continue with closing if credit check fails (graceful degradation)
     }
     
     try {
@@ -759,21 +1210,62 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
 
   const handleCancelOrder = async () => {
     if (!orderId || !order) return
-    if (!window.confirm(t('orderDetail.confirm.cancel', 'Are you sure you want to cancel this order? This action cannot be undone.'))) {
+    
+    // Check if there are completed appointments for this order
+    const completedAppointments = await sql`
+      SELECT COUNT(*) as count
+      FROM scheduled_appointments
+      WHERE order_id = ${orderId}
+        AND status = 'completed'
+    `
+    const hasCompleted = completedAppointments?.[0]?.count > 0
+    
+    // Cannot cancel if there are completed appointments
+    if (hasCompleted) {
+      alert(t('orderDetail.error.cannotCancelWithCompleted', 'Cannot cancel order. This order has {{count}} completed appointment(s). Orders with completed appointments cannot be cancelled.', { count: completedAppointments[0].count }))
+      return
+    }
+    
+    // Check how many appointments will be cancelled
+    const appointmentsToCancel = await sql`
+      SELECT COUNT(*) as count
+      FROM scheduled_appointments
+      WHERE order_id = ${orderId}
+        AND status IN ('scheduled', 'rescheduled', 'no_show')
+    `
+    const appointmentCount = appointmentsToCancel?.[0]?.count || 0
+    
+    const confirmMessage = appointmentCount > 0
+      ? t('orderDetail.confirm.cancel', 'Are you sure you want to cancel this order? This will cancel {{count}} appointment(s) and remove all credits. This action cannot be undone.', { count: appointmentCount })
+      : t('orderDetail.confirm.cancelNoAppointments', 'Are you sure you want to cancel this order? This will remove all credits. This action cannot be undone.')
+    
+    if (!window.confirm(confirmMessage)) {
       return
     }
     try {
+      // Cancel all scheduled/rescheduled/no_show appointments
       await sql`
-        UPDATE orders 
-        SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
-        WHERE id = ${orderId}
+        UPDATE scheduled_appointments
+        SET status = 'cancelled',
+            cancelled_at = CURRENT_TIMESTAMP,
+            updated_at = CURRENT_TIMESTAMP
+        WHERE order_id = ${orderId}
+          AND status IN ('scheduled', 'rescheduled', 'no_show')
       `
+      
       // Delete all credits associated with this order's items
       await sql`
         DELETE FROM customer_service_credits
         WHERE order_item_id IN (
           SELECT id FROM order_items WHERE order_id = ${orderId}
         )
+      `
+      
+      // Update order status to cancelled
+      await sql`
+        UPDATE orders 
+        SET status = 'cancelled', cancelled_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP
+        WHERE id = ${orderId}
       `
       // Reload order
       const orderResult = await sql`
@@ -849,7 +1341,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
     <div className="px-4 py-6 sm:p-6 lg:p-8">
       <div className="rounded-xl bg-white p-4 sm:p-6 shadow-sm">
         {/* Header */}
-        <div className="mb-6 pb-6 border-b border-gray-200">
+        <div className="mb-6">
           <button
             onClick={onBack}
             className="mb-2 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors"
@@ -859,22 +1351,52 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
             </svg>
             {t('orderDetail.back', 'Back')}
           </button>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between mb-4">
             <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">
-                {t('orderDetail.title', 'Order {{orderNumber}}', { orderNumber: order.order_number })}
-              </h1>
-              <p className="text-gray-500 text-sm mt-1">
-                {t('orderDetail.subtitle', 'Full details for this customer order.')}
-              </p>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 break-words">
+                  {t('orderDetail.title', 'Order {{orderNumber}}', { orderNumber: order.order_number })}
+                </h1>
+                <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusStyle.pill}`}>
+                  {order.status?.toUpperCase() || 'OPEN'}
+                </span>
+              </div>
             </div>
             {order.status === 'open' && canModify(user) && (
               <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
                 <button
                   onClick={handleCloseOrder}
-                  disabled={Math.abs(Number(order.balance_due || 0)) > 0.01}
+                  disabled={(() => {
+                    const totalRefunded = orderRefunds.reduce((sum, r) => sum + Number(r.amount || 0), 0)
+                    const calculatedBalance = Number(order.total_amount || 0) - Number(order.total_paid || 0) + totalRefunded
+                    const hasNonZeroBalance = Math.abs(calculatedBalance) > 0.01
+                    
+                    // Check if any service credits are non-zero
+                    const hasNonZeroCredits = serviceCredits.some(c => Math.abs(Number(c.balance || 0)) > 0.01)
+                    
+                    return hasNonZeroBalance || hasNonZeroCredits
+                  })()}
                   className="inline-flex items-center justify-center rounded-lg border border-emerald-300 px-3 py-2 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white whitespace-nowrap"
-                  title={Math.abs(Number(order.balance_due || 0)) > 0.01 ? t('orderDetail.buttons.closeDisabled', 'Cannot close order. Balance due must be zero. Current balance: {{balance}}', { balance: formatAmount(order.balance_due) }) : t('orderDetail.buttons.close', 'Close Order')}
+                  title={(() => {
+                    const totalRefunded = orderRefunds.reduce((sum, r) => sum + Number(r.amount || 0), 0)
+                    const calculatedBalance = Number(order.total_amount || 0) - Number(order.total_paid || 0) + totalRefunded
+                    const hasNonZeroBalance = Math.abs(calculatedBalance) > 0.01
+                    
+                    // Check if any service credits are non-zero
+                    const nonZeroCredits = serviceCredits.filter(c => Math.abs(Number(c.balance || 0)) > 0.01)
+                    const hasNonZeroCredits = nonZeroCredits.length > 0
+                    
+                    if (hasNonZeroBalance) {
+                      return t('orderDetail.buttons.closeDisabled', 'Cannot close order. Balance due must be zero. Current balance: {{balance}}', { balance: formatAmount(calculatedBalance) })
+                    }
+                    if (hasNonZeroCredits) {
+                      const creditDetails = nonZeroCredits.map(c => 
+                        `${c.service_name}: ${Number(c.balance).toFixed(2)} ${c.duration_unit}`
+                      ).join(', ')
+                      return t('orderDetail.buttons.closeDisabledCredits', 'Cannot close order. All service credits must be zero. Non-zero: {{credits}}', { credits: creditDetails })
+                    }
+                    return t('orderDetail.buttons.close', 'Close Order')
+                  })()}
                 >
                   {t('orderDetail.buttons.close', 'Close Order')}
                 </button>
@@ -896,14 +1418,6 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
               <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                 <div>
                   <p className="text-xs font-semibold uppercase text-gray-500">
-                    {t('orderDetail.status', 'Status')}
-                  </p>
-                  <span className={`mt-1 inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusStyle.pill}`}>
-                    {order.status?.toUpperCase() || 'OPEN'}
-                  </span>
-                </div>
-                <div>
-                  <p className="text-xs font-semibold uppercase text-gray-500">
                     {t('orderDetail.totalAmount', 'Total Amount')}
                   </p>
                   <p className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 break-words">
@@ -914,8 +1428,16 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                   <p className="text-xs font-semibold uppercase text-gray-500">
                     {t('orderDetail.balanceDue', 'Balance Due')}
                   </p>
-                  <p className={`text-xl sm:text-2xl font-bold break-words ${order.balance_due > 0 ? 'text-rose-700' : 'text-emerald-700'}`}>
-                    {formatAmount(order.balance_due)}
+                  <p className={`text-xl sm:text-2xl font-bold break-words ${(() => {
+                    const totalRefunded = orderRefunds.reduce((sum, r) => sum + Number(r.amount || 0), 0)
+                    const calculatedBalance = Number(order.total_amount || 0) - Number(order.total_paid || 0) + totalRefunded
+                    return calculatedBalance > 0 ? 'text-rose-700' : 'text-emerald-700'
+                  })()}`}>
+                    {(() => {
+                      const totalRefunded = orderRefunds.reduce((sum, r) => sum + Number(r.amount || 0), 0)
+                      const calculatedBalance = Number(order.total_amount || 0) - Number(order.total_paid || 0) + totalRefunded
+                      return formatAmount(calculatedBalance)
+                    })()}
                   </p>
                 </div>
                 <div>
@@ -924,6 +1446,14 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                   </p>
                   <p className="text-xl sm:text-2xl font-bold text-gray-900 break-words">
                     {formatAmount(order.total_paid)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-xs font-semibold uppercase text-gray-500">
+                    {t('orderDetail.totalRefund', 'Total Refund')}
+                  </p>
+                  <p className="text-xl sm:text-2xl font-bold text-rose-700 break-words">
+                    {formatAmount(orderRefunds.reduce((sum, r) => sum + Number(r.amount || 0), 0))}
                   </p>
                 </div>
               </div>
@@ -935,15 +1465,19 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                 <h2 className="text-lg font-semibold text-gray-900">
                   {t('orderDetail.items.title', 'Order Items')}
                 </h2>
-                {canModify(user) && order?.status === 'open' && (
+                {canModify(user) && (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      setShowAddItem(!showAddItem)
+                      if (order?.status === 'open') {
+                        setShowAddItem(!showAddItem)
+                      }
                     }}
-                    className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm transition-colors bg-indigo-600 text-white hover:bg-indigo-500"
+                    disabled={order?.status !== 'open'}
+                    className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm transition-colors bg-indigo-600 text-white hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-indigo-600"
+                    title={order?.status !== 'open' ? t('orderDetail.items.cannotAddClosed', 'Cannot add items to a closed order') : ''}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -954,9 +1488,9 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
               </div>
 
               {/* Add Item Form */}
-              {showAddItem && canModify(user) && order?.status === 'open' && (
+              {showAddItem && canModify(user) && (
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
                     <div>
                       <label className="mb-1 block text-xs font-medium text-gray-700">
                         {t('orderDetail.itemFields.type', 'Type')}
@@ -1058,24 +1592,35 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                       <div key={item.id} className="border border-gray-200 rounded-lg p-4 bg-white">
                         <div className="flex items-start justify-between mb-2">
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 break-words">
-                              {item.item_name}
-                            </div>
-                            {item.service_name && item.item_type === 'service_package' && (
-                              <div className="text-xs text-gray-500 mt-1">
-                                {t('orderDetail.items.service', 'Service')}: {item.service_name}
+                            {item.service_name && item.item_type === 'service_package' ? (
+                              <>
+                                <div className="text-sm font-medium text-gray-900 break-words">
+                                  {item.service_name}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-0.5 break-words">
+                                  {item.item_name}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-sm font-medium text-gray-900 break-words">
+                                {item.item_name}
                               </div>
                             )}
                             <div className="text-xs text-gray-500 mt-1 capitalize">
                               {item.item_type.replace('_', ' ')}
                             </div>
                           </div>
-                          {order.status === 'open' && canModify(user) && (
-                            <button
-                              onClick={() => handleRemoveItem(item.id)}
-                              className="ml-2 inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors flex-shrink-0"
-                              title={t('orderDetail.items.remove', 'Remove Item')}
-                            >
+                            {canModify(user) && (
+                              <button
+                                onClick={() => {
+                                  if (order.status === 'open') {
+                                    handleRemoveItem(item.id)
+                                  }
+                                }}
+                                disabled={order.status !== 'open'}
+                                className="ml-2 inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                                title={order.status !== 'open' ? t('orderDetail.items.cannotRemoveClosed', 'Cannot remove items from a closed order') : t('orderDetail.items.remove', 'Remove Item')}
+                              >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
@@ -1102,7 +1647,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                   
                   {/* Desktop Table View */}
                   <div className="hidden sm:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1120,23 +1665,29 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           {t('orderDetail.items.subtotal', 'Subtotal')}
                         </th>
-                        {order.status === 'open' && canModify(user) && (
-                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            {t('orderDetail.items.actions', 'Actions')}
-                          </th>
-                        )}
+                         {canModify(user) && (
+                            <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              {t('orderDetail.items.actions', 'Actions')}
+                            </th>
+                          )}
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {orderItems.map((item) => (
                         <tr key={item.id}>
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <div className="text-sm font-medium text-gray-900">
-                              {item.item_name}
-                            </div>
-                            {item.service_name && item.item_type === 'service_package' && (
-                              <div className="text-xs text-gray-500 mt-0.5">
-                                {t('orderDetail.items.service', 'Service')}: {item.service_name}
+                            {item.service_name && item.item_type === 'service_package' ? (
+                              <>
+                                <div className="text-sm font-medium text-gray-900">
+                                  {item.service_name}
+                                </div>
+                                <div className="text-xs text-gray-500 mt-0.5">
+                                  {item.item_name}
+                                </div>
+                              </>
+                            ) : (
+                              <div className="text-sm font-medium text-gray-900">
+                                {item.item_name}
                               </div>
                             )}
                           </td>
@@ -1152,13 +1703,18 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900 text-right">
                             {formatAmount(item.subtotal)}
                           </td>
-                          {order.status === 'open' && canModify(user) && (
-                            <td className="px-4 py-3 whitespace-nowrap text-center">
-                              <button
-                                onClick={() => handleRemoveItem(item.id)}
-                                className="inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors"
-                                title={t('orderDetail.items.remove', 'Remove Item')}
-                              >
+                           {canModify(user) && (
+                              <td className="px-4 py-3 whitespace-nowrap text-center">
+                                <button
+                                  onClick={() => {
+                                    if (order.status === 'open') {
+                                      handleRemoveItem(item.id)
+                                    }
+                                  }}
+                                  disabled={order.status !== 'open'}
+                                  className="inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                                  title={order.status !== 'open' ? t('orderDetail.items.cannotRemoveClosed', 'Cannot remove items from a closed order') : t('orderDetail.items.remove', 'Remove Item')}
+                                >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
@@ -1169,52 +1725,77 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                       ))}
                     </tbody>
                     <tfoot className="bg-gray-50">
-                      <tr>
-                        <td colSpan={order.status === 'open' && canModify(user) ? 5 : 5} className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
-                          {t('orderDetail.items.subtotal', 'Subtotal')}:
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
-                          {formatAmount(order.subtotal)}
-                        </td>
-                        {order.status === 'open' && canModify(user) && <td></td>}
-                      </tr>
                       {order.discount_amount > 0 && (
                       <tr>
-                        <td colSpan={order.status === 'open' && canModify(user) ? 4 : 4} className="px-4 py-3 text-right text-sm font-semibold text-gray-500">
-                          {t('orderDetail.items.discount', 'Discount')}:
-                        </td>
-                          <td className="px-4 py-3 text-right text-sm font-semibold text-red-600">
-                            -{formatAmount(order.discount_amount)}
+                         <td colSpan={canModify(user) ? 5 : 4} className="px-4 py-3 text-right text-sm font-semibold text-gray-500">
+                            {t('orderDetail.items.discount', 'Discount')}:
                           </td>
-                          {order.status === 'open' && canModify(user) && <td></td>}
+                            <td className="px-4 py-3 text-right text-sm font-semibold text-red-600">
+                              -{formatAmount(order.discount_amount)}
+                            </td>
+                           {canModify(user) && <td></td>}
                         </tr>
                       )}
                       {order.tax_amount > 0 && (
                         <tr>
-                          <td colSpan={order.status === 'open' && canModify(user) ? 4 : 4} className="px-4 py-3 text-right text-sm font-semibold text-gray-500">
-                            {t('orderDetail.items.tax', 'Tax')}:
-                          </td>
-                          <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
-                            {formatAmount(order.tax_amount)}
-                          </td>
-                          {order.status === 'open' && canModify(user) && <td></td>}
+                           <td colSpan={canModify(user) ? 5 : 4} className="px-4 py-3 text-right text-sm font-semibold text-gray-500">
+                              {t('orderDetail.items.tax', 'Tax')}:
+                            </td>
+                            <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
+                              {formatAmount(order.tax_amount)}
+                            </td>
+                           {canModify(user) && <td></td>}
                         </tr>
                       )}
                       <tr>
-                        <td colSpan={order.status === 'open' && canModify(user) ? 4 : 4} className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                          {t('orderDetail.items.total', 'Total')}:
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
-                          {formatAmount(order.total_amount)}
-                        </td>
-                        {order.status === 'open' && canModify(user) && <td></td>}
+                         <td colSpan={canModify(user) ? 5 : 4} className="px-4 py-3 text-right text-sm font-bold text-gray-900">
+                            {t('orderDetail.items.total', 'Total')}:
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
+                            {formatAmount(order.total_amount)}
+                          </td>
+                         {canModify(user) && <td></td>}
                       </tr>
                     </tfoot>
-                    </table>
-                  </div>
+                  </table>
+                </div>
                 </>
               )}
             </div>
+
+             {/* Service Credits */}
+             {serviceCredits.length > 0 && (
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  {t('orderDetail.credits.title', 'Service Credits')}
+                </h2>
+                <div className="space-y-3">
+                  {serviceCredits.map((credit) => (
+                    <div key={credit.service_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {credit.service_name}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {t('orderDetail.credits.fromItems', 'From items')}: {Number(credit.credits_from_items || 0).toFixed(2)} {credit.duration_unit} | 
+                          {t('orderDetail.credits.used', 'Used')}: {Number(credit.credits_used_by_appointments || 0).toFixed(2)} {credit.duration_unit}
+                        </div>
+                      </div>
+                      <div className={`text-lg font-bold ${Number(credit.balance || 0) < 0 ? 'text-red-600' : Number(credit.balance || 0) > 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                        {Number(credit.balance || 0).toFixed(2)} {credit.duration_unit}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {serviceCredits.some(c => Math.abs(Number(c.balance || 0)) > 0.01) && (
+                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                    <p className="text-sm text-amber-800">
+                      {t('orderDetail.credits.warning', 'All service credits must be zero before closing the order.')}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Payments */}
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -1222,15 +1803,19 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                 <h2 className="text-lg font-semibold text-gray-900">
                   {t('orderDetail.payments.title', 'Payments')}
                 </h2>
-                {canModify(user) && order?.status === 'open' && (
+                {canModify(user) && (
                   <button
                     type="button"
                     onClick={(e) => {
                       e.preventDefault()
                       e.stopPropagation()
-                      setShowAddPayment(!showAddPayment)
+                      if (order?.status === 'open') {
+                        setShowAddPayment(!showAddPayment)
+                      }
                     }}
-                    className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm transition-colors bg-emerald-600 text-white hover:bg-emerald-500"
+                    disabled={order?.status !== 'open'}
+                    className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm transition-colors bg-emerald-600 text-white hover:bg-emerald-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-emerald-600"
+                    title={order?.status !== 'open' ? t('orderDetail.payments.cannotAddClosed', 'Cannot add payments to a closed order') : ''}
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -1241,22 +1826,9 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
               </div>
 
               {/* Add Payment Form */}
-              {showAddPayment && canModify(user) && order?.status === 'open' && (
+              {showAddPayment && canModify(user) && (
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-                    <div>
-                      <label className="mb-1 block text-xs font-medium text-gray-700">
-                        {t('orderDetail.paymentFields.amount', 'Amount *')}
-                      </label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0.01"
-                        value={paymentAmount}
-                        onChange={(e) => setPaymentAmount(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                      />
-                    </div>
                     <div>
                       <label className="mb-1 block text-xs font-medium text-gray-700">
                         {t('orderDetail.paymentFields.method', 'Payment Method *')}
@@ -1276,7 +1848,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                     </div>
                     <div>
                       <label className="mb-1 block text-xs font-medium text-gray-700">
-                        {t('orderDetail.paymentFields.account', 'Company Account')}
+                        {t('orderDetail.paymentFields.account', 'Company Account')} *
                       </label>
                       <select
                         value={paymentCompanyAccountId}
@@ -1290,6 +1862,19 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                           </option>
                         ))}
                       </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-700">
+                        {t('orderDetail.paymentFields.amount', 'Amount *')}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={paymentAmount}
+                        onChange={(e) => setPaymentAmount(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      />
                     </div>
                     <div className="flex items-end gap-2">
                       <button
@@ -1333,12 +1918,17 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                               {formatDateTime(payment.occurred_at)}
                             </div>
                           </div>
-                          {order.status === 'open' && canModify(user) && (
-                            <button
-                              onClick={() => handleRemovePayment(payment.id)}
-                              className="ml-2 inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors flex-shrink-0"
-                              title={t('orderDetail.payments.remove', 'Remove Payment')}
-                            >
+                           {canModify(user) && (
+                              <button
+                                onClick={() => {
+                                  if (order.status === 'open') {
+                                    handleRemovePayment(payment.id)
+                                  }
+                                }}
+                                disabled={order.status !== 'open'}
+                                className="ml-2 inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                                title={order.status !== 'open' ? t('orderDetail.payments.cannotRemoveClosed', 'Cannot remove payments from a closed order') : t('orderDetail.payments.remove', 'Remove Payment')}
+                              >
                               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                               </svg>
@@ -1363,7 +1953,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                   
                   {/* Desktop Table View */}
                   <div className="hidden sm:block overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-200">
+                  <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
                       <tr>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -1378,7 +1968,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           {t('orderDetail.payments.amount', 'Amount')}
                         </th>
-                        {order.status === 'open' && canModify(user) && (
+                        {canModify(user) && (
                           <th className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                             {t('orderDetail.payments.actions', 'Actions')}
                           </th>
@@ -1400,12 +1990,17 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                           <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-emerald-700 text-right">
                             {formatAmount(payment.amount)}
                           </td>
-                          {order.status === 'open' && canModify(user) && (
+                          {canModify(user) && (
                             <td className="px-4 py-3 whitespace-nowrap text-center">
                               <button
-                                onClick={() => handleRemovePayment(payment.id)}
-                                className="inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors"
-                                title={t('orderDetail.payments.remove', 'Remove Payment')}
+                                onClick={() => {
+                                  if (order.status === 'open') {
+                                    handleRemovePayment(payment.id)
+                                  }
+                                }}
+                                disabled={order.status !== 'open'}
+                                className="inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                                title={order.status !== 'open' ? t('orderDetail.payments.cannotRemoveClosed', 'Cannot remove payments from a closed order') : t('orderDetail.payments.remove', 'Remove Payment')}
                               >
                                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -1418,50 +2013,250 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                     </tbody>
                     <tfoot className="bg-gray-50">
                       <tr>
-                        <td colSpan={order.status === 'open' && canModify(user) ? 3 : 3} className="px-4 py-3 text-right text-sm font-bold text-gray-900">
+                        <td colSpan={canModify(user) ? 4 : 3} className="px-4 py-3 text-right text-sm font-bold text-gray-900">
                           {t('orderDetail.payments.total', 'Total Paid')}:
                         </td>
                         <td className="px-4 py-3 text-right text-sm font-bold text-emerald-700">
                           {formatAmount(order.total_paid)}
                         </td>
-                        {order.status === 'open' && canModify(user) && <td></td>}
+                        {canModify(user) && <td></td>}
                       </tr>
                     </tfoot>
-                    </table>
-                  </div>
+                  </table>
+                </div>
                 </>
               )}
             </div>
 
-            {/* Order Details */}
-            <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-5 shadow-sm">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                {t('orderDetail.details.title', 'Order Details')}
-              </h2>
-              <dl className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <dt className="text-xs font-semibold uppercase text-gray-500">
-                    {t('orderDetail.details.customer', 'Customer')}
-                  </dt>
-                  <dd className="mt-1 text-gray-900">{order.customer_name || '—'}</dd>
+            {/* Refunds */}
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t('orderDetail.refunds.title', 'Refunds')}
+                </h2>
+                {canModify(user) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (order?.status === 'open') {
+                        setShowAddRefund(!showAddRefund)
+                      }
+                    }}
+                    disabled={order?.status !== 'open'}
+                    className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm transition-colors bg-rose-600 text-white hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-rose-600"
+                    title={order?.status !== 'open' ? t('orderDetail.refunds.cannotAddClosed', 'Cannot add refunds to a closed order') : ''}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    {t('orderDetail.refunds.add', 'Add Refund')}
+                  </button>
+                )}
+              </div>
+
+              {/* Add Refund Form */}
+              {showAddRefund && canModify(user) && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-700">
+                        {t('orderDetail.refundFields.method', 'Payment Method *')}
+                      </label>
+                      <select
+                        value={refundMethodId}
+                        onChange={(e) => setRefundMethodId(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      >
+                        <option value="">{t('orderDetail.refundFields.selectMethod', 'Select...')}</option>
+                        {paymentMethods.map((pm) => (
+                          <option key={pm.id} value={pm.id}>
+                            {pm.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-700">
+                        {t('orderDetail.refundFields.account', 'Company Account')} *
+                      </label>
+                      <select
+                        value={refundCompanyAccountId}
+                        onChange={(e) => setRefundCompanyAccountId(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      >
+                        <option value="">{t('orderDetail.refundFields.selectAccount', 'Select...')}</option>
+                        {companyAccounts.map((acc) => (
+                          <option key={acc.id} value={acc.id}>
+                            {acc.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-700">
+                        {t('orderDetail.refundFields.amount', 'Amount *')}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={refundAmount}
+                        onChange={(e) => setRefundAmount(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      />
+                    </div>
+                    <div className="flex items-end gap-2">
+                      <button
+                        type="button"
+                        onClick={handleAddRefund}
+                        disabled={addingRefund}
+                        className="flex-1 rounded-lg bg-rose-600 px-3 py-2 text-sm font-semibold text-white hover:bg-rose-500 disabled:opacity-50"
+                      >
+                        {addingRefund ? t('orderDetail.buttons.addingRefund', 'Adding...') : t('orderDetail.buttons.add', 'Add')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setShowAddRefund(false)
+                        }}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                      >
+                        {t('orderDetail.buttons.cancel', 'Cancel')}
+                      </button>
+                    </div>
+                  </div>
                 </div>
-                {order.agency_name && (
-                  <div>
-                    <dt className="text-xs font-semibold uppercase text-gray-500">
-                      {t('orderDetail.details.agency', 'Agency')}
-                    </dt>
-                    <dd className="mt-1 text-gray-900">{order.agency_name}</dd>
+              )}
+
+              {orderRefunds.length === 0 ? (
+                <p className="text-gray-500 text-sm">{t('orderDetail.refunds.empty', 'No refunds recorded for this order.')}</p>
+              ) : (
+                <>
+                  {/* Mobile Card View */}
+                  <div className="block sm:hidden space-y-3">
+                    {orderRefunds.map((refund) => (
+                      <div key={refund.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-rose-700">
+                              {formatAmount(refund.amount)}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {formatDateTime(refund.occurred_at)}
+                            </div>
+                          </div>
+                           {canModify(user) && (
+                              <button
+                                onClick={() => {
+                                  if (order.status === 'open') {
+                                    handleRemoveRefund(refund.id)
+                                  }
+                                }}
+                                disabled={order.status !== 'open'}
+                                className="ml-2 inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                                title={order.status !== 'open' ? t('orderDetail.refunds.cannotRemoveClosed', 'Cannot remove refunds from a closed order') : t('orderDetail.refunds.remove', 'Remove Refund')}
+                              >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                        <div className="mt-2 space-y-1 text-sm">
+                          <div>
+                            <span className="text-gray-500">{t('orderDetail.refunds.method', 'Method')}:</span>{' '}
+                            <span className="text-gray-900">{refund.payment_method_name || '—'}</span>
+                          </div>
+                          {refund.company_account_name && (
+                            <div>
+                              <span className="text-gray-500">{t('orderDetail.refunds.account', 'Account')}:</span>{' '}
+                              <span className="text-gray-900">{refund.company_account_name}</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
-                {order.note && (
-                  <div className="md:col-span-2">
-                    <dt className="text-xs font-semibold uppercase text-gray-500">
-                      {t('orderDetail.details.note', 'Note')}
-                    </dt>
-                    <dd className="mt-1 whitespace-pre-wrap text-gray-900">{order.note}</dd>
+
+                  {/* Desktop Table View */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {t('orderDetail.refunds.date', 'Date')}
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {t('orderDetail.refunds.method', 'Method')}
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {t('orderDetail.refunds.account', 'Account')}
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {t('orderDetail.refunds.amount', 'Amount')}
+                          </th>
+                           {canModify(user) && (
+                              <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                                {t('orderDetail.refunds.actions', 'Actions')}
+                              </th>
+                            )}
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {orderRefunds.map((refund) => (
+                          <tr key={refund.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                              {formatDateTime(refund.occurred_at)}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {refund.payment_method_name || '—'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {refund.company_account_name || '—'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-rose-700 text-right">
+                              {formatAmount(refund.amount)}
+                            </td>
+                             {canModify(user) && (
+                                <td className="px-4 py-3 whitespace-nowrap text-center">
+                                  <button
+                                    onClick={() => {
+                                      if (order.status === 'open') {
+                                        handleRemoveRefund(refund.id)
+                                      }
+                                    }}
+                                    disabled={order.status !== 'open'}
+                                    className="inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                                    title={order.status !== 'open' ? t('orderDetail.refunds.cannotRemoveClosed', 'Cannot remove refunds from a closed order') : t('orderDetail.refunds.remove', 'Remove Refund')}
+                                  >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-gray-50">
+                        <tr>
+                           <td colSpan={canModify(user) ? 4 : 3} className="px-4 py-3 text-right text-sm font-bold text-gray-900">
+                              {t('orderDetail.refunds.total', 'Total Refunded')}:
+                            </td>
+                            <td className="px-4 py-3 text-right text-sm font-bold text-rose-700">
+                              {formatAmount(orderRefunds.reduce((sum, r) => sum + Number(r.amount || 0), 0))}
+                            </td>
+                           {canModify(user) && <td></td>}
+                        </tr>
+                      </tfoot>
+                    </table>
                   </div>
-                )}
-              </dl>
+                </>
+              )}
             </div>
           </div>
 
@@ -1517,7 +2312,11 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, user = null }) {
                 </div>
                 <div>
                   <dt className="text-xs font-medium text-gray-500 uppercase">{t('orderDetail.info.balanceDue', 'Balance Due')}</dt>
-                  <dd className="mt-1 text-gray-900 font-semibold">{formatCurrency(order.balance_due || 0)}</dd>
+                  <dd className="mt-1 text-gray-900 font-semibold">{(() => {
+                    const totalRefunded = orderRefunds.reduce((sum, r) => sum + Number(r.amount || 0), 0)
+                    const calculatedBalance = Number(order.total_amount || 0) - Number(order.total_paid || 0) + totalRefunded
+                    return formatCurrency(calculatedBalance)
+                  })()}</dd>
                 </div>
                 <div>
                   <dt className="text-xs font-medium text-gray-500 uppercase">{t('orderDetail.info.agency', 'Agency')}</dt>

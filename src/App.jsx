@@ -59,50 +59,76 @@ function App() {
   const [loading, setLoading] = useState(true)
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [customerFormCustomer, setCustomerFormCustomer] = useState(null)
+  const [customerFormBackPage, setCustomerFormBackPage] = useState('customers')
+  const [customerFormBackId, setCustomerFormBackId] = useState(null)
   const [customerDetailId, setCustomerDetailId] = useState(null)
   const [customersRefreshKey, setCustomersRefreshKey] = useState(0)
   const [hotelFormHotel, setHotelFormHotel] = useState(null)
+  const [hotelFormBackPage, setHotelFormBackPage] = useState('hotels')
+  const [hotelFormBackId, setHotelFormBackId] = useState(null)
   const [hotelDetailId, setHotelDetailId] = useState(null)
   const [hotelsRefreshKey, setHotelsRefreshKey] = useState(0)
   const [agencyFormAgency, setAgencyFormAgency] = useState(null)
+  const [agencyFormBackPage, setAgencyFormBackPage] = useState('agencies')
+  const [agencyFormBackId, setAgencyFormBackId] = useState(null)
   const [agencyDetailId, setAgencyDetailId] = useState(null)
   const [agenciesRefreshKey, setAgenciesRefreshKey] = useState(0)
   const [instructorFormInstructor, setInstructorFormInstructor] = useState(null)
+  const [instructorFormBackPage, setInstructorFormBackPage] = useState('instructors')
+  const [instructorFormBackId, setInstructorFormBackId] = useState(null)
   const [instructorsRefreshKey, setInstructorsRefreshKey] = useState(0)
   const [instructorDetailId, setInstructorDetailId] = useState(null)
   const [staffFormStaff, setStaffFormStaff] = useState(null)
+  const [staffFormBackPage, setStaffFormBackPage] = useState('staff')
+  const [staffFormBackId, setStaffFormBackId] = useState(null)
   const [staffRefreshKey, setStaffRefreshKey] = useState(0)
   const [staffDetailId, setStaffDetailId] = useState(null)
   const [companyAccountsRefreshKey, setCompanyAccountsRefreshKey] = useState(0)
   const [companyAccountFormAccount, setCompanyAccountFormAccount] = useState(null)
+  const [companyAccountFormBackPage, setCompanyAccountFormBackPage] = useState('companyAccounts')
+  const [companyAccountFormBackId, setCompanyAccountFormBackId] = useState(null)
   const [companyAccountDetailId, setCompanyAccountDetailId] = useState(null)
   const [thirdPartiesRefreshKey, setThirdPartiesRefreshKey] = useState(0)
   const [thirdPartyFormItem, setThirdPartyFormItem] = useState(null)
+  const [thirdPartyFormBackPage, setThirdPartyFormBackPage] = useState('thirdParties')
+  const [thirdPartyFormBackId, setThirdPartyFormBackId] = useState(null)
   const [thirdPartyDetailId, setThirdPartyDetailId] = useState(null)
   const [transactionsRefreshKey, setTransactionsRefreshKey] = useState(0)
   const [transactionFormTransaction, setTransactionFormTransaction] = useState(null)
+  const [transactionFormBackPage, setTransactionFormBackPage] = useState('transactions')
+  const [transactionFormBackId, setTransactionFormBackId] = useState(null)
   const [transactionDetailId, setTransactionDetailId] = useState(null)
   const [orderDetailId, setOrderDetailId] = useState(null)
   const [orderDetailBackPage, setOrderDetailBackPage] = useState('customers')
   const [orderDetailBackId, setOrderDetailBackId] = useState(null)
   const [productsRefreshKey, setProductsRefreshKey] = useState(0)
   const [productFormProduct, setProductFormProduct] = useState(null)
+  const [productFormBackPage, setProductFormBackPage] = useState('products')
+  const [productFormBackId, setProductFormBackId] = useState(null)
   const [productDetailId, setProductDetailId] = useState(null)
   const [ordersRefreshKey, setOrdersRefreshKey] = useState(0)
   const [orderFormOrder, setOrderFormOrder] = useState(null)
   const [orderFormCustomer, setOrderFormCustomer] = useState(null)
+  const [orderFormBackPage, setOrderFormBackPage] = useState('orders')
+  const [orderFormBackId, setOrderFormBackId] = useState(null)
   const [servicesRefreshKey, setServicesRefreshKey] = useState(0)
   const [serviceFormService, setServiceFormService] = useState(null)
+  const [serviceFormBackPage, setServiceFormBackPage] = useState('services')
+  const [serviceFormBackId, setServiceFormBackId] = useState(null)
   const [serviceDetailId, setServiceDetailId] = useState(null)
   const [servicePackagesRefreshKey, setServicePackagesRefreshKey] = useState(0)
   const [servicePackageFormPackage, setServicePackageFormPackage] = useState(null)
   const [servicePackageFormService, setServicePackageFormService] = useState(null)
+  const [servicePackageFormBackPage, setServicePackageFormBackPage] = useState('servicePackages')
+  const [servicePackageFormBackId, setServicePackageFormBackId] = useState(null)
   const [servicePackageDetailId, setServicePackageDetailId] = useState(null)
   const [servicePackageDetailBackPage, setServicePackageDetailBackPage] = useState('servicePackages')
   const [servicePackageDetailBackId, setServicePackageDetailBackId] = useState(null)
   const [appointmentsRefreshKey, setAppointmentsRefreshKey] = useState(0)
   const [appointmentFormAppointment, setAppointmentFormAppointment] = useState(null)
   const [appointmentFormCustomer, setAppointmentFormCustomer] = useState(null)
+  const [appointmentFormBackPage, setAppointmentFormBackPage] = useState('appointments')
+  const [appointmentFormBackId, setAppointmentFormBackId] = useState(null)
   const [appointmentDetailId, setAppointmentDetailId] = useState(null)
   const [appointmentDetailBackPage, setAppointmentDetailBackPage] = useState('appointments')
   const [customerDetailBackPage, setCustomerDetailBackPage] = useState('customers')
@@ -183,8 +209,10 @@ function App() {
     setIsSidebarOpen((prev) => !prev)
   }
 
-  const openCustomerForm = (customer = null) => {
+  const openCustomerForm = (customer = null, backPage = 'customers', backId = null) => {
     setCustomerFormCustomer(customer)
+    setCustomerFormBackPage(backPage)
+    setCustomerFormBackId(backId)
     setCurrentPage('customerForm')
   }
 
@@ -195,14 +223,42 @@ function App() {
   }
 
   const handleCustomerFormSaved = () => {
+    const backPage = customerFormBackPage
+    const backId = customerFormBackId
+    
     setCustomersRefreshKey((prev) => prev + 1)
     setCustomerFormCustomer(null)
-    setCurrentPage('customers')
+    
+    // Navigate back to where we came from
+    if (backPage === 'customerDetail' && backId) {
+      setCustomerDetailId(backId)
+      setCurrentPage('customerDetail')
+    } else {
+      setCurrentPage(backPage || 'customers')
+    }
+    
+    // Reset back page tracking
+    setCustomerFormBackPage('customers')
+    setCustomerFormBackId(null)
   }
 
   const handleCustomerFormCancel = () => {
+    const backPage = customerFormBackPage
+    const backId = customerFormBackId
+    
     setCustomerFormCustomer(null)
-    setCurrentPage('customers')
+    
+    // Navigate back to where we came from
+    if (backPage === 'customerDetail' && backId) {
+      setCustomerDetailId(backId)
+      setCurrentPage('customerDetail')
+    } else {
+      setCurrentPage(backPage || 'customers')
+    }
+    
+    // Reset back page tracking
+    setCustomerFormBackPage('customers')
+    setCustomerFormBackId(null)
   }
 
   const handleCustomerDetailBack = () => {
@@ -212,9 +268,7 @@ function App() {
   }
 
   const handleCustomerDetailEdit = (customer) => {
-    setCustomerFormCustomer(customer)
-    setCustomerDetailId(null)
-    setCurrentPage('customerForm')
+    openCustomerForm(customer, 'customerDetail', customerDetailId)
   }
 
   const handleCustomerDetailDelete = () => {
@@ -228,41 +282,79 @@ function App() {
     setCurrentPage('orders')
   }
 
-  const openOrderForm = (order = null, customer = null) => {
+  const openOrderForm = (order = null, customer = null, backPage = 'orders', backId = null) => {
     setOrderFormOrder(order)
     setOrderFormCustomer(customer)
+    setOrderFormBackPage(backPage)
+    setOrderFormBackId(backId)
     setCurrentPage('orderForm')
   }
 
   const handleOrderFormSaved = () => {
+    const wasEditing = !!orderFormOrder
+    const wasFromCustomer = !!orderFormCustomer
+    const customerId = orderFormCustomer?.id
+    const backPage = orderFormBackPage
+    const backId = orderFormBackId
+    
     setOrderFormOrder(null)
     setOrderFormCustomer(null)
     setOrdersRefreshKey((prev) => prev + 1)
-    if (orderFormOrder) {
+    
+    // Navigate back to where we came from
+    if (backPage === 'orderDetail' && backId) {
+      // If we came from order detail, go back there
+      setOrderDetailId(backId)
+      setCurrentPage('orderDetail')
+    } else if (wasEditing) {
       // After editing, go to order detail
       setOrderDetailId(orderFormOrder.id)
       setCurrentPage('orderDetail')
-    } else {
-      // After creating, go to orders list
-      setCurrentPage('orders')
-    }
-  }
-
-  const handleOrderFormCancel = () => {
-    setOrderFormOrder(null)
-    setOrderFormCustomer(null)
-    if (orderFormOrder) {
-      // If editing, go back to order detail
-      setOrderDetailId(orderFormOrder.id)
-      setCurrentPage('orderDetail')
-    } else if (orderFormCustomer) {
-      // If creating from customer detail, go back to customer
-      setCustomerDetailId(orderFormCustomer.id)
+    } else if (wasFromCustomer && customerId) {
+      // After creating from customer detail, go back to customer detail
+      setCustomerDetailId(customerId)
       setCurrentPage('customerDetail')
     } else {
       // Otherwise, go to orders list
-      setCurrentPage('orders')
+      setCurrentPage(backPage || 'orders')
     }
+    
+    // Reset back page tracking
+    setOrderFormBackPage('orders')
+    setOrderFormBackId(null)
+  }
+
+  const handleOrderFormCancel = () => {
+    const wasEditing = !!orderFormOrder
+    const wasFromCustomer = !!orderFormCustomer
+    const customerId = orderFormCustomer?.id
+    const backPage = orderFormBackPage
+    const backId = orderFormBackId
+    
+    setOrderFormOrder(null)
+    setOrderFormCustomer(null)
+    
+    // Navigate back to where we came from
+    if (backPage === 'orderDetail' && backId) {
+      // If we came from order detail, go back there
+      setOrderDetailId(backId)
+      setCurrentPage('orderDetail')
+    } else if (wasEditing) {
+      // If editing, go back to order detail
+      setOrderDetailId(orderFormOrder.id)
+      setCurrentPage('orderDetail')
+    } else if (wasFromCustomer && customerId) {
+      // If creating from customer detail, go back to customer
+      setCustomerDetailId(customerId)
+      setCurrentPage('customerDetail')
+    } else {
+      // Otherwise, go to orders list
+      setCurrentPage(backPage || 'orders')
+    }
+    
+    // Reset back page tracking
+    setOrderFormBackPage('orders')
+    setOrderFormBackId(null)
   }
 
   const openOrderDetail = (order, backPage = 'customers', backId = null) => {
@@ -287,7 +379,7 @@ function App() {
   }
 
   const handleOrderDetailEdit = (order) => {
-    openOrderForm(order)
+    openOrderForm(order, null, 'orderDetail', orderDetailId)
   }
 
   const handleOrderDetailDelete = () => {
@@ -300,20 +392,46 @@ function App() {
     handleOrderDetailBack()
   }
 
-  const openProductForm = (product = null) => {
+  const openProductForm = (product = null, backPage = 'products', backId = null) => {
     setProductFormProduct(product)
+    setProductFormBackPage(backPage)
+    setProductFormBackId(backId)
     setCurrentPage('productForm')
   }
 
   const handleProductFormSaved = () => {
+    const backPage = productFormBackPage
+    const backId = productFormBackId
+    
     setProductsRefreshKey((prev) => prev + 1)
     setProductFormProduct(null)
-    setCurrentPage('products')
+    
+    if (backPage === 'productDetail' && backId) {
+      setProductDetailId(backId)
+      setCurrentPage('productDetail')
+    } else {
+      setCurrentPage(backPage || 'products')
+    }
+    
+    setProductFormBackPage('products')
+    setProductFormBackId(null)
   }
 
   const handleProductFormCancel = () => {
+    const backPage = productFormBackPage
+    const backId = productFormBackId
+    
     setProductFormProduct(null)
-    setCurrentPage('products')
+    
+    if (backPage === 'productDetail' && backId) {
+      setProductDetailId(backId)
+      setCurrentPage('productDetail')
+    } else {
+      setCurrentPage(backPage || 'products')
+    }
+    
+    setProductFormBackPage('products')
+    setProductFormBackId(null)
   }
 
   const openProductDetail = (product) => {
@@ -327,9 +445,7 @@ function App() {
   }
 
   const handleProductDetailEdit = (product) => {
-    setProductFormProduct(product)
-    setProductDetailId(null)
-    setCurrentPage('productForm')
+    openProductForm(product, 'productDetail', productDetailId)
   }
 
   const handleProductDetailDelete = () => {
@@ -338,20 +454,46 @@ function App() {
     setCurrentPage('products')
   }
 
-  const openServiceForm = (service = null) => {
+  const openServiceForm = (service = null, backPage = 'services', backId = null) => {
     setServiceFormService(service)
+    setServiceFormBackPage(backPage)
+    setServiceFormBackId(backId)
     setCurrentPage('serviceForm')
   }
 
   const handleServiceFormSaved = () => {
+    const backPage = serviceFormBackPage
+    const backId = serviceFormBackId
+    
     setServicesRefreshKey((prev) => prev + 1)
     setServiceFormService(null)
-    setCurrentPage('services')
+    
+    if (backPage === 'serviceDetail' && backId) {
+      setServiceDetailId(backId)
+      setCurrentPage('serviceDetail')
+    } else {
+      setCurrentPage(backPage || 'services')
+    }
+    
+    setServiceFormBackPage('services')
+    setServiceFormBackId(null)
   }
 
   const handleServiceFormCancel = () => {
+    const backPage = serviceFormBackPage
+    const backId = serviceFormBackId
+    
     setServiceFormService(null)
-    setCurrentPage('services')
+    
+    if (backPage === 'serviceDetail' && backId) {
+      setServiceDetailId(backId)
+      setCurrentPage('serviceDetail')
+    } else {
+      setCurrentPage(backPage || 'services')
+    }
+    
+    setServiceFormBackPage('services')
+    setServiceFormBackId(null)
   }
 
   const openServiceDetail = (service) => {
@@ -365,9 +507,7 @@ function App() {
   }
 
   const handleServiceDetailEdit = (service) => {
-    setServiceFormService(service)
-    setServiceDetailId(null)
-    setCurrentPage('serviceForm')
+    openServiceForm(service, 'serviceDetail', serviceDetailId)
   }
 
   const handleServiceDetailDelete = () => {
@@ -377,9 +517,7 @@ function App() {
   }
 
   const handleServiceDetailAddPackage = (service) => {
-    setServicePackageFormService(service)
-    setServiceDetailId(null)
-    setCurrentPage('servicePackageForm')
+    openServicePackageForm(null, service, 'serviceDetail', serviceDetailId)
   }
 
   const handleServiceDetailViewPackage = (pkg) => {
@@ -393,41 +531,76 @@ function App() {
     setCurrentPage('servicePackages')
   }
 
-  const openServicePackageForm = (pkg = null, service = null) => {
+  const openServicePackageForm = (pkg = null, service = null, backPage = 'servicePackages', backId = null) => {
     setServicePackageFormPackage(pkg)
     setServicePackageFormService(service)
+    setServicePackageFormBackPage(backPage)
+    setServicePackageFormBackId(backId)
     setCurrentPage('servicePackageForm')
   }
 
   const handleServicePackageFormSaved = () => {
+    const backPage = servicePackageFormBackPage
+    const backId = servicePackageFormBackId
+    
     setServicePackagesRefreshKey((prev) => prev + 1)
     setServicesRefreshKey((prev) => prev + 1) // Refresh services too in case package count changed
     setServicePackageFormPackage(null)
     setServicePackageFormService(null)
-    // If we came from service detail, go back there
-    if (serviceDetailId || servicePackageFormService) {
+    
+    // Navigate back to where we came from
+    if (backPage === 'servicePackageDetail' && backId) {
+      setServicePackageDetailId(backId)
+      setCurrentPage('servicePackageDetail')
+    } else if (backPage === 'serviceDetail' && backId) {
+      setServiceDetailId(backId)
+      setCurrentPage('serviceDetail')
+    } else if (serviceDetailId || servicePackageFormService) {
+      // Legacy support: if we came from service detail, go back there
       const backToServiceId = serviceDetailId || servicePackageFormService?.id
       if (backToServiceId) {
         setServiceDetailId(backToServiceId)
         setCurrentPage('serviceDetail')
       } else {
-        setCurrentPage('servicePackages')
+        setCurrentPage(backPage || 'servicePackages')
       }
     } else {
-      setCurrentPage('servicePackages')
+      setCurrentPage(backPage || 'servicePackages')
     }
+    
+    setServicePackageFormBackPage('servicePackages')
+    setServicePackageFormBackId(null)
   }
 
   const handleServicePackageFormCancel = () => {
-    const backToServiceId = serviceDetailId || servicePackageFormService?.id
+    const backPage = servicePackageFormBackPage
+    const backId = servicePackageFormBackId
+    
     setServicePackageFormPackage(null)
     setServicePackageFormService(null)
-    if (backToServiceId) {
-      setServiceDetailId(backToServiceId)
+    
+    // Navigate back to where we came from
+    if (backPage === 'servicePackageDetail' && backId) {
+      setServicePackageDetailId(backId)
+      setCurrentPage('servicePackageDetail')
+    } else if (backPage === 'serviceDetail' && backId) {
+      setServiceDetailId(backId)
       setCurrentPage('serviceDetail')
+    } else if (serviceDetailId || servicePackageFormService) {
+      // Legacy support: if we came from service detail, go back there
+      const backToServiceId = serviceDetailId || servicePackageFormService?.id
+      if (backToServiceId) {
+        setServiceDetailId(backToServiceId)
+        setCurrentPage('serviceDetail')
+      } else {
+        setCurrentPage(backPage || 'servicePackages')
+      }
     } else {
-      setCurrentPage('servicePackages')
+      setCurrentPage(backPage || 'servicePackages')
     }
+    
+    setServicePackageFormBackPage('servicePackages')
+    setServicePackageFormBackId(null)
   }
 
   const openServicePackageDetail = (pkg, backPage = 'servicePackages', backId = null) => {
@@ -452,9 +625,7 @@ function App() {
   }
 
   const handleServicePackageDetailEdit = (pkg) => {
-    setServicePackageFormPackage(pkg)
-    setServicePackageDetailId(null)
-    setCurrentPage('servicePackageForm')
+    openServicePackageForm(pkg, null, 'servicePackageDetail', servicePackageDetailId)
   }
 
   const handleServicePackageDetailDelete = () => {
@@ -479,20 +650,46 @@ function App() {
   }
 
 
-  const openHotelForm = (hotel = null) => {
+  const openHotelForm = (hotel = null, backPage = 'hotels', backId = null) => {
     setHotelFormHotel(hotel)
+    setHotelFormBackPage(backPage)
+    setHotelFormBackId(backId)
     setCurrentPage('hotelForm')
   }
 
   const handleHotelFormSaved = () => {
+    const backPage = hotelFormBackPage
+    const backId = hotelFormBackId
+    
     setHotelsRefreshKey((prev) => prev + 1)
     setHotelFormHotel(null)
-    setCurrentPage('hotels')
+    
+    if (backPage === 'hotelDetail' && backId) {
+      setHotelDetailId(backId)
+      setCurrentPage('hotelDetail')
+    } else {
+      setCurrentPage(backPage || 'hotels')
+    }
+    
+    setHotelFormBackPage('hotels')
+    setHotelFormBackId(null)
   }
 
   const handleHotelFormCancel = () => {
+    const backPage = hotelFormBackPage
+    const backId = hotelFormBackId
+    
     setHotelFormHotel(null)
-    setCurrentPage('hotels')
+    
+    if (backPage === 'hotelDetail' && backId) {
+      setHotelDetailId(backId)
+      setCurrentPage('hotelDetail')
+    } else {
+      setCurrentPage(backPage || 'hotels')
+    }
+    
+    setHotelFormBackPage('hotels')
+    setHotelFormBackId(null)
   }
 
   const openHotelDetail = (hotel) => {
@@ -506,9 +703,7 @@ function App() {
   }
 
   const handleHotelDetailEdit = (hotel) => {
-    setHotelFormHotel(hotel)
-    setHotelDetailId(null)
-    setCurrentPage('hotelForm')
+    openHotelForm(hotel, 'hotelDetail', hotelDetailId)
   }
 
   const handleHotelDetailDelete = () => {
@@ -517,20 +712,46 @@ function App() {
     setCurrentPage('hotels')
   }
 
-  const openAgencyForm = (agency = null) => {
+  const openAgencyForm = (agency = null, backPage = 'agencies', backId = null) => {
     setAgencyFormAgency(agency)
+    setAgencyFormBackPage(backPage)
+    setAgencyFormBackId(backId)
     setCurrentPage('agencyForm')
   }
 
   const handleAgencyFormSaved = () => {
+    const backPage = agencyFormBackPage
+    const backId = agencyFormBackId
+    
     setAgenciesRefreshKey((prev) => prev + 1)
     setAgencyFormAgency(null)
-    setCurrentPage('agencies')
+    
+    if (backPage === 'agencyDetail' && backId) {
+      setAgencyDetailId(backId)
+      setCurrentPage('agencyDetail')
+    } else {
+      setCurrentPage(backPage || 'agencies')
+    }
+    
+    setAgencyFormBackPage('agencies')
+    setAgencyFormBackId(null)
   }
 
   const handleAgencyFormCancel = () => {
+    const backPage = agencyFormBackPage
+    const backId = agencyFormBackId
+    
     setAgencyFormAgency(null)
-    setCurrentPage('agencies')
+    
+    if (backPage === 'agencyDetail' && backId) {
+      setAgencyDetailId(backId)
+      setCurrentPage('agencyDetail')
+    } else {
+      setCurrentPage(backPage || 'agencies')
+    }
+    
+    setAgencyFormBackPage('agencies')
+    setAgencyFormBackId(null)
   }
 
   const openAgencyDetail = (agency) => {
@@ -544,9 +765,7 @@ function App() {
   }
 
   const handleAgencyDetailEdit = (agency) => {
-    setAgencyFormAgency(agency)
-    setAgencyDetailId(null)
-    setCurrentPage('agencyForm')
+    openAgencyForm(agency, 'agencyDetail', agencyDetailId)
   }
 
   const handleAgencyDetailDelete = () => {
@@ -555,20 +774,46 @@ function App() {
     setCurrentPage('agencies')
   }
 
-  const openInstructorForm = (instructor = null) => {
+  const openInstructorForm = (instructor = null, backPage = 'instructors', backId = null) => {
     setInstructorFormInstructor(instructor)
+    setInstructorFormBackPage(backPage)
+    setInstructorFormBackId(backId)
     setCurrentPage('instructorForm')
   }
 
   const handleInstructorFormSaved = () => {
+    const backPage = instructorFormBackPage
+    const backId = instructorFormBackId
+    
     setInstructorsRefreshKey((prev) => prev + 1)
     setInstructorFormInstructor(null)
-    setCurrentPage('instructors')
+    
+    if (backPage === 'instructorDetail' && backId) {
+      setInstructorDetailId(backId)
+      setCurrentPage('instructorDetail')
+    } else {
+      setCurrentPage(backPage || 'instructors')
+    }
+    
+    setInstructorFormBackPage('instructors')
+    setInstructorFormBackId(null)
   }
 
   const handleInstructorFormCancel = () => {
+    const backPage = instructorFormBackPage
+    const backId = instructorFormBackId
+    
     setInstructorFormInstructor(null)
-    setCurrentPage('instructors')
+    
+    if (backPage === 'instructorDetail' && backId) {
+      setInstructorDetailId(backId)
+      setCurrentPage('instructorDetail')
+    } else {
+      setCurrentPage(backPage || 'instructors')
+    }
+    
+    setInstructorFormBackPage('instructors')
+    setInstructorFormBackId(null)
   }
 
   const openInstructorDetail = (instructor, backPage = 'instructors') => {
@@ -599,20 +844,46 @@ function App() {
     }
   }
 
-  const openStaffForm = (staff = null) => {
+  const openStaffForm = (staff = null, backPage = 'staff', backId = null) => {
     setStaffFormStaff(staff)
+    setStaffFormBackPage(backPage)
+    setStaffFormBackId(backId)
     setCurrentPage('staffForm')
   }
 
   const handleStaffFormSaved = () => {
+    const backPage = staffFormBackPage
+    const backId = staffFormBackId
+    
     setStaffRefreshKey((prev) => prev + 1)
     setStaffFormStaff(null)
-    setCurrentPage('staff')
+    
+    if (backPage === 'staffDetail' && backId) {
+      setStaffDetailId(backId)
+      setCurrentPage('staffDetail')
+    } else {
+      setCurrentPage(backPage || 'staff')
+    }
+    
+    setStaffFormBackPage('staff')
+    setStaffFormBackId(null)
   }
 
   const handleStaffFormCancel = () => {
+    const backPage = staffFormBackPage
+    const backId = staffFormBackId
+    
     setStaffFormStaff(null)
-    setCurrentPage('staff')
+    
+    if (backPage === 'staffDetail' && backId) {
+      setStaffDetailId(backId)
+      setCurrentPage('staffDetail')
+    } else {
+      setCurrentPage(backPage || 'staff')
+    }
+    
+    setStaffFormBackPage('staff')
+    setStaffFormBackId(null)
   }
 
   const openStaffDetail = (staff) => {
@@ -626,9 +897,7 @@ function App() {
   }
 
   const handleStaffDetailEdit = (staff) => {
-    setStaffFormStaff(staff)
-    setStaffDetailId(null)
-    setCurrentPage('staffForm')
+    openStaffForm(staff, 'staffDetail', staffDetailId)
   }
 
   const handleStaffDetailDelete = () => {
@@ -638,20 +907,46 @@ function App() {
   }
 
 
-  const openCompanyAccountForm = (account = null) => {
+  const openCompanyAccountForm = (account = null, backPage = 'companyAccounts', backId = null) => {
     setCompanyAccountFormAccount(account)
+    setCompanyAccountFormBackPage(backPage)
+    setCompanyAccountFormBackId(backId)
     setCurrentPage('companyAccountForm')
   }
 
   const handleCompanyAccountFormSaved = () => {
+    const backPage = companyAccountFormBackPage
+    const backId = companyAccountFormBackId
+    
     setCompanyAccountsRefreshKey((prev) => prev + 1)
     setCompanyAccountFormAccount(null)
-    setCurrentPage('companyAccounts')
+    
+    if (backPage === 'companyAccountDetail' && backId) {
+      setCompanyAccountDetailId(backId)
+      setCurrentPage('companyAccountDetail')
+    } else {
+      setCurrentPage(backPage || 'companyAccounts')
+    }
+    
+    setCompanyAccountFormBackPage('companyAccounts')
+    setCompanyAccountFormBackId(null)
   }
 
   const handleCompanyAccountFormCancel = () => {
+    const backPage = companyAccountFormBackPage
+    const backId = companyAccountFormBackId
+    
     setCompanyAccountFormAccount(null)
-    setCurrentPage('companyAccounts')
+    
+    if (backPage === 'companyAccountDetail' && backId) {
+      setCompanyAccountDetailId(backId)
+      setCurrentPage('companyAccountDetail')
+    } else {
+      setCurrentPage(backPage || 'companyAccounts')
+    }
+    
+    setCompanyAccountFormBackPage('companyAccounts')
+    setCompanyAccountFormBackId(null)
   }
 
   const openCompanyAccountDetail = (account) => {
@@ -665,9 +960,7 @@ function App() {
   }
 
   const handleCompanyAccountDetailEdit = (account) => {
-    setCompanyAccountFormAccount(account)
-    setCompanyAccountDetailId(null)
-    setCurrentPage('companyAccountForm')
+    openCompanyAccountForm(account, 'companyAccountDetail', companyAccountDetailId)
   }
 
   const handleCompanyAccountDetailDelete = () => {
@@ -676,20 +969,46 @@ function App() {
     setCurrentPage('companyAccounts')
   }
 
-  const openThirdPartyForm = (thirdParty = null) => {
+  const openThirdPartyForm = (thirdParty = null, backPage = 'thirdParties', backId = null) => {
     setThirdPartyFormItem(thirdParty)
+    setThirdPartyFormBackPage(backPage)
+    setThirdPartyFormBackId(backId)
     setCurrentPage('thirdPartyForm')
   }
 
   const handleThirdPartyFormSaved = () => {
+    const backPage = thirdPartyFormBackPage
+    const backId = thirdPartyFormBackId
+    
     setThirdPartiesRefreshKey((prev) => prev + 1)
     setThirdPartyFormItem(null)
-    setCurrentPage('thirdParties')
+    
+    if (backPage === 'thirdPartyDetail' && backId) {
+      setThirdPartyDetailId(backId)
+      setCurrentPage('thirdPartyDetail')
+    } else {
+      setCurrentPage(backPage || 'thirdParties')
+    }
+    
+    setThirdPartyFormBackPage('thirdParties')
+    setThirdPartyFormBackId(null)
   }
 
   const handleThirdPartyFormCancel = () => {
+    const backPage = thirdPartyFormBackPage
+    const backId = thirdPartyFormBackId
+    
     setThirdPartyFormItem(null)
-    setCurrentPage('thirdParties')
+    
+    if (backPage === 'thirdPartyDetail' && backId) {
+      setThirdPartyDetailId(backId)
+      setCurrentPage('thirdPartyDetail')
+    } else {
+      setCurrentPage(backPage || 'thirdParties')
+    }
+    
+    setThirdPartyFormBackPage('thirdParties')
+    setThirdPartyFormBackId(null)
   }
 
   const openThirdPartyDetail = (thirdParty) => {
@@ -703,9 +1022,7 @@ function App() {
   }
 
   const handleThirdPartyDetailEdit = (thirdParty) => {
-    setThirdPartyFormItem(thirdParty)
-    setThirdPartyDetailId(null)
-    setCurrentPage('thirdPartyForm')
+    openThirdPartyForm(thirdParty, 'thirdPartyDetail', thirdPartyDetailId)
   }
 
   const handleThirdPartyDetailDelete = () => {
@@ -714,20 +1031,46 @@ function App() {
     setCurrentPage('thirdParties')
   }
 
-  const openTransactionForm = (transactionEntry = null) => {
+  const openTransactionForm = (transactionEntry = null, backPage = 'transactions', backId = null) => {
     setTransactionFormTransaction(transactionEntry)
+    setTransactionFormBackPage(backPage)
+    setTransactionFormBackId(backId)
     setCurrentPage('transactionForm')
   }
 
   const handleTransactionFormSaved = () => {
+    const backPage = transactionFormBackPage
+    const backId = transactionFormBackId
+    
     setTransactionsRefreshKey((prev) => prev + 1)
     setTransactionFormTransaction(null)
-    setCurrentPage('transactions')
+    
+    if (backPage === 'transactionDetail' && backId) {
+      setTransactionDetailId(backId)
+      setCurrentPage('transactionDetail')
+    } else {
+      setCurrentPage(backPage || 'transactions')
+    }
+    
+    setTransactionFormBackPage('transactions')
+    setTransactionFormBackId(null)
   }
 
   const handleTransactionFormCancel = () => {
+    const backPage = transactionFormBackPage
+    const backId = transactionFormBackId
+    
     setTransactionFormTransaction(null)
-    setCurrentPage('transactions')
+    
+    if (backPage === 'transactionDetail' && backId) {
+      setTransactionDetailId(backId)
+      setCurrentPage('transactionDetail')
+    } else {
+      setCurrentPage(backPage || 'transactions')
+    }
+    
+    setTransactionFormBackPage('transactions')
+    setTransactionFormBackId(null)
   }
 
   const openTransactionDetail = (transaction) => {
@@ -741,9 +1084,7 @@ function App() {
   }
 
   const handleTransactionDetailEdit = (transaction) => {
-    setTransactionFormTransaction(transaction)
-    setTransactionDetailId(null)
-    setCurrentPage('transactionForm')
+    openTransactionForm(transaction, 'transactionDetail', transactionDetailId)
   }
 
   const handleTransactionDetailDelete = () => {
@@ -752,37 +1093,68 @@ function App() {
     setCurrentPage('transactions')
   }
 
-  const openAppointmentForm = (appointment = null, customer = null) => {
+  const openAppointmentForm = (appointment = null, customer = null, backPage = 'appointments', backId = null) => {
     setAppointmentFormAppointment(appointment)
     setAppointmentFormCustomer(customer)
+    setAppointmentFormBackPage(backPage)
+    setAppointmentFormBackId(backId)
     setCurrentPage('appointmentForm')
   }
 
   const handleAppointmentFormSaved = () => {
-    setAppointmentFormAppointment(null)
+    const wasEditing = !!appointmentFormAppointment
     const savedCustomer = appointmentFormCustomer
+    const backPage = appointmentFormBackPage
+    const backId = appointmentFormBackId
+    
+    setAppointmentFormAppointment(null)
     setAppointmentFormCustomer(null)
     setAppointmentsRefreshKey((prev) => prev + 1)
-    // If we were adding from customer detail, go back to customer detail
-    if (savedCustomer) {
+    
+    // Navigate back to where we came from
+    if (backPage === 'appointmentDetail' && backId) {
+      // If we came from appointment detail, go back there
+      setAppointmentDetailId(backId)
+      setCurrentPage('appointmentDetail')
+    } else if (savedCustomer) {
+      // If we were adding from customer detail, go back to customer detail
       setCustomerDetailId(savedCustomer.id)
       setCurrentPage('customerDetail')
     } else {
-      setCurrentPage('appointments')
+      // Otherwise, go to appointments list
+      setCurrentPage(backPage || 'appointments')
     }
+    
+    // Reset back page tracking
+    setAppointmentFormBackPage('appointments')
+    setAppointmentFormBackId(null)
   }
 
   const handleAppointmentFormCancel = () => {
-    setAppointmentFormAppointment(null)
     const cancelledCustomer = appointmentFormCustomer
+    const backPage = appointmentFormBackPage
+    const backId = appointmentFormBackId
+    
+    setAppointmentFormAppointment(null)
     setAppointmentFormCustomer(null)
-    // If we were adding from customer detail, go back to customer detail
-    if (cancelledCustomer) {
+    
+    // Navigate back to where we came from
+    if (backPage === 'appointmentDetail' && backId) {
+      // If we came from appointment detail, go back there
+      setAppointmentDetailId(backId)
+      setCurrentPage('appointmentDetail')
+    } else if (cancelledCustomer) {
+      // If we were adding from customer detail, go back to customer detail
       setCustomerDetailId(cancelledCustomer.id)
       setCurrentPage('customerDetail')
     } else {
-      setCurrentPage('appointments')
+      // Otherwise, go to appointments list
+      setCurrentPage(backPage || 'appointments')
     }
+    
+    // Reset back page tracking
+    setAppointmentFormBackPage('appointments')
+    setAppointmentFormBackId(null)
   }
 
   const handleAppointmentView = (appointment, backPage = 'appointments') => {
@@ -802,7 +1174,7 @@ function App() {
   }
 
   const handleAppointmentDetailEdit = (appointment) => {
-    openAppointmentForm(appointment)
+    openAppointmentForm(appointment, null, 'appointmentDetail', appointmentDetailId)
   }
 
   const handleAppointmentDetailDelete = () => {
@@ -998,7 +1370,7 @@ function App() {
           <InstructorDetail
             instructorId={instructorDetailId}
             onBack={handleInstructorDetailBack}
-            onEdit={(instructor) => openInstructorForm(instructor)}
+            onEdit={(instructor) => openInstructorForm(instructor, 'instructorDetail', instructorDetailId)}
             onDelete={handleInstructorDetailDelete}
             user={user}
           />
@@ -1202,6 +1574,7 @@ function App() {
             onDelete={handleAppointmentDetailDelete}
             onViewCustomer={(customer) => openCustomerDetail(customer, 'appointmentDetail')}
             onViewInstructor={(instructor) => openInstructorDetail(instructor, 'appointmentDetail')}
+            onViewOrder={(order) => openOrderDetail(order, 'appointmentDetail', appointmentDetailId)}
             user={user}
           />
         )

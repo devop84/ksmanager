@@ -138,9 +138,41 @@ function Orders({ onAddOrder = () => {}, onEditOrder = () => {}, onViewOrder = (
 
   const handleDelete = async (orderId, event) => {
     event.stopPropagation()
-    if (!window.confirm(t('orders.confirm.delete', 'Are you sure you want to delete this order? This action cannot be undone.'))) return
+    
+    // Count all appointments (including completed) that will be deleted
+    const allAppointments = await sql`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE status = 'completed') as completed,
+        COUNT(*) FILTER (WHERE status IN ('scheduled', 'rescheduled', 'no_show')) as scheduled
+      FROM scheduled_appointments
+      WHERE order_id = ${orderId}
+    `
+    const totalCount = allAppointments?.[0]?.total || 0
+    const completedCount = allAppointments?.[0]?.completed || 0
+    const scheduledCount = allAppointments?.[0]?.scheduled || 0
+    
+    let confirmMessage
+    if (totalCount > 0) {
+      if (completedCount > 0) {
+        confirmMessage = t('orders.confirm.deleteWithCompleted', 'WARNING: This order has {{total}} appointment(s) including {{completed}} completed appointment(s). Deleting will PERMANENTLY DELETE ALL appointments (including completed ones), remove credits, and delete the order. This action cannot be undone. Are you sure?', { 
+          total: totalCount, 
+          completed: completedCount 
+        })
+      } else {
+        confirmMessage = t('orders.confirm.deleteWithAppointments', 'This order has {{count}} appointment(s). Deleting will PERMANENTLY DELETE ALL appointments, remove credits, and delete the order. This action cannot be undone. Are you sure?', { count: totalCount })
+      }
+    } else {
+      confirmMessage = t('orders.confirm.delete', 'Are you sure you want to delete this order? This will remove all credits and delete the order. This action cannot be undone.')
+    }
+    
+    if (!window.confirm(confirmMessage)) return
     try {
       setDeletingId(orderId)
+      
+      // No need to manually update appointments - they will be deleted via CASCADE
+      // when the order is deleted
+      
       // Delete credits associated with this order's items (before deleting order)
       // Note: Database CASCADE should handle this, but we're being explicit
       await sql`
@@ -149,7 +181,9 @@ function Orders({ onAddOrder = () => {}, onEditOrder = () => {}, onViewOrder = (
           SELECT id FROM order_items WHERE order_id = ${orderId}
         )
       `
+      
       // Delete the order (this will also CASCADE delete order_items)
+      // Note: order_id in appointments is now NULL, so deletion will succeed
       await sql`DELETE FROM orders WHERE id = ${orderId}`
       setOrders((prev) => prev.filter((order) => order.id !== orderId))
       setTableData((prev) => prev.filter((order) => order.id !== orderId))

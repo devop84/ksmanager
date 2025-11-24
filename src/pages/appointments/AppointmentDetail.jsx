@@ -32,7 +32,7 @@ const statusStyles = {
   }
 }
 
-function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCustomer, onViewInstructor, user = null }) {
+function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCustomer, onViewInstructor, onViewOrder, user = null }) {
   const [appointment, setAppointment] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -76,6 +76,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
             sa.service_id,
             sa.service_package_id,
             sa.credit_id,
+            sa.order_id,
             sa.scheduled_start,
             sa.scheduled_end,
             sa.duration_hours,
@@ -100,7 +101,9 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
             sp.name AS service_package_name,
             i.fullname AS instructor_name,
             st.fullname AS staff_name,
-            u.name AS created_by_name
+            u.name AS created_by_name,
+            o.order_number,
+            o.status AS order_status
           FROM scheduled_appointments sa
           LEFT JOIN customers c ON sa.customer_id = c.id
           LEFT JOIN services s ON sa.service_id = s.id
@@ -109,6 +112,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
           LEFT JOIN instructors i ON sa.instructor_id = i.id
           LEFT JOIN staff st ON sa.staff_id = st.id
           LEFT JOIN users u ON sa.created_by = u.id
+          LEFT JOIN orders o ON sa.order_id = o.id
           WHERE sa.id = ${appointmentId}
           LIMIT 1
         `
@@ -159,6 +163,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
           sa.service_id,
           sa.service_package_id,
           sa.credit_id,
+          sa.order_id,
           sa.scheduled_start,
           sa.scheduled_end,
           sa.duration_hours,
@@ -183,7 +188,9 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
           sp.name AS service_package_name,
           i.fullname AS instructor_name,
           st.fullname AS staff_name,
-          u.name AS created_by_name
+          u.name AS created_by_name,
+          o.order_number,
+          o.status AS order_status
         FROM scheduled_appointments sa
         LEFT JOIN customers c ON sa.customer_id = c.id
         LEFT JOIN services s ON sa.service_id = s.id
@@ -192,6 +199,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
         LEFT JOIN instructors i ON sa.instructor_id = i.id
         LEFT JOIN staff st ON sa.staff_id = st.id
         LEFT JOIN users u ON sa.created_by = u.id
+        LEFT JOIN orders o ON sa.order_id = o.id
         WHERE sa.id = ${appointmentId}
         LIMIT 1
       `
@@ -219,6 +227,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
           sa.service_id,
           sa.service_package_id,
           sa.credit_id,
+          sa.order_id,
           sa.scheduled_start,
           sa.scheduled_end,
           sa.duration_hours,
@@ -243,7 +252,9 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
           sp.name AS service_package_name,
           i.fullname AS instructor_name,
           st.fullname AS staff_name,
-          u.name AS created_by_name
+          u.name AS created_by_name,
+          o.order_number,
+          o.status AS order_status
         FROM scheduled_appointments sa
         LEFT JOIN customers c ON sa.customer_id = c.id
         LEFT JOIN services s ON sa.service_id = s.id
@@ -252,6 +263,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
         LEFT JOIN instructors i ON sa.instructor_id = i.id
         LEFT JOIN staff st ON sa.staff_id = st.id
         LEFT JOIN users u ON sa.created_by = u.id
+        LEFT JOIN orders o ON sa.order_id = o.id
         WHERE sa.id = ${appointmentId}
         LIMIT 1
       `
@@ -283,6 +295,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
           sa.service_id,
           sa.service_package_id,
           sa.credit_id,
+          sa.order_id,
           sa.scheduled_start,
           sa.scheduled_end,
           sa.duration_hours,
@@ -307,7 +320,9 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
           sp.name AS service_package_name,
           i.fullname AS instructor_name,
           st.fullname AS staff_name,
-          u.name AS created_by_name
+          u.name AS created_by_name,
+          o.order_number,
+          o.status AS order_status
         FROM scheduled_appointments sa
         LEFT JOIN customers c ON sa.customer_id = c.id
         LEFT JOIN services s ON sa.service_id = s.id
@@ -316,6 +331,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
         LEFT JOIN instructors i ON sa.instructor_id = i.id
         LEFT JOIN staff st ON sa.staff_id = st.id
         LEFT JOIN users u ON sa.created_by = u.id
+        LEFT JOIN orders o ON sa.order_id = o.id
         WHERE sa.id = ${appointmentId}
         LIMIT 1
       `
@@ -427,10 +443,13 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
           </button>
           
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between mb-6">
-            <div>
+            <div className="flex items-center gap-3 flex-wrap">
               <h1 className="text-3xl font-bold text-gray-900">
                 {t('appointmentDetail.title', 'Appointment #{{id}}', { id: appointment.id })}
               </h1>
+              <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusStyle.pill}`}>
+                {formatStatusDisplay(displayStatus)}
+              </span>
             </div>
             
             {/* Action Buttons */}
@@ -502,41 +521,41 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
                   {/* Date and time / Start and end date based on duration unit */}
                   {appointment.service_duration_unit === 'hours' ? (
                     <>
-                      <div>
-                        <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                  <div>
+                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
                           {t('appointmentDetail.overview.startTime', 'Start Time')}
-                        </dt>
+                    </dt>
                         <dd className="mt-1 text-sm font-semibold text-gray-900">
                           {appointment.scheduled_start ? formatDateTime(new Date(appointment.scheduled_start)) : '—'}
                         </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                  </div>
+                  <div>
+                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
                           {t('appointmentDetail.overview.endTime', 'End Time')}
-                        </dt>
+                    </dt>
                         <dd className="mt-1 text-sm font-semibold text-gray-900">
                           {appointment.scheduled_end ? formatDateTime(new Date(appointment.scheduled_end)) : '—'}
                         </dd>
-                      </div>
+                  </div>
                     </>
                   ) : (
                     <>
-                      <div>
-                        <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                  <div>
+                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
                           {t('appointmentDetail.overview.startDate', 'Start Date')}
-                        </dt>
+                    </dt>
                         <dd className="mt-1 text-sm font-semibold text-gray-900">
                           {appointment.scheduled_start ? formatDate(new Date(appointment.scheduled_start)) : '—'}
                         </dd>
-                      </div>
-                      <div>
-                        <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                  </div>
+                    <div>
+                      <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
                           {t('appointmentDetail.overview.endDate', 'End Date')}
-                        </dt>
+                      </dt>
                         <dd className="mt-1 text-sm font-semibold text-gray-900">
                           {appointment.scheduled_end ? formatDate(new Date(appointment.scheduled_end)) : '—'}
                         </dd>
-                      </div>
+                    </div>
                     </>
                   )}
 
@@ -574,17 +593,51 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
                     </div>
                   )}
 
-                  {/* Status */}
-                  <div>
-                    <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
-                      {t('appointmentDetail.overview.status', 'Status')}
-                    </dt>
-                    <dd className="mt-1">
-                      <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${statusStyle.pill}`}>
-                        {formatStatusDisplay(displayStatus)}
-                      </span>
-                    </dd>
-                  </div>
+                  {/* Order */}
+                  {appointment.order_number && (
+                    <>
+                      <div>
+                        <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                          {t('appointmentDetail.overview.order', 'Order')}
+                        </dt>
+                        <dd className="mt-1 text-sm font-semibold text-gray-900 flex items-center gap-2">
+                          <span>{appointment.order_number}</span>
+                          {appointment.order_id && onViewOrder && (
+                            <button
+                              onClick={() => onViewOrder({ id: appointment.order_id, order_number: appointment.order_number })}
+                              className="inline-flex items-center justify-center p-1 rounded text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+                              title={t('appointmentDetail.overview.viewOrder', 'View Order')}
+                            >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                              </svg>
+                            </button>
+                          )}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt className="text-xs font-medium text-gray-500 uppercase mb-1">
+                          {t('appointmentDetail.overview.orderStatus', 'Order Status')}
+                        </dt>
+                        <dd className="mt-1">
+                          {appointment.order_status ? (
+                            <span className={`inline-flex items-center rounded-full border px-3 py-1 text-xs font-semibold ${
+                              appointment.order_status === 'open' 
+                                ? 'text-blue-700 bg-blue-50 border-blue-200'
+                                : appointment.order_status === 'closed'
+                                ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                : 'text-gray-700 bg-gray-50 border-gray-200'
+                            }`}>
+                              {appointment.order_status.toUpperCase()}
+                            </span>
+                          ) : (
+                            <span className="text-sm text-gray-500">—</span>
+                          )}
+                        </dd>
+                      </div>
+                    </>
+                  )}
                 </dl>
               </div>
             </div>

@@ -171,9 +171,6 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
                           <p className="text-base font-semibold text-gray-900">{customer.fullname || '—'}</p>
                           <p className="text-sm text-gray-500">{customer.email || customer.phone || '—'}</p>
                         </div>
-                        <span className="inline-flex items-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-800">
-                          {customer.agency_name || t('common.direct', 'Direct')}
-                        </span>
                       </div>
                       <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-sm text-gray-600">
                         <div>

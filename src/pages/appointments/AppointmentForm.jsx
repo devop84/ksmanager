@@ -31,6 +31,7 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
   const [instructors, setInstructors] = useState([])
   const [selectedService, setSelectedService] = useState(null)
   const [selectedCredit, setSelectedCredit] = useState(null)
+  const [openOrder, setOpenOrder] = useState(null)
 
   // Helper function to format date to datetime-local string (always in local time)
   // Input: ISO string from database (UTC) or timestamp -> Output: datetime-local string (local time)
@@ -154,15 +155,38 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
   }, [])
 
 
-  // Load customer credits when customer is selected
+  // Load customer open order and credits when customer is selected
   useEffect(() => {
     if (formData.customer_id && !isEditing) {
+      loadCustomerOpenOrder(parseInt(formData.customer_id))
       loadCustomerCredits(parseInt(formData.customer_id))
     } else {
-      // Clear credits when no customer selected
+      // Clear credits and order when no customer selected
       setCustomerCredits([])
+      setOpenOrder(null)
     }
   }, [formData.customer_id, isEditing])
+
+  const loadCustomerOpenOrder = async (customerId) => {
+    try {
+      const result = await sql`
+        SELECT id, order_number, status
+        FROM orders
+        WHERE customer_id = ${customerId}
+          AND status = 'open'
+        ORDER BY created_at DESC
+        LIMIT 1
+      `
+      if (result && result.length > 0) {
+        setOpenOrder(result[0])
+      } else {
+        setOpenOrder(null)
+      }
+    } catch (err) {
+      console.error('Failed to load customer open order:', err)
+      setOpenOrder(null)
+    }
+  }
 
   const loadCustomerCredits = async (customerId) => {
     try {
@@ -340,8 +364,14 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
       return
     }
     
-    if (!formData.customer_id || (!isEditing && !formData.credit_id) || !formData.service_id || !formData.scheduled_start || !formData.scheduled_end) {
+    if (!formData.customer_id || !formData.service_id || !formData.scheduled_start || !formData.scheduled_end) {
       setError(t('appointmentForm.error.required', 'Please fill in all required fields.'))
+      return
+    }
+
+    // Validate that customer has an open order
+    if (!isEditing && !openOrder) {
+      setError(t('appointmentForm.error.noOpenOrder', 'Customer must have an open order to create an appointment. Please create an order first.'))
       return
     }
 
@@ -370,24 +400,7 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
       }
     }
 
-    // Validate credit is selected (required for new appointments)
-    if (!isEditing && !formData.credit_id) {
-      setError(t('appointmentForm.error.creditRequired', 'Please select a credit package to use for this appointment'))
-      return
-    }
-
-    // Validate credit availability if using credit
-    if (formData.credit_id && selectedCredit) {
-      const requestedDuration = parseFloat(
-        formData.duration_hours || formData.duration_days || formData.duration_months || 0
-      )
-      const available = parseFloat(selectedCredit.available || 0)
-      
-      if (requestedDuration > available) {
-        setError(t('appointmentForm.error.insufficientCredit', 'Insufficient credit. Available: {{available}}', { available }))
-        return
-      }
-    }
+    // Note: Credit is optional - appointments can be created without credits (generating negative credits)
 
     try {
       setSaving(true)
@@ -397,8 +410,35 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
       const startISO = convertLocalToISO(formData.scheduled_start)
       const endISO = convertLocalToISO(formData.scheduled_end)
 
+      // Get order_id - use openOrder for new appointments, or get from existing appointment
+      let orderId = null
+      if (!isEditing) {
+        orderId = openOrder?.id || null
+      } else {
+        // For editing, get order_id from existing appointment or find open order
+        const existingAppointment = await sql`
+          SELECT order_id FROM scheduled_appointments WHERE id = ${appointment.id}
+        `
+        if (existingAppointment && existingAppointment.length > 0 && existingAppointment[0].order_id) {
+          orderId = existingAppointment[0].order_id
+        } else {
+          // Try to find open order for this customer
+          const openOrderResult = await sql`
+            SELECT id FROM orders
+            WHERE customer_id = ${parseInt(formData.customer_id)}
+              AND status = 'open'
+            ORDER BY created_at DESC
+            LIMIT 1
+          `
+          if (openOrderResult && openOrderResult.length > 0) {
+            orderId = openOrderResult[0].id
+          }
+        }
+      }
+
       const appointmentData = {
         customer_id: parseInt(formData.customer_id),
+        order_id: orderId,
         attendee_name: formData.attendee_name?.trim() || null,
         service_id: parseInt(formData.service_id),
         service_package_id: formData.service_package_id ? parseInt(formData.service_package_id) : null,
@@ -419,6 +459,7 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
           UPDATE scheduled_appointments
           SET 
             customer_id = ${appointmentData.customer_id},
+            order_id = ${appointmentData.order_id},
             attendee_name = ${appointmentData.attendee_name},
             service_id = ${appointmentData.service_id},
             service_package_id = ${appointmentData.service_package_id},
@@ -437,13 +478,13 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
         try {
           await sql`
             INSERT INTO scheduled_appointments (
-              customer_id, attendee_name, service_id, service_package_id, credit_id,
+              customer_id, order_id, attendee_name, service_id, service_package_id, credit_id,
               scheduled_start, scheduled_end,
               duration_hours, duration_days, duration_months,
               instructor_id, note, status
             )
             VALUES (
-              ${appointmentData.customer_id}, ${appointmentData.attendee_name}, ${appointmentData.service_id}, ${appointmentData.service_package_id}, ${appointmentData.credit_id},
+              ${appointmentData.customer_id}, ${appointmentData.order_id}, ${appointmentData.attendee_name}, ${appointmentData.service_id}, ${appointmentData.service_package_id}, ${appointmentData.credit_id},
               ${appointmentData.scheduled_start}, ${appointmentData.scheduled_end},
               ${appointmentData.duration_hours}, ${appointmentData.duration_days}, ${appointmentData.duration_months},
               ${appointmentData.instructor_id}, ${appointmentData.note}, ${appointmentData.status}
@@ -464,13 +505,13 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
               // Retry the insert after fixing the sequence
               await sql`
                 INSERT INTO scheduled_appointments (
-                  customer_id, attendee_name, service_id, service_package_id, credit_id,
+                  customer_id, order_id, attendee_name, service_id, service_package_id, credit_id,
                   scheduled_start, scheduled_end,
                   duration_hours, duration_days, duration_months,
                   instructor_id, note, status
                 )
                 VALUES (
-                  ${appointmentData.customer_id}, ${appointmentData.attendee_name}, ${appointmentData.service_id}, ${appointmentData.service_package_id}, ${appointmentData.credit_id},
+                  ${appointmentData.customer_id}, ${appointmentData.order_id}, ${appointmentData.attendee_name}, ${appointmentData.service_id}, ${appointmentData.service_package_id}, ${appointmentData.credit_id},
                   ${appointmentData.scheduled_start}, ${appointmentData.scheduled_end},
                   ${appointmentData.duration_hours}, ${appointmentData.duration_days}, ${appointmentData.duration_months},
                   ${appointmentData.instructor_id}, ${appointmentData.note}, ${appointmentData.status}
@@ -564,44 +605,46 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
               </div>
             </div>
 
-            {/* Credit Selection - Primary Selector (replaces Service Dropdown) */}
-            {!isEditing && formData.customer_id && customerCredits.length > 0 && (
+            {/* Open Order Check */}
+            {!isEditing && formData.customer_id && (
               <div>
-                <label className="mb-2 block text-sm font-medium text-gray-700" htmlFor="credit_id">
-                  {t('appointmentForm.fields.credit', 'Use Credit')} <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="credit_id"
-                  name="credit_id"
-                  value={formData.credit_id}
-                  onChange={(e) => handleCreditChange(e.target.value)}
-                  required
-                  className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
-                >
-                  <option value="">{t('appointmentForm.fields.selectCredit', 'Select a credit package...')}</option>
-                  {customerCredits.map((credit) => (
-                    <option key={credit.credit_id} value={credit.credit_id}>
-                      {credit.service_name} - {credit.package_name}
-                    </option>
-                  ))}
-                </select>
-                {selectedCredit && (
-                  <p className="mt-1.5 text-sm text-gray-600">
-                    {t('appointmentForm.creditInfo', 'Available: {{available}} {{unit}}', { 
-                      available: Number(selectedCredit.available || 0).toFixed(2), 
-                      unit: selectedCredit.duration_unit 
-                    })}
-                  </p>
+                {openOrder ? (
+                  <div className="rounded-lg border border-green-200 bg-green-50 p-4">
+                    <p className="text-sm text-green-800">
+                      {t('appointmentForm.openOrderFound', 'Open order found: {{orderNumber}}', { orderNumber: openOrder.order_number || openOrder.id })}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="rounded-lg border border-red-200 bg-red-50 p-4">
+                    <p className="text-sm text-red-800">
+                      {t('appointmentForm.noOpenOrder', 'Customer must have an open order to create an appointment. Please create an order first.')}
+                    </p>
+                  </div>
                 )}
               </div>
             )}
-            {!isEditing && formData.customer_id && customerCredits.length === 0 && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50 p-4">
-                <p className="text-sm text-amber-800">
-                  {t('appointmentForm.noCredits', 'This customer has no available credits. Please purchase a service package first.')}
-                </p>
-              </div>
-            )}
+
+            {/* Service Selection */}
+            <div>
+              <label className="mb-2 block text-sm font-medium text-gray-700" htmlFor="service_id">
+                {t('appointmentForm.fields.service', 'Service')} <span className="text-red-500">*</span>
+              </label>
+              <select
+                id="service_id"
+                name="service_id"
+                value={formData.service_id}
+                onChange={handleChange}
+                required
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+              >
+                <option value="">{t('appointmentForm.fields.selectService', 'Select a service...')}</option>
+                {services.map((service) => (
+                  <option key={service.id} value={service.id}>
+                    {service.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
             {/* Duration, Start Time, End Time in same row */}
             {selectedService && selectedService.duration_unit !== 'none' && (
