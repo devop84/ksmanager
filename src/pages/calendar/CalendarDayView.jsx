@@ -233,7 +233,7 @@ function CalendarDayView({ currentDate, appointments, statusColors, onViewAppoin
                 <div
                   key={apt.id}
                   onClick={() => onViewAppointment?.({ id: apt.id })}
-                  className={`py-2 px-2 sm:px-3 ${categoryColor} ${borderLColor} ${borderLWidth} ${roundedLeft} ${roundedRight} ${leftMargin} ${rightMargin} cursor-pointer hover:brightness-90 transition-all duration-200`}
+                  className={`py-2 px-2 sm:px-3 ${categoryColor} ${borderLColor} ${borderLWidth} ${roundedLeft} ${roundedRight} ${leftMargin} ${rightMargin} cursor-pointer hover:brightness-90 transition-all duration-200 shadow-sm`}
                 >
                   <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs sm:text-sm">
                     <span className="font-semibold">
