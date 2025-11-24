@@ -182,11 +182,6 @@ function CalendarMonthView({ currentDate, appointments, statusColors, onViewAppo
                           <span className="font-semibold">{count}</span> {category}
                         </div>
                       ))}
-                      {overview.total > Object.keys(overview.categories).length && (
-                        <div className="text-xs text-gray-500 px-1">
-                          {overview.total} total
-                        </div>
-                      )}
                     </div>
                   ) : null}
                 </>
