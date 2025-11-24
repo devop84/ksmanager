@@ -4,22 +4,21 @@ import sql from '../../lib/neon'
 import { useSettings } from '../../context/SettingsContext'
 import PageHeader from '../../components/layout/PageHeader'
 import CalendarMonthView from './CalendarMonthView'
-import CalendarWeekView from './CalendarWeekView'
 import CalendarDayView from './CalendarDayView'
 
 const statusColors = {
-  scheduled: 'text-blue-700 bg-blue-50 border-blue-100',
-  in_progress: 'text-indigo-700 bg-indigo-50 border-indigo-100',
-  completed: 'text-emerald-700 bg-emerald-50 border-emerald-100',
-  cancelled: 'text-rose-700 bg-rose-50 border-rose-100',
-  no_show: 'text-amber-700 bg-amber-50 border-amber-100',
-  rescheduled: 'text-purple-700 bg-purple-50 border-purple-100'
+  scheduled: 'text-blue-900 bg-blue-200 border-blue-300',
+  in_progress: 'text-indigo-900 bg-indigo-200 border-indigo-300',
+  completed: 'text-emerald-900 bg-emerald-200 border-emerald-300',
+  cancelled: 'text-rose-900 bg-rose-200 border-rose-300',
+  no_show: 'text-amber-900 bg-amber-200 border-amber-300',
+  rescheduled: 'text-purple-900 bg-purple-200 border-purple-300'
 }
 
-function Calendar({ onViewAppointment, onAddAppointment }) {
+function Calendar({ onViewAppointment, onAddAppointment, onNavigateToAppointments }) {
   const { t } = useTranslation()
   const { formatDate } = useSettings()
-  const [view, setView] = useState('month') // 'month', 'week', 'day'
+  const [view, setView] = useState('month') // 'month', 'day'
   const [currentDate, setCurrentDate] = useState(new Date())
   const [appointments, setAppointments] = useState([])
   const [loading, setLoading] = useState(true)
@@ -37,14 +36,6 @@ function Calendar({ onViewAppointment, onAddAppointment }) {
       // Last day of month
       end.setMonth(end.getMonth() + 1)
       end.setDate(0)
-      end.setHours(23, 59, 59, 999)
-    } else if (view === 'week') {
-      // Start of week (Sunday)
-      const day = start.getDay()
-      start.setDate(start.getDate() - day)
-      start.setHours(0, 0, 0, 0)
-      // End of week (Saturday)
-      end.setDate(start.getDate() + 6)
       end.setHours(23, 59, 59, 999)
     } else {
       // Day view
@@ -102,8 +93,6 @@ function Calendar({ onViewAppointment, onAddAppointment }) {
     
     if (view === 'month') {
       newDate.setMonth(newDate.getMonth() + direction)
-    } else if (view === 'week') {
-      newDate.setDate(newDate.getDate() + (direction * 7))
     } else {
       newDate.setDate(newDate.getDate() + direction)
     }
@@ -118,11 +107,6 @@ function Calendar({ onViewAppointment, onAddAppointment }) {
   const getViewTitle = () => {
     if (view === 'month') {
       return currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-    } else if (view === 'week') {
-      const { start } = getDateRange()
-      const end = new Date(start)
-      end.setDate(end.getDate() + 6)
-      return `${formatDate(start)} - ${formatDate(end)}`
     } else {
       return formatDate(currentDate)
     }
@@ -151,16 +135,6 @@ function Calendar({ onViewAppointment, onAddAppointment }) {
               {t('calendar.view.month', 'Month')}
             </button>
             <button
-              onClick={() => setView('week')}
-              className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
-                view === 'week'
-                  ? 'bg-indigo-600 text-white'
-                  : 'text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              {t('calendar.view.week', 'Week')}
-            </button>
-            <button
               onClick={() => setView('day')}
               className={`px-4 py-2 rounded text-sm font-medium transition-colors ${
                 view === 'day'
@@ -173,31 +147,31 @@ function Calendar({ onViewAppointment, onAddAppointment }) {
           </div>
 
           {/* Date Navigation */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => navigateDate(-1)}
-              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+              className="h-8 px-2 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50"
               aria-label={t('calendar.navigation.previous', 'Previous')}
             >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
               </svg>
             </button>
             <button
               onClick={goToToday}
-              className="px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50"
+              className="h-8 px-3 flex items-center justify-center rounded-lg border border-gray-300 text-sm font-medium hover:bg-gray-50"
             >
               {t('calendar.navigation.today', 'Today')}
             </button>
-            <span className="text-sm font-medium text-gray-700 px-3 min-w-[200px] text-center">
+            <span className="text-sm font-medium text-gray-700 px-2 min-w-[150px] text-center">
               {getViewTitle()}
             </span>
             <button
               onClick={() => navigateDate(1)}
-              className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+              className="h-8 px-2 flex items-center justify-center rounded-lg border border-gray-300 hover:bg-gray-50"
               aria-label={t('calendar.navigation.next', 'Next')}
             >
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-4 h-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
               </svg>
             </button>
@@ -226,18 +200,7 @@ function Calendar({ onViewAppointment, onAddAppointment }) {
                 setCurrentDate(date)
                 setView('day')
               }}
-            />
-          )}
-          {view === 'week' && (
-            <CalendarWeekView
-              currentDate={currentDate}
-              appointments={appointments}
-              statusColors={statusColors}
-              onViewAppointment={onViewAppointment}
-              onDateClick={(date) => {
-                setCurrentDate(date)
-                setView('day')
-              }}
+              onNavigateToAppointments={onNavigateToAppointments}
             />
           )}
           {view === 'day' && (

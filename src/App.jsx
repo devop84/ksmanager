@@ -1583,6 +1583,7 @@ function App() {
           <Calendar
             onViewAppointment={(appointment) => handleAppointmentView(appointment, 'calendar')}
             onAddAppointment={() => openAppointmentForm(null)}
+            onNavigateToAppointments={() => setCurrentPage('appointments')}
           />
         )
       case 'companyAccountForm':
