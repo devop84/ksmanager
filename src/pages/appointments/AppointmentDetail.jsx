@@ -419,6 +419,10 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
   const displayStatus = getDisplayStatus()
   const statusStyle = statusStyles[displayStatus] || statusStyles.scheduled
 
+  // Check if appointment is linked to a closed or cancelled order
+  const isOrderClosedOrCancelled = appointment?.order_id && 
+    (appointment?.order_status === 'closed' || appointment?.order_status === 'cancelled')
+
   // Format status for display (replace underscores with spaces)
   const formatStatusDisplay = (status) => {
     if (status === 'in_progress') {
@@ -650,6 +654,7 @@ function AppointmentDetail({ appointmentId, onBack, onEdit, onDelete, onViewCust
                 onDelete={handleDelete}
                 user={user}
                 deleting={deleting}
+                disableActions={isOrderClosedOrCancelled}
               >
                 <dl className="space-y-4 text-sm">
                   <div>

@@ -59,6 +59,7 @@ function Appointments({ refreshKey = 0, user = null, onAddAppointment, onViewApp
             sa.service_id,
             sa.service_package_id,
             sa.credit_id,
+            sa.order_id,
             sa.scheduled_start,
             sa.scheduled_end,
             sa.duration_hours,
@@ -76,13 +77,15 @@ function Appointments({ refreshKey = 0, user = null, onAddAppointment, onViewApp
             s.name AS service_name,
             sp.name AS service_package_name,
             i.fullname AS instructor_name,
-            st.fullname AS staff_name
+            st.fullname AS staff_name,
+            o.status AS order_status
           FROM scheduled_appointments sa
           LEFT JOIN customers c ON sa.customer_id = c.id
           LEFT JOIN services s ON sa.service_id = s.id
           LEFT JOIN service_packages sp ON sa.service_package_id = sp.id
           LEFT JOIN instructors i ON sa.instructor_id = i.id
           LEFT JOIN staff st ON sa.staff_id = st.id
+          LEFT JOIN orders o ON sa.order_id = o.id
           ORDER BY sa.scheduled_start ASC
         `
         

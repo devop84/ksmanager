@@ -387,6 +387,164 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onViewAppointmen
           <div className="flex flex-col lg:flex-row lg:items-start gap-4 sm:gap-6">
             {/* Appointments and Orders Section - Left */}
             <div className="flex-1 space-y-4 sm:space-y-6 min-w-0">
+              {/* Overview Section - Inline Cards */}
+              {(() => {
+                // Get upcoming/in-progress appointments
+                const now = new Date()
+                const upcomingAppointments = appointments.filter(apt => {
+                  if (!apt.scheduled_start) return false
+                  const startTime = new Date(apt.scheduled_start)
+                  const endTime = apt.scheduled_end ? new Date(apt.scheduled_end) : null
+                  const isScheduled = apt.status?.toLowerCase() === 'scheduled' || apt.status?.toLowerCase() === 'rescheduled'
+                  const isNotCancelled = !apt.cancelled_at
+                  // Appointment is upcoming if it starts in the future, or is in progress (started but not ended)
+                  const isUpcoming = startTime > now || (startTime <= now && endTime && endTime > now)
+                  return isScheduled && isNotCancelled && isUpcoming
+                }).sort((a, b) => {
+                  const aStart = a.scheduled_start ? new Date(a.scheduled_start) : new Date(0)
+                  const bStart = b.scheduled_start ? new Date(b.scheduled_start) : new Date(0)
+                  return aStart - bStart
+                })
+
+                // Check if there are non-zero service credits
+                const hasNonZeroCredits = openOrderServiceCredits && openOrderServiceCredits.some(
+                  credit => Math.abs(Number(credit.balance || 0)) > 0.01
+                )
+
+                // Calculate payment due (balance due from open order)
+                const paymentDue = openOrder ? (() => {
+                  const totalRefunded = openOrderRefunds.reduce((sum, r) => sum + Number(r.amount || 0), 0)
+                  return Number(openOrder.total_amount || 0) - Number(openOrder.total_paid || 0) + totalRefunded
+                })() : 0
+
+                // Only show overview if there's something to show
+                if (upcomingAppointments.length === 0 && !openOrder && paymentDue <= 0) {
+                  return null
+                }
+
+                return (
+                  <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+                    {/* Upcoming/In-Progress Appointments */}
+                    {upcomingAppointments.length > 0 && (
+                      <div className="flex-1 rounded-lg border border-blue-200 bg-blue-50 p-3 sm:p-4">
+                        <div className="flex items-start gap-2">
+                          <svg className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-sm font-semibold text-blue-900 mb-2">
+                              {t('customerDetail.overview.upcomingAppointments', 'Upcoming Appointments')}
+                            </h3>
+                            <div className="space-y-2">
+                              {upcomingAppointments.slice(0, 3).map((apt) => {
+                                const startTime = apt.scheduled_start ? new Date(apt.scheduled_start) : null
+                                const isInProgress = startTime && startTime <= now && apt.scheduled_end && new Date(apt.scheduled_end) > now
+                                return (
+                                  <div key={apt.id} className="text-sm text-blue-800">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium">{apt.service_name || '—'}</span>
+                                      {isInProgress && (
+                                        <span className="inline-flex items-center rounded-full bg-blue-600 text-white px-2 py-0.5 text-xs font-semibold">
+                                          {t('customerDetail.overview.inProgress', 'In Progress')}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <div className="text-xs text-blue-700 mt-0.5">
+                                      {startTime ? formatDateTime(startTime) : '—'}
+                                      {apt.instructor_name && ` • ${apt.instructor_name}`}
+                                    </div>
+                                  </div>
+                                )
+                              })}
+                              {upcomingAppointments.length > 3 && (
+                                <div className="text-xs text-blue-700 font-medium">
+                                  {t('customerDetail.overview.moreAppointments', '+ {{count}} more appointment(s)', { count: upcomingAppointments.length - 3 })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Open Order */}
+                    {openOrder && (
+                      <div className="flex-1 rounded-lg border border-indigo-200 bg-indigo-50 p-3 sm:p-4">
+                        <div className="flex items-start gap-2">
+                          <svg className="w-5 h-5 text-indigo-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                          </svg>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <h3 className="text-sm font-semibold text-indigo-900">
+                                {t('customerDetail.overview.openOrder', 'Open Order')}
+                              </h3>
+                              <button
+                                onClick={() => onViewOrder?.(openOrder)}
+                                className="text-xs font-medium text-indigo-700 hover:text-indigo-900 underline"
+                              >
+                                {t('customerDetail.overview.viewOrder', 'View')}
+                              </button>
+                            </div>
+                            <div className="text-sm text-indigo-800">
+                              <div>{openOrder.order_number || `#${openOrder.id}`}</div>
+                              <div className="text-xs text-indigo-700 mt-1">
+                                {t('customerDetail.overview.total', 'Total')}: {formatCurrency(Number(openOrder.total_amount || 0))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Payment Due */}
+                    {openOrder && paymentDue > 0 && (
+                      <div className={`flex-1 rounded-lg border p-3 sm:p-4 ${
+                        hasNonZeroCredits 
+                          ? 'border-amber-300 bg-amber-50' 
+                          : 'border-rose-200 bg-rose-50'
+                      }`}>
+                        <div className="flex items-start gap-2">
+                          <svg className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                            hasNonZeroCredits ? 'text-amber-600' : 'text-rose-600'
+                          }`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <div className="flex-1 min-w-0">
+                            <h3 className={`text-sm font-semibold mb-1 ${
+                              hasNonZeroCredits ? 'text-amber-900' : 'text-rose-900'
+                            }`}>
+                              {t('customerDetail.overview.paymentDue', 'Payment Due')}
+                            </h3>
+                            <div className={`text-sm font-semibold mb-2 ${
+                              hasNonZeroCredits ? 'text-amber-800' : 'text-rose-800'
+                            }`}>
+                              {formatCurrency(paymentDue)}
+                            </div>
+                            {hasNonZeroCredits && (
+                              <div className="text-xs text-amber-800 bg-amber-100 rounded px-2 py-1.5 border border-amber-200">
+                                <div className="font-semibold mb-1">
+                                  {t('customerDetail.overview.creditsWarning', '⚠️ Warning: Service credits are not zero')}
+                                </div>
+                                <div className="space-y-1">
+                                  {openOrderServiceCredits
+                                    .filter(credit => Math.abs(Number(credit.balance || 0)) > 0.01)
+                                    .map((credit, idx) => (
+                                      <div key={idx}>
+                                        {credit.service_name}: {Number(credit.balance).toFixed(2)} {credit.duration_unit}
+                                      </div>
+                                    ))
+                                  }
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )
+              })()}
               {/* Appointments Section */}
               <div className="rounded-xl border border-gray-200 bg-white p-4 sm:p-6 shadow-sm">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4">

@@ -646,6 +646,9 @@ CREATE TABLE IF NOT EXISTS scheduled_appointments (
     -- Which credit is being used (can be NULL if it's a direct service purchase, not from credit)
     credit_id INTEGER REFERENCES customer_service_credits(id) ON DELETE SET NULL,
     
+    -- Link to order (appointments are linked to orders)
+    order_id INTEGER REFERENCES orders(id) ON DELETE CASCADE,
+    
     -- Scheduling details
     scheduled_start TIMESTAMP WITH TIME ZONE NOT NULL,
     scheduled_end TIMESTAMP WITH TIME ZONE NOT NULL,
@@ -684,6 +687,7 @@ CREATE TABLE IF NOT EXISTS scheduled_appointments (
 CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_customer ON scheduled_appointments(customer_id);
 CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_service ON scheduled_appointments(service_id);
 CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_credit ON scheduled_appointments(credit_id);
+CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_order ON scheduled_appointments(order_id);
 CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_status ON scheduled_appointments(status);
 CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_start ON scheduled_appointments(scheduled_start);
 CREATE INDEX IF NOT EXISTS idx_scheduled_appointments_end ON scheduled_appointments(scheduled_end);
@@ -827,54 +831,63 @@ BEGIN
         IF FOUND THEN
             -- Only create credit if duration_unit is not 'none'
             IF pkg.duration_unit != 'none' THEN
-                -- Determine which duration field to use based on service duration_unit
-                -- Multiply by quantity to get total credit amount
-                IF pkg.duration_unit = 'hours' THEN
-                    credit_total_hours := pkg.duration_hours * NEW.quantity;
-                    credit_total_days := NULL;
-                    credit_total_months := NULL;
-                ELSIF pkg.duration_unit = 'days' THEN
-                    credit_total_hours := NULL;
-                    credit_total_days := pkg.duration_days * NEW.quantity;
-                    credit_total_months := NULL;
-                ELSIF pkg.duration_unit = 'months' THEN
-                    credit_total_hours := NULL;
-                    credit_total_days := NULL;
-                    credit_total_months := pkg.duration_months * NEW.quantity;
+                -- Check if credit already exists for this order_item_id to prevent duplicates
+                SELECT id INTO credit_id_val
+                FROM customer_service_credits
+                WHERE order_item_id = NEW.id
+                LIMIT 1;
+                
+                -- Only create credit if it doesn't already exist
+                IF credit_id_val IS NULL THEN
+                    -- Determine which duration field to use based on service duration_unit
+                    -- Multiply by quantity to get total credit amount
+                    IF pkg.duration_unit = 'hours' THEN
+                        credit_total_hours := pkg.duration_hours * NEW.quantity;
+                        credit_total_days := NULL;
+                        credit_total_months := NULL;
+                    ELSIF pkg.duration_unit = 'days' THEN
+                        credit_total_hours := NULL;
+                        credit_total_days := pkg.duration_days * NEW.quantity;
+                        credit_total_months := NULL;
+                    ELSIF pkg.duration_unit = 'months' THEN
+                        credit_total_hours := NULL;
+                        credit_total_days := NULL;
+                        credit_total_months := pkg.duration_months * NEW.quantity;
+                    END IF;
+                    
+                    -- Create a single credit with total amount (quantity * duration)
+                    INSERT INTO customer_service_credits (
+                        customer_id,
+                        order_item_id,
+                        service_package_id,
+                        service_id,
+                        total_hours,
+                        total_days,
+                        total_months,
+                        status
+                    )
+                    VALUES (
+                        customer_id_val,
+                        NEW.id,
+                        pkg.id,
+                        pkg.service_id,
+                        credit_total_hours,
+                        credit_total_days,
+                        credit_total_months,
+                        'active'
+                    )
+                    RETURNING id INTO credit_id_val;
+                
+                    -- Transfer orphaned appointments to this new credit
+                    -- Find appointments for this customer+service that have no credit_id (orphaned)
+                    UPDATE scheduled_appointments
+                    SET credit_id = credit_id_val
+                    WHERE customer_id = customer_id_val
+                      AND service_id = pkg.service_id
+                      AND credit_id IS NULL
+                      AND status IN ('scheduled', 'completed')
+                      AND cancelled_at IS NULL;
                 END IF;
-                
-                -- Create a single credit with total amount (quantity * duration)
-                INSERT INTO customer_service_credits (
-                    customer_id,
-                    order_item_id,
-                    service_package_id,
-                    service_id,
-                    total_hours,
-                    total_days,
-                    total_months,
-                    status
-                )
-                VALUES (
-                    customer_id_val,
-                    NEW.id,
-                    pkg.id,
-                    pkg.service_id,
-                    credit_total_hours,
-                    credit_total_days,
-                    credit_total_months,
-                    'active'
-                )
-                RETURNING id INTO credit_id_val;
-                
-                -- Transfer orphaned appointments to this new credit
-                -- Find appointments for this customer+service that have no credit_id (orphaned)
-                UPDATE scheduled_appointments
-                SET credit_id = credit_id_val
-                WHERE customer_id = customer_id_val
-                  AND service_id = pkg.service_id
-                  AND credit_id IS NULL
-                  AND status IN ('scheduled', 'completed')
-                  AND cancelled_at IS NULL;
             END IF;
         END IF;
     END IF;
@@ -894,53 +907,62 @@ BEGIN
         LIMIT 1;
         
         IF FOUND AND svc.duration_unit != 'none' THEN
-            -- Determine which duration field to use based on service duration_unit
-            -- For direct services, use 1 unit per quantity (multiply by quantity)
-            IF svc.duration_unit = 'hours' THEN
-                credit_total_hours := 1 * NEW.quantity;
-                credit_total_days := NULL;
-                credit_total_months := NULL;
-            ELSIF svc.duration_unit = 'days' THEN
-                credit_total_hours := NULL;
-                credit_total_days := 1 * NEW.quantity;
-                credit_total_months := NULL;
-            ELSIF svc.duration_unit = 'months' THEN
-                credit_total_hours := NULL;
-                credit_total_days := NULL;
-                credit_total_months := 1 * NEW.quantity;
+            -- Check if credit already exists for this order_item_id to prevent duplicates
+            SELECT id INTO credit_id_val
+            FROM customer_service_credits
+            WHERE order_item_id = NEW.id
+            LIMIT 1;
+            
+            -- Only create credit if it doesn't already exist
+            IF credit_id_val IS NULL THEN
+                -- Determine which duration field to use based on service duration_unit
+                -- For direct services, use 1 unit per quantity (multiply by quantity)
+                IF svc.duration_unit = 'hours' THEN
+                    credit_total_hours := 1 * NEW.quantity;
+                    credit_total_days := NULL;
+                    credit_total_months := NULL;
+                ELSIF svc.duration_unit = 'days' THEN
+                    credit_total_hours := NULL;
+                    credit_total_days := 1 * NEW.quantity;
+                    credit_total_months := NULL;
+                ELSIF svc.duration_unit = 'months' THEN
+                    credit_total_hours := NULL;
+                    credit_total_days := NULL;
+                    credit_total_months := 1 * NEW.quantity;
+                END IF;
+                
+                -- Create a single credit with total amount (quantity * 1 unit)
+                INSERT INTO customer_service_credits (
+                    customer_id,
+                    order_item_id,
+                    service_package_id,
+                    service_id,
+                    total_hours,
+                    total_days,
+                    total_months,
+                    status
+                )
+                VALUES (
+                    customer_id_val,
+                    NEW.id,
+                    NULL,  -- No package for direct service
+                    svc.service_id,
+                    credit_total_hours,
+                    credit_total_days,
+                    credit_total_months,
+                    'active'
+                )
+                RETURNING id INTO credit_id_val;
+                
+                -- Transfer orphaned appointments to this new credit
+                UPDATE scheduled_appointments
+                SET credit_id = credit_id_val
+                WHERE customer_id = customer_id_val
+                  AND service_id = svc.service_id
+                  AND credit_id IS NULL
+                  AND status IN ('scheduled', 'completed')
+                  AND cancelled_at IS NULL;
             END IF;
-            
-            -- Create a single credit with total amount (quantity * 1 unit)
-            INSERT INTO customer_service_credits (
-                customer_id,
-                order_item_id,
-                service_package_id,
-                service_id,
-                total_hours,
-                total_days,
-                total_months,
-                status
-            )
-            VALUES (
-                customer_id_val,
-                NEW.id,
-                NULL,  -- No package for direct service
-                svc.service_id,
-                credit_total_hours,
-                credit_total_days,
-                credit_total_months,
-                'active'
-            )
-            RETURNING id INTO credit_id_val;
-            
-            -- Transfer orphaned appointments to this new credit
-            UPDATE scheduled_appointments
-            SET credit_id = credit_id_val
-            WHERE customer_id = customer_id_val
-              AND service_id = svc.service_id
-              AND credit_id IS NULL
-              AND status IN ('scheduled', 'completed')
-              AND cancelled_at IS NULL;
         END IF;
     END IF;
     
@@ -972,3 +994,346 @@ CREATE TRIGGER trigger_update_scheduled_appointments_updated_at
 BEFORE UPDATE ON scheduled_appointments
 FOR EACH ROW
 EXECUTE FUNCTION update_updated_at_column();
+
+-- ============================================
+-- ORDER CREDIT FUNCTIONS (from redo_credit_system migration)
+-- ============================================
+
+-- Function to calculate credit balance per service per order
+CREATE OR REPLACE FUNCTION get_order_service_credit_balance(order_id_param INTEGER, service_id_param INTEGER)
+RETURNS TABLE (
+    service_id INTEGER,
+    service_name VARCHAR,
+    duration_unit VARCHAR,
+    credits_from_items NUMERIC,
+    credits_used_by_appointments NUMERIC,
+    balance NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        s.id as service_id,
+        s.name as service_name,
+        s.duration_unit,
+        -- Sum of credits from order_items for this service
+        CASE 
+            WHEN s.duration_unit = 'hours' THEN 
+                COALESCE(SUM(
+                    CASE 
+                        WHEN oi.item_type = 'service_package' THEN sp.duration_hours * oi.quantity
+                        WHEN oi.item_type = 'service' THEN 1 * oi.quantity
+                        ELSE 0
+                    END
+                ), 0)
+            WHEN s.duration_unit = 'days' THEN 
+                COALESCE(SUM(
+                    CASE 
+                        WHEN oi.item_type = 'service_package' THEN sp.duration_days * oi.quantity
+                        WHEN oi.item_type = 'service' THEN 1 * oi.quantity
+                        ELSE 0
+                    END
+                ), 0)
+            WHEN s.duration_unit = 'months' THEN 
+                COALESCE(SUM(
+                    CASE 
+                        WHEN oi.item_type = 'service_package' THEN sp.duration_months * oi.quantity
+                        WHEN oi.item_type = 'service' THEN 1 * oi.quantity
+                        ELSE 0
+                    END
+                ), 0)::NUMERIC
+            ELSE 0
+        END as credits_from_items,
+        -- Sum of appointments duration for this service in this order
+        CASE 
+            WHEN s.duration_unit = 'hours' THEN 
+                COALESCE(SUM(sa.duration_hours) FILTER (
+                    WHERE sa.status IN ('scheduled', 'completed') 
+                    AND sa.cancelled_at IS NULL
+                ), 0)
+            WHEN s.duration_unit = 'days' THEN 
+                COALESCE(SUM(sa.duration_days) FILTER (
+                    WHERE sa.status IN ('scheduled', 'completed') 
+                    AND sa.cancelled_at IS NULL
+                ), 0)
+            WHEN s.duration_unit = 'months' THEN 
+                COALESCE(SUM(sa.duration_months) FILTER (
+                    WHERE sa.status IN ('scheduled', 'completed') 
+                    AND sa.cancelled_at IS NULL
+                ), 0)::NUMERIC
+            ELSE 0
+        END as credits_used_by_appointments,
+        -- Balance = credits_from_items - credits_used_by_appointments
+        CASE 
+            WHEN s.duration_unit = 'hours' THEN 
+                COALESCE(SUM(
+                    CASE 
+                        WHEN oi.item_type = 'service_package' THEN sp.duration_hours * oi.quantity
+                        WHEN oi.item_type = 'service' THEN 1 * oi.quantity
+                        ELSE 0
+                    END
+                ), 0) - COALESCE(SUM(sa.duration_hours) FILTER (
+                    WHERE sa.status IN ('scheduled', 'completed') 
+                    AND sa.cancelled_at IS NULL
+                ), 0)
+            WHEN s.duration_unit = 'days' THEN 
+                COALESCE(SUM(
+                    CASE 
+                        WHEN oi.item_type = 'service_package' THEN sp.duration_days * oi.quantity
+                        WHEN oi.item_type = 'service' THEN 1 * oi.quantity
+                        ELSE 0
+                    END
+                ), 0) - COALESCE(SUM(sa.duration_days) FILTER (
+                    WHERE sa.status IN ('scheduled', 'completed') 
+                    AND sa.cancelled_at IS NULL
+                ), 0)
+            WHEN s.duration_unit = 'months' THEN 
+                (COALESCE(SUM(
+                    CASE 
+                        WHEN oi.item_type = 'service_package' THEN sp.duration_months * oi.quantity
+                        WHEN oi.item_type = 'service' THEN 1 * oi.quantity
+                        ELSE 0
+                    END
+                ), 0)::NUMERIC - COALESCE(SUM(sa.duration_months) FILTER (
+                    WHERE sa.status IN ('scheduled', 'completed') 
+                    AND sa.cancelled_at IS NULL
+                ), 0)::NUMERIC)
+            ELSE 0
+        END as balance
+    FROM services s
+    LEFT JOIN order_items oi ON oi.order_id = order_id_param
+        AND (
+            (oi.item_type = 'service_package' AND EXISTS (
+                SELECT 1 FROM service_packages sp2 
+                WHERE sp2.id = oi.item_id AND sp2.service_id = s.id
+            ))
+            OR (oi.item_type = 'service' AND oi.item_id = s.id)
+        )
+    LEFT JOIN service_packages sp ON oi.item_type = 'service_package' AND sp.id = oi.item_id AND sp.service_id = s.id
+    LEFT JOIN scheduled_appointments sa ON sa.order_id = order_id_param 
+        AND sa.service_id = s.id
+    WHERE s.id = service_id_param
+        AND s.duration_unit != 'none'
+    GROUP BY s.id, s.name, s.duration_unit;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to get all service credit balances for an order
+CREATE OR REPLACE FUNCTION get_order_all_service_credits(order_id_param INTEGER)
+RETURNS TABLE (
+    service_id INTEGER,
+    service_name VARCHAR,
+    duration_unit VARCHAR,
+    credits_from_items NUMERIC,
+    credits_used_by_appointments NUMERIC,
+    balance NUMERIC
+) AS $$
+BEGIN
+    RETURN QUERY
+    WITH service_credits AS (
+        -- Calculate credits from order_items (without appointments join to avoid multiplication)
+        SELECT 
+            s.id as service_id,
+            s.name as service_name,
+            s.duration_unit,
+            CASE 
+                WHEN s.duration_unit = 'hours' THEN 
+                    COALESCE(SUM(
+                        CASE 
+                            WHEN oi.item_type = 'service_package' THEN sp.duration_hours * oi.quantity
+                            WHEN oi.item_type = 'service' THEN 1 * oi.quantity
+                            ELSE 0
+                        END
+                    ), 0)
+                WHEN s.duration_unit = 'days' THEN 
+                    COALESCE(SUM(
+                        CASE 
+                            WHEN oi.item_type = 'service_package' THEN sp.duration_days * oi.quantity
+                            WHEN oi.item_type = 'service' THEN 1 * oi.quantity
+                            ELSE 0
+                        END
+                    ), 0)
+                WHEN s.duration_unit = 'months' THEN 
+                    COALESCE(SUM(
+                        CASE 
+                            WHEN oi.item_type = 'service_package' THEN sp.duration_months * oi.quantity
+                            WHEN oi.item_type = 'service' THEN 1 * oi.quantity
+                            ELSE 0
+                        END
+                    ), 0)::NUMERIC
+                ELSE 0
+            END as credits_from_items
+        FROM (
+            SELECT DISTINCT s.id, s.name, s.duration_unit
+            FROM services s
+            WHERE s.duration_unit != 'none'
+            AND (
+                EXISTS (
+                    SELECT 1 FROM order_items oi
+                    WHERE oi.order_id = order_id_param
+                    AND (
+                        (oi.item_type = 'service_package' AND EXISTS (
+                            SELECT 1 FROM service_packages sp 
+                            WHERE sp.id = oi.item_id AND sp.service_id = s.id
+                        ))
+                        OR (oi.item_type = 'service' AND oi.item_id = s.id)
+                    )
+                )
+                OR EXISTS (
+                    SELECT 1 FROM scheduled_appointments sa
+                    WHERE sa.order_id = order_id_param
+                    AND sa.service_id = s.id
+                )
+            )
+        ) s
+        LEFT JOIN order_items oi ON oi.order_id = order_id_param
+            AND (
+                (oi.item_type = 'service_package' AND EXISTS (
+                    SELECT 1 FROM service_packages sp2 
+                    WHERE sp2.id = oi.item_id AND sp2.service_id = s.id
+                ))
+                OR (oi.item_type = 'service' AND oi.item_id = s.id)
+            )
+        LEFT JOIN service_packages sp ON oi.item_type = 'service_package' AND sp.id = oi.item_id AND sp.service_id = s.id
+        GROUP BY s.id, s.name, s.duration_unit
+    ),
+    appointment_credits AS (
+        -- Calculate credits used by appointments separately
+        SELECT 
+            s.id as service_id,
+            CASE 
+                WHEN s.duration_unit = 'hours' THEN 
+                    COALESCE(SUM(sa.duration_hours) FILTER (
+                        WHERE sa.status IN ('scheduled', 'completed') 
+                        AND sa.cancelled_at IS NULL
+                    ), 0)
+                WHEN s.duration_unit = 'days' THEN 
+                    COALESCE(SUM(sa.duration_days) FILTER (
+                        WHERE sa.status IN ('scheduled', 'completed') 
+                        AND sa.cancelled_at IS NULL
+                    ), 0)
+                WHEN s.duration_unit = 'months' THEN 
+                    COALESCE(SUM(sa.duration_months) FILTER (
+                        WHERE sa.status IN ('scheduled', 'completed') 
+                        AND sa.cancelled_at IS NULL
+                    ), 0)::NUMERIC
+                ELSE 0
+            END as credits_used_by_appointments
+        FROM services s
+        INNER JOIN scheduled_appointments sa ON sa.order_id = order_id_param AND sa.service_id = s.id
+        WHERE s.duration_unit != 'none'
+        GROUP BY s.id, s.duration_unit
+    )
+    SELECT DISTINCT
+        sc.service_id,
+        sc.service_name,
+        sc.duration_unit,
+        sc.credits_from_items,
+        COALESCE(ac.credits_used_by_appointments, 0) as credits_used_by_appointments,
+        sc.credits_from_items - COALESCE(ac.credits_used_by_appointments, 0) as balance
+    FROM service_credits sc
+    LEFT JOIN appointment_credits ac ON ac.service_id = sc.service_id
+    WHERE sc.credits_from_items != 0 OR COALESCE(ac.credits_used_by_appointments, 0) != 0
+    ORDER BY sc.service_id;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to check if order can be closed (all credits must be 0)
+CREATE OR REPLACE FUNCTION can_close_order(order_id_param INTEGER)
+RETURNS BOOLEAN AS $$
+DECLARE
+    non_zero_balance_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO non_zero_balance_count
+    FROM get_order_all_service_credits(order_id_param)
+    WHERE ABS(balance) > 0.01;  -- Allow small floating point differences
+    
+    RETURN non_zero_balance_count = 0;
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================
+-- ORDER CANCELLATION & DELETION FUNCTIONS (from handle_order_cancellation_deletion migration)
+-- ============================================
+
+-- Function to check if order can be cancelled
+-- Returns true if order can be cancelled (no completed appointments), false otherwise
+CREATE OR REPLACE FUNCTION can_cancel_order(order_id_param INTEGER)
+RETURNS BOOLEAN AS $$
+DECLARE
+    completed_count INTEGER;
+BEGIN
+    SELECT COUNT(*) INTO completed_count
+    FROM scheduled_appointments
+    WHERE order_id = order_id_param
+      AND status = 'completed';
+    
+    RETURN completed_count = 0;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to handle order cancellation
+-- This function will:
+-- 1. Cancel all appointments (scheduled, rescheduled, no_show) - only called if no completed appointments
+-- 2. Delete credits associated with the order
+CREATE OR REPLACE FUNCTION handle_order_cancellation(order_id_param INTEGER)
+RETURNS void AS $$
+BEGIN
+    -- Cancel all scheduled/rescheduled/no_show appointments for this order
+    UPDATE scheduled_appointments
+    SET status = 'cancelled',
+        cancelled_at = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+    WHERE order_id = order_id_param
+      AND status IN ('scheduled', 'rescheduled', 'no_show');
+    
+    -- Delete all credits associated with this order's items
+    DELETE FROM customer_service_credits
+    WHERE order_item_id IN (
+        SELECT id FROM order_items WHERE order_id = order_id_param
+    );
+END;
+$$ LANGUAGE plpgsql;
+
+-- Function to handle order deletion
+-- This function will:
+-- 1. Delete credits (handled by CASCADE from order_items)
+-- 2. The order deletion itself will CASCADE delete all appointments (including completed)
+-- 3. Order items will be deleted via CASCADE
+-- Note: All appointments (including completed) will be deleted via CASCADE
+CREATE OR REPLACE FUNCTION handle_order_deletion(order_id_param INTEGER)
+RETURNS void AS $$
+BEGIN
+    -- Delete credits explicitly (though CASCADE will handle it)
+    DELETE FROM customer_service_credits
+    WHERE order_item_id IN (
+        SELECT id FROM order_items WHERE order_id = order_id_param
+    );
+    
+    -- The actual order deletion should be done in application code after this
+    -- All appointments will be deleted via CASCADE when the order is deleted
+END;
+$$ LANGUAGE plpgsql;
+
+-- ============================================
+-- PROTECTED TRANSACTION TYPES TRIGGER (from protect_customer_transaction_types migration)
+-- ============================================
+
+-- Function to prevent deletion of protected transaction types
+CREATE OR REPLACE FUNCTION prevent_delete_protected_transaction_types()
+RETURNS TRIGGER AS $$
+BEGIN
+    -- Check if the transaction type being deleted is a protected one
+    IF OLD.code IN ('CUSTOMER_PAYMENT', 'CUSTOMER_REFUND') THEN
+        RAISE EXCEPTION 'Cannot delete protected transaction type: %. This type is required by the system.', OLD.code;
+    END IF;
+    
+    RETURN OLD;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Create trigger to prevent deletion
+DROP TRIGGER IF EXISTS trigger_prevent_delete_protected_transaction_types ON transaction_types;
+CREATE TRIGGER trigger_prevent_delete_protected_transaction_types
+BEFORE DELETE ON transaction_types
+FOR EACH ROW
+EXECUTE FUNCTION prevent_delete_protected_transaction_types();

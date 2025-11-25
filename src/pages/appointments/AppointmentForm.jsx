@@ -415,12 +415,23 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
       if (!isEditing) {
         orderId = openOrder?.id || null
       } else {
-        // For editing, get order_id from existing appointment or find open order
+        // For editing, get order_id and order_status from existing appointment
         const existingAppointment = await sql`
-          SELECT order_id FROM scheduled_appointments WHERE id = ${appointment.id}
+          SELECT sa.order_id, o.status AS order_status
+          FROM scheduled_appointments sa
+          LEFT JOIN orders o ON sa.order_id = o.id
+          WHERE sa.id = ${appointment.id}
         `
-        if (existingAppointment && existingAppointment.length > 0 && existingAppointment[0].order_id) {
-          orderId = existingAppointment[0].order_id
+        if (existingAppointment && existingAppointment.length > 0) {
+          const appointmentData = existingAppointment[0]
+          // Prevent editing if linked to closed or cancelled order
+          if (appointmentData.order_id && 
+              (appointmentData.order_status === 'closed' || appointmentData.order_status === 'cancelled')) {
+            setError(t('appointmentForm.error.orderClosedOrCancelled', 'Cannot edit appointment: linked to a closed or cancelled order.'))
+            setSaving(false)
+            return
+          }
+          orderId = appointmentData.order_id
         } else {
           // Try to find open order for this customer
           const openOrderResult = await sql`

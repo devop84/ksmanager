@@ -1455,6 +1455,7 @@ function App() {
             onBack={handleOrderDetailBack}
             onEdit={handleOrderDetailEdit}
             onDelete={handleOrderDetailDelete}
+            onViewCustomer={(customer) => openCustomerDetail(customer, 'orderDetail')}
             user={user}
           />
         )
