@@ -32,7 +32,8 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
   
   // For adding items
   const [showAddItem, setShowAddItem] = useState(false)
-  const [itemType, setItemType] = useState('service')
+  const [itemType, setItemType] = useState('service') // 'service' for Services, 'product' for Products
+  const [actualItemType, setActualItemType] = useState('service') // 'service' or 'service_package' or 'product'
   const [itemId, setItemId] = useState('')
   const [itemQuantity, setItemQuantity] = useState('1')
   const [itemPrice, setItemPrice] = useState('')
@@ -178,7 +179,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
         const [servicesResult, packagesResult, productsResult, paymentMethodsResult, accountsResult] = await Promise.all([
           sql`SELECT id, name, base_price FROM services WHERE is_active = true ORDER BY name ASC`,
           sql`
-            SELECT sp.id, sp.name, sp.price, s.name AS service_name
+            SELECT sp.id, sp.name, sp.price, sp.service_id, s.name AS service_name
             FROM service_packages sp
             LEFT JOIN services s ON sp.service_id = s.id
             WHERE sp.is_active = true
@@ -319,15 +320,15 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
         return
       }
 
-      // Get item name based on type
+      // Get item name based on actual type
       let itemName = ''
-      if (itemType === 'service') {
+      if (actualItemType === 'service') {
         const service = services.find(s => s.id.toString() === itemId)
         itemName = service?.name || `Service #${itemId}`
-      } else if (itemType === 'service_package') {
+      } else if (actualItemType === 'service_package') {
         const pkg = servicePackages.find(p => p.id.toString() === itemId)
         itemName = pkg?.name || `Package #${itemId}`
-      } else if (itemType === 'product') {
+      } else if (actualItemType === 'product') {
         const product = products.find(p => p.id.toString() === itemId)
         itemName = product?.name || `Product #${itemId}`
       }
@@ -349,7 +350,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
             INSERT INTO order_items (order_id, item_type, item_id, item_name, quantity, unit_price, subtotal, note)
             VALUES (
               ${orderId}, 
-              ${itemType}, 
+              ${actualItemType}, 
               ${Number(itemId)}, 
               ${itemName}, 
               ${quantity}, 
@@ -387,7 +388,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                 INSERT INTO order_items (order_id, item_type, item_id, item_name, quantity, unit_price, subtotal, note)
                 VALUES (
                   ${orderId}, 
-                  ${itemType}, 
+                  ${actualItemType}, 
                   ${Number(itemId)}, 
                   ${itemName}, 
                   ${quantity}, 
@@ -474,6 +475,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
 
       // Reset form
       setItemType('service')
+      setActualItemType('service')
       setItemId('')
       setItemQuantity('1')
       setItemPrice('')
@@ -626,22 +628,83 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
     }
   }
 
+  // Build combined services list (services with their packages grouped)
+  const getCombinedServicesList = () => {
+    const combined = []
+    
+    // Group packages by service_id
+    const packagesByService = {}
+    servicePackages.forEach(pkg => {
+      const serviceId = pkg.service_id
+      if (!packagesByService[serviceId]) {
+        packagesByService[serviceId] = []
+      }
+      packagesByService[serviceId].push(pkg)
+    })
+    
+    // Add services with their packages
+    services.forEach(service => {
+      // Add the service itself
+      combined.push({
+        id: service.id,
+        name: service.name,
+        type: 'service',
+        price: service.base_price
+      })
+      
+      // Add packages for this service
+      const packages = packagesByService[service.id] || []
+      packages.forEach(pkg => {
+        combined.push({
+          id: pkg.id,
+          name: pkg.name,
+          type: 'service_package',
+          price: pkg.price,
+          serviceName: service.name
+        })
+      })
+    })
+    
+    // Add services that have packages but weren't in the services list (shouldn't happen, but safety)
+    Object.keys(packagesByService).forEach(serviceId => {
+      const service = services.find(s => s.id === Number(serviceId))
+      if (!service) {
+        // Service not found, add packages anyway
+        packagesByService[serviceId].forEach(pkg => {
+          combined.push({
+            id: pkg.id,
+            name: pkg.name,
+            type: 'service_package',
+            price: pkg.price,
+            serviceName: pkg.service_name
+          })
+        })
+      }
+    })
+    
+    return combined
+  }
+
   const handleItemTypeChange = (type) => {
     setItemType(type)
+    setActualItemType(type === 'service' ? 'service' : 'product')
     setItemId('')
     setItemPrice('')
   }
 
   const handleItemIdChange = (id) => {
     setItemId(id)
-    // Auto-fill price based on selected item
+    
     if (itemType === 'service') {
-      const service = services.find(s => s.id.toString() === id)
-      setItemPrice(service?.base_price?.toString() || '')
-    } else if (itemType === 'service_package') {
-      const pkg = servicePackages.find(p => p.id.toString() === id)
-      setItemPrice(pkg?.price?.toString() || '')
+      // Check if it's a service or service_package from the combined list
+      const combinedList = getCombinedServicesList()
+      const selectedItem = combinedList.find(item => item.id.toString() === id)
+      if (selectedItem) {
+        setActualItemType(selectedItem.type)
+        setItemPrice(selectedItem.price?.toString() || '')
+      }
     } else if (itemType === 'product') {
+      setActualItemType('product')
       const product = products.find(p => p.id.toString() === id)
       setItemPrice(product?.price?.toString() || '')
     }
@@ -1517,8 +1580,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                         onChange={(e) => handleItemTypeChange(e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                       >
-                        <option value="service">{t('orderDetail.itemTypes.service', 'Service')}</option>
-                        <option value="service_package">{t('orderDetail.itemTypes.servicePackage', 'Service Package')}</option>
+                        <option value="service">{t('orderDetail.itemTypes.services', 'Services')}</option>
                         <option value="product">{t('orderDetail.itemTypes.product', 'Product')}</option>
                       </select>
                     </div>
@@ -1532,14 +1594,9 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                       >
                         <option value="">{t('orderDetail.itemFields.selectItem', 'Select...')}</option>
-                        {itemType === 'service' && services.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name}
-                          </option>
-                        ))}
-                        {itemType === 'service_package' && servicePackages.map((p) => (
-                          <option key={p.id} value={p.id}>
-                            {p.name} {p.service_name ? `(${p.service_name})` : ''}
+                        {itemType === 'service' && getCombinedServicesList().map((item) => (
+                          <option key={`${item.type}-${item.id}`} value={item.id}>
+                            {item.type === 'service_package' ? `  └ ${item.name}` : item.name}
                           </option>
                         ))}
                         {itemType === 'product' && products.map((p) => (

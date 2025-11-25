@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import Sidebar from './components/layout/Sidebar'
 import Customers from './pages/customers/Customers'
@@ -135,6 +135,241 @@ function App() {
   const [instructorDetailBackPage, setInstructorDetailBackPage] = useState('instructors')
   const [usersRefreshKey, setUsersRefreshKey] = useState(0)
   const [userFormUser, setUserFormUser] = useState(null)
+
+  // Helper function to get page from URL path
+  const getPageFromPath = (pathname) => {
+    const path = pathname.replace(/^\/+|\/+$/g, '') || 'landing'
+    // Map URL paths to page names
+    const pathToPage = {
+      '': 'landing',
+      'landing': 'landing',
+      'login': 'login',
+      'signup': 'signup',
+      'dashboard': 'dashboard',
+      'customers': 'customers',
+      'hotels': 'hotels',
+      'agencies': 'agencies',
+      'instructors': 'instructors',
+      'staff': 'staff',
+      'company-accounts': 'companyAccounts',
+      'third-parties': 'thirdParties',
+      'transactions': 'transactions',
+      'orders': 'orders',
+      'products': 'products',
+      'services': 'services',
+      'service-packages': 'servicePackages',
+      'appointments': 'appointments',
+      'calendar': 'calendar',
+      'settings': 'settings',
+      'roadmap': 'roadmap'
+    }
+    return pathToPage[path] || 'landing'
+  }
+
+  // Helper function to get URL path from page name
+  const getPathFromPage = (page) => {
+    // Map detail and form pages to their base pages
+    const basePageMap = {
+      'customerDetail': 'customers',
+      'customerForm': 'customers',
+      'hotelDetail': 'hotels',
+      'hotelForm': 'hotels',
+      'agencyDetail': 'agencies',
+      'agencyForm': 'agencies',
+      'instructorDetail': 'instructors',
+      'instructorForm': 'instructors',
+      'staffDetail': 'staff',
+      'staffForm': 'staff',
+      'companyAccountDetail': 'companyAccounts',
+      'companyAccountForm': 'companyAccounts',
+      'thirdPartyDetail': 'thirdParties',
+      'thirdPartyForm': 'thirdParties',
+      'transactionDetail': 'transactions',
+      'transactionForm': 'transactions',
+      'orderDetail': 'orders',
+      'orderForm': 'orders',
+      'productDetail': 'products',
+      'productForm': 'products',
+      'serviceDetail': 'services',
+      'serviceForm': 'services',
+      'servicePackageDetail': 'servicePackages',
+      'servicePackageForm': 'servicePackages',
+      'appointmentDetail': 'appointments',
+      'appointmentForm': 'appointments'
+    }
+    
+    // Get the base page if it's a detail/form page
+    const basePage = basePageMap[page] || page
+    
+    const pageToPath = {
+      'landing': '/',
+      'login': '/login',
+      'signup': '/signup',
+      'dashboard': '/dashboard',
+      'customers': '/customers',
+      'hotels': '/hotels',
+      'agencies': '/agencies',
+      'instructors': '/instructors',
+      'staff': '/staff',
+      'companyAccounts': '/company-accounts',
+      'thirdParties': '/third-parties',
+      'transactions': '/transactions',
+      'orders': '/orders',
+      'products': '/products',
+      'services': '/services',
+      'servicePackages': '/service-packages',
+      'appointments': '/appointments',
+      'calendar': '/calendar',
+      'settings': '/settings',
+      'roadmap': '/roadmap'
+    }
+    return pageToPath[basePage] || '/'
+  }
+
+  // Initialize page from URL on mount
+  useEffect(() => {
+    const pathname = window.location.pathname
+    const pageFromUrl = getPageFromPath(pathname)
+    if (pageFromUrl !== currentPage) {
+      setCurrentPage(pageFromUrl)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // Capture current navigation state for history
+  const captureNavigationState = () => {
+    return {
+      page: currentPage,
+      customerDetailId,
+      customerDetailBackPage,
+      hotelDetailId,
+      hotelFormBackPage,
+      agencyDetailId,
+      agencyFormBackPage,
+      instructorDetailId,
+      instructorDetailBackPage,
+      staffDetailId,
+      staffFormBackPage,
+      companyAccountDetailId,
+      companyAccountFormBackPage,
+      thirdPartyDetailId,
+      thirdPartyFormBackPage,
+      transactionDetailId,
+      transactionFormBackPage,
+      orderDetailId,
+      orderDetailBackPage,
+      orderDetailBackId,
+      productDetailId,
+      productFormBackPage,
+      serviceDetailId,
+      serviceFormBackPage,
+      servicePackageDetailId,
+      servicePackageDetailBackPage,
+      servicePackageDetailBackId,
+      appointmentDetailId,
+      appointmentDetailBackPage
+    }
+  }
+
+  // Restore navigation state from history
+  const restoreNavigationState = (state) => {
+    if (!state) return
+    
+    if (state.customerDetailId !== undefined) setCustomerDetailId(state.customerDetailId)
+    if (state.customerDetailBackPage !== undefined) setCustomerDetailBackPage(state.customerDetailBackPage)
+    if (state.hotelDetailId !== undefined) setHotelDetailId(state.hotelDetailId)
+    if (state.hotelFormBackPage !== undefined) setHotelFormBackPage(state.hotelFormBackPage)
+    if (state.agencyDetailId !== undefined) setAgencyDetailId(state.agencyDetailId)
+    if (state.agencyFormBackPage !== undefined) setAgencyFormBackPage(state.agencyFormBackPage)
+    if (state.instructorDetailId !== undefined) setInstructorDetailId(state.instructorDetailId)
+    if (state.instructorDetailBackPage !== undefined) setInstructorDetailBackPage(state.instructorDetailBackPage)
+    if (state.staffDetailId !== undefined) setStaffDetailId(state.staffDetailId)
+    if (state.staffFormBackPage !== undefined) setStaffFormBackPage(state.staffFormBackPage)
+    if (state.companyAccountDetailId !== undefined) setCompanyAccountDetailId(state.companyAccountDetailId)
+    if (state.companyAccountFormBackPage !== undefined) setCompanyAccountFormBackPage(state.companyAccountFormBackPage)
+    if (state.thirdPartyDetailId !== undefined) setThirdPartyDetailId(state.thirdPartyDetailId)
+    if (state.thirdPartyFormBackPage !== undefined) setThirdPartyFormBackPage(state.thirdPartyFormBackPage)
+    if (state.transactionDetailId !== undefined) setTransactionDetailId(state.transactionDetailId)
+    if (state.transactionFormBackPage !== undefined) setTransactionFormBackPage(state.transactionFormBackPage)
+    if (state.orderDetailId !== undefined) setOrderDetailId(state.orderDetailId)
+    if (state.orderDetailBackPage !== undefined) setOrderDetailBackPage(state.orderDetailBackPage)
+    if (state.orderDetailBackId !== undefined) setOrderDetailBackId(state.orderDetailBackId)
+    if (state.productDetailId !== undefined) setProductDetailId(state.productDetailId)
+    if (state.productFormBackPage !== undefined) setProductFormBackPage(state.productFormBackPage)
+    if (state.serviceDetailId !== undefined) setServiceDetailId(state.serviceDetailId)
+    if (state.serviceFormBackPage !== undefined) setServiceFormBackPage(state.serviceFormBackPage)
+    if (state.servicePackageDetailId !== undefined) setServicePackageDetailId(state.servicePackageDetailId)
+    if (state.servicePackageDetailBackPage !== undefined) setServicePackageDetailBackPage(state.servicePackageDetailBackPage)
+    if (state.servicePackageDetailBackId !== undefined) setServicePackageDetailBackId(state.servicePackageDetailBackId)
+    if (state.appointmentDetailId !== undefined) setAppointmentDetailId(state.appointmentDetailId)
+    if (state.appointmentDetailBackPage !== undefined) setAppointmentDetailBackPage(state.appointmentDetailBackPage)
+  }
+
+  // Track previous state to detect actual navigation changes
+  const prevNavigationStateRef = useRef(null)
+
+  // Sync URL with currentPage changes (but not on initial mount to avoid conflicts)
+  useEffect(() => {
+    // Skip if this is the initial render
+    if (loading) return
+    
+    const path = getPathFromPage(currentPage)
+    const navigationState = captureNavigationState()
+    
+    // Check if this is a real navigation change (not just a state update)
+    const isNavigationChange = !prevNavigationStateRef.current || 
+      prevNavigationStateRef.current.page !== currentPage ||
+      prevNavigationStateRef.current.customerDetailId !== customerDetailId ||
+      prevNavigationStateRef.current.orderDetailId !== orderDetailId ||
+      prevNavigationStateRef.current.appointmentDetailId !== appointmentDetailId ||
+      prevNavigationStateRef.current.servicePackageDetailId !== servicePackageDetailId
+    
+    if (window.location.pathname !== path) {
+      // URL changed, always push new state
+      window.history.pushState(navigationState, '', path)
+      prevNavigationStateRef.current = navigationState
+    } else if (isNavigationChange) {
+      // Same URL but different page/context (e.g., navigating to detail page from list)
+      // Push new state to create history entry
+      window.history.pushState(navigationState, '', path)
+      prevNavigationStateRef.current = navigationState
+    } else {
+      // Just a state update, replace current state
+      window.history.replaceState(navigationState, '', path)
+      prevNavigationStateRef.current = navigationState
+    }
+  }, [
+    currentPage, loading, customerDetailId, customerDetailBackPage,
+    hotelDetailId, hotelFormBackPage, agencyDetailId, agencyFormBackPage,
+    instructorDetailId, instructorDetailBackPage, staffDetailId, staffFormBackPage,
+    companyAccountDetailId, companyAccountFormBackPage, thirdPartyDetailId, thirdPartyFormBackPage,
+    transactionDetailId, transactionFormBackPage, orderDetailId, orderDetailBackPage, orderDetailBackId,
+    productDetailId, productFormBackPage, serviceDetailId, serviceFormBackPage,
+    servicePackageDetailId, servicePackageDetailBackPage, servicePackageDetailBackId,
+    appointmentDetailId, appointmentDetailBackPage
+  ])
+
+  // Listen to browser back/forward button
+  useEffect(() => {
+    const handlePopState = (event) => {
+      const state = event.state
+      if (state && state.page) {
+        // Restore full navigation state
+        restoreNavigationState(state)
+        setCurrentPage(state.page)
+      } else {
+        // Fallback: just use URL
+        const pathname = window.location.pathname
+        const pageFromUrl = getPageFromPath(pathname)
+        setCurrentPage(pageFromUrl)
+      }
+    }
+
+    window.addEventListener('popstate', handlePopState)
+    return () => {
+      window.removeEventListener('popstate', handlePopState)
+    }
+  }, [])
 
   // Check if user is logged in on mount using session
   useEffect(() => {
