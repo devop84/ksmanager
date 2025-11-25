@@ -1,13 +1,41 @@
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useSettings } from '../../context/SettingsContext'
 
 function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClose }) {
   const { t } = useTranslation()
+  const { language, setLanguage } = useSettings()
+  const [showLanguageMenu, setShowLanguageMenu] = useState(false)
+
+  // Close language menu when sidebar closes on mobile
+  useEffect(() => {
+    if (!isMobileOpen) {
+      setShowLanguageMenu(false)
+    }
+  }, [isMobileOpen])
+
+  const languages = [
+    { code: 'en-US', label: 'English', flag: '🇺🇸' },
+    { code: 'pt-BR', label: 'Português', flag: '🇧🇷' },
+    { code: 'fr-FR', label: 'Français', flag: '🇫🇷' },
+    { code: 'es-ES', label: 'Español', flag: '🇪🇸' },
+    { code: 'de-DE', label: 'Deutsch', flag: '🇩🇪' },
+    { code: 'it-IT', label: 'Italiano', flag: '🇮🇹' },
+  ]
+
+  const currentLanguage = languages.find((lang) => lang.code === language) || languages[0]
+
+  const handleLanguageChange = (langCode) => {
+    setLanguage(langCode)
+    setShowLanguageMenu(false)
+  }
 
   const handleNavigateClick = (page) => {
     onNavigate(page)
     if (onClose) {
       onClose()
     }
+    setShowLanguageMenu(false)
   }
 
   const navItems = [
@@ -94,6 +122,71 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
               </p>
             </div>
             <div className="flex items-center gap-2 flex-shrink-0">
+              {/* Language Selector */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowLanguageMenu(!showLanguageMenu)}
+                  className="p-2 rounded-md text-gray-400 hover:text-white hover:bg-gray-800 transition-colors duration-200"
+                  aria-label={t('settings.language', 'Language')}
+                  title={t('settings.language', 'Language')}
+                >
+                  <svg
+                    className="w-5 h-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
+                    />
+                  </svg>
+                </button>
+                {/* Language Dropdown Menu */}
+                {showLanguageMenu && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowLanguageMenu(false)}
+                    />
+                    <div className="absolute top-full left-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl border border-gray-700 z-50">
+                      <div className="py-1">
+                        {languages.map((lang) => (
+                          <button
+                            key={lang.code}
+                            onClick={() => handleLanguageChange(lang.code)}
+                            className={`w-full text-left px-4 py-2 text-sm flex items-center gap-2 transition-colors ${
+                              language === lang.code
+                                ? 'bg-indigo-600 text-white'
+                                : 'text-gray-300 hover:bg-gray-700 hover:text-white'
+                            }`}
+                          >
+                            <span className="text-lg">{lang.flag}</span>
+                            <span>{lang.label}</span>
+                            {language === lang.code && (
+                              <svg
+                                className="w-4 h-4 ml-auto"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                              >
+                                <path
+                                  strokeLinecap="round"
+                                  strokeLinejoin="round"
+                                  strokeWidth={2}
+                                  d="M5 13l4 4L19 7"
+                                />
+                              </svg>
+                            )}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                )}
+              </div>
               {/* Settings Button */}
               <button
                 onClick={() => {

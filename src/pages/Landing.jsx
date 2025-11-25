@@ -10,6 +10,17 @@ function Landing({ onNavigate, isAuthenticated = false }) {
   const [showLanguageMenu, setShowLanguageMenu] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
+  const languages = [
+    { code: 'en-US', label: 'English (US)', shortLabel: 'English', flag: '🇺🇸', shortCode: 'EN' },
+    { code: 'pt-BR', label: 'Português (Brasil)', shortLabel: 'Português', flag: '🇧🇷', shortCode: 'PT' },
+    { code: 'fr-FR', label: 'Français', shortLabel: 'Français', flag: '🇫🇷', shortCode: 'FR' },
+    { code: 'es-ES', label: 'Español', shortLabel: 'Español', flag: '🇪🇸', shortCode: 'ES' },
+    { code: 'de-DE', label: 'Deutsch', shortLabel: 'Deutsch', flag: '🇩🇪', shortCode: 'DE' },
+    { code: 'it-IT', label: 'Italiano', shortLabel: 'Italiano', flag: '🇮🇹', shortCode: 'IT' },
+  ]
+
+  const currentLanguage = languages.find((lang) => lang.code === language) || languages[0]
+
   const features = [
     {
       icon: '📊',
@@ -80,10 +91,10 @@ function Landing({ onNavigate, isAuthenticated = false }) {
                   aria-label="Select language"
                 >
                   <span className="text-base sm:text-lg">
-                    {language === 'pt-BR' ? '🇧🇷' : '🇺🇸'}
+                    {currentLanguage.flag}
                   </span>
                   <span className="text-xs sm:text-sm hidden sm:inline">
-                    {language === 'pt-BR' ? 'PT' : 'EN'}
+                    {currentLanguage.shortCode}
                   </span>
                   <svg
                     className={`w-3 h-3 sm:w-4 sm:h-4 transition-transform ${showLanguageMenu ? 'rotate-180' : ''}`}
@@ -105,40 +116,26 @@ function Landing({ onNavigate, isAuthenticated = false }) {
                     
                     {/* Dropdown Menu */}
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                      <button
-                        onClick={() => {
-                          setLanguage('en-US')
-                          setShowLanguageMenu(false)
-                        }}
-                        className={`w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors ${
-                          language === 'en-US' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
-                        }`}
-                      >
-                        <span className="text-xl">🇺🇸</span>
-                        <span className="font-medium">English (US)</span>
-                        {language === 'en-US' && (
-                          <svg className="w-4 h-4 ml-auto" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </button>
-                      <button
-                        onClick={() => {
-                          setLanguage('pt-BR')
-                          setShowLanguageMenu(false)
-                        }}
-                        className={`w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors ${
-                          language === 'pt-BR' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
-                        }`}
-                      >
-                        <span className="text-xl">🇧🇷</span>
-                        <span className="font-medium">Português (Brasil)</span>
-                        {language === 'pt-BR' && (
-                          <svg className="w-4 h-4 ml-auto" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        )}
-                      </button>
+                      {languages.map((lang) => (
+                        <button
+                          key={lang.code}
+                          onClick={() => {
+                            setLanguage(lang.code)
+                            setShowLanguageMenu(false)
+                          }}
+                          className={`w-full px-4 py-2 text-left flex items-center gap-3 hover:bg-gray-50 transition-colors ${
+                            language === lang.code ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
+                          }`}
+                        >
+                          <span className="text-xl">{lang.flag}</span>
+                          <span className="font-medium">{lang.label}</span>
+                          {language === lang.code && (
+                            <svg className="w-4 h-4 ml-auto" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                            </svg>
+                          )}
+                        </button>
+                      ))}
                     </div>
                   </>
                 )}
@@ -177,7 +174,7 @@ function Landing({ onNavigate, isAuthenticated = false }) {
                   aria-label="Select language"
                 >
                   <span className="text-base">
-                    {language === 'pt-BR' ? '🇧🇷' : '🇺🇸'}
+                    {currentLanguage.flag}
                   </span>
                 </button>
                 
@@ -188,30 +185,21 @@ function Landing({ onNavigate, isAuthenticated = false }) {
                       onClick={() => setShowLanguageMenu(false)}
                     ></div>
                     <div className="absolute right-0 mt-2 w-40 bg-white rounded-lg shadow-lg border border-gray-200 py-1 z-50">
-                      <button
-                        onClick={() => {
-                          setLanguage('en-US')
-                          setShowLanguageMenu(false)
-                        }}
-                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-gray-50 transition-colors text-sm ${
-                          language === 'en-US' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
-                        }`}
-                      >
-                        <span className="text-lg">🇺🇸</span>
-                        <span className="font-medium">English</span>
-                      </button>
-                      <button
-                        onClick={() => {
-                          setLanguage('pt-BR')
-                          setShowLanguageMenu(false)
-                        }}
-                        className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-gray-50 transition-colors text-sm ${
-                          language === 'pt-BR' ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
-                        }`}
-                      >
-                        <span className="text-lg">🇧🇷</span>
-                        <span className="font-medium">Português</span>
-                      </button>
+                      {languages.map((lang) => (
+                        <button
+                          key={lang.code}
+                          onClick={() => {
+                            setLanguage(lang.code)
+                            setShowLanguageMenu(false)
+                          }}
+                          className={`w-full px-3 py-2 text-left flex items-center gap-2 hover:bg-gray-50 transition-colors text-sm ${
+                            language === lang.code ? 'bg-indigo-50 text-indigo-600' : 'text-gray-700'
+                          }`}
+                        >
+                          <span className="text-lg">{lang.flag}</span>
+                          <span className="font-medium">{lang.shortLabel}</span>
+                        </button>
+                      ))}
                     </div>
                   </>
                 )}
