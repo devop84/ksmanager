@@ -1135,10 +1135,20 @@ function App() {
     openStaffForm(staff, 'staffDetail', staffDetailId)
   }
 
-  const handleStaffDetailDelete = () => {
-    setStaffRefreshKey((prev) => prev + 1)
-    setStaffDetailId(null)
-    setCurrentPage('staff')
+  const handleStaffDetailDelete = async () => {
+    if (!window.confirm(t('staff.confirm.delete', 'Are you sure you want to delete this staff member? This action cannot be undone.'))) {
+      return
+    }
+
+    try {
+      await sql`DELETE FROM staff WHERE id = ${staffDetailId}`
+      setStaffRefreshKey((prev) => prev + 1)
+      setStaffDetailId(null)
+      setCurrentPage('staff')
+    } catch (err) {
+      console.error('Failed to delete staff:', err)
+      alert(t('staff.error.delete', 'Unable to delete staff. Please try again.'))
+    }
   }
 
 
