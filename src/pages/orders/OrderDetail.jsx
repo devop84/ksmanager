@@ -59,6 +59,13 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
   const [refundCompanyAccountId, setRefundCompanyAccountId] = useState('')
   const [addingRefund, setAddingRefund] = useState(false)
   const [serviceCredits, setServiceCredits] = useState([])
+  
+  // For adding discounts
+  const [orderDiscounts, setOrderDiscounts] = useState([])
+  const [showAddDiscount, setShowAddDiscount] = useState(false)
+  const [discountAmount, setDiscountAmount] = useState('')
+  const [discountReason, setDiscountReason] = useState('')
+  const [addingDiscount, setAddingDiscount] = useState(false)
 
   useEffect(() => {
     if (!orderId) return
@@ -177,6 +184,24 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
           ORDER BY orf.occurred_at ASC
         `
         setOrderRefunds(refundsResult || [])
+        
+        // Fetch order discounts
+        const discountsResult = await sql`
+          SELECT 
+            od.id,
+            od.amount,
+            od.currency,
+            od.reason,
+            od.note,
+            od.occurred_at,
+            od.created_at,
+            u.name AS created_by_name
+          FROM order_discounts od
+          LEFT JOIN users u ON od.created_by = u.id
+          WHERE od.order_id = ${orderId}
+          ORDER BY od.occurred_at ASC
+        `
+        setOrderDiscounts(discountsResult || [])
         
         // Load dropdown options for adding items and payments
         const [servicesResult, packagesResult, productsResult, paymentMethodsResult, accountsResult] = await Promise.all([
@@ -1263,6 +1288,176 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
     }
   }
 
+  const handleAddDiscount = async (e) => {
+    if (e) {
+      e.preventDefault()
+      e.stopPropagation()
+    }
+
+    if (!orderId || !order) return
+
+    // Double-submission protection
+    if (addingDiscount) {
+      return
+    }
+
+    try {
+      if (!discountAmount) {
+        alert(t('orderDetail.errors.discountRequired', 'Please enter a discount amount.'))
+        return
+      }
+
+      const amount = Number(discountAmount)
+      if (amount <= 0) {
+        alert(t('orderDetail.errors.invalidDiscount', 'Discount amount must be greater than 0.'))
+        return
+      }
+
+      setAddingDiscount(true)
+
+      // Insert discount (trigger will automatically update order totals)
+      await sql`
+        INSERT INTO order_discounts (order_id, amount, currency, reason, occurred_at, created_by)
+        VALUES (
+          ${orderId},
+          ${amount},
+          ${order.currency || 'BRL'},
+          ${discountReason || null},
+          ${new Date().toISOString()},
+          ${user?.id || null}
+        )
+      `
+
+      // Reload discounts
+      const discountsResult = await sql`
+        SELECT 
+          od.id,
+          od.amount,
+          od.currency,
+          od.reason,
+          od.note,
+          od.occurred_at,
+          od.created_at,
+          u.name AS created_by_name
+        FROM order_discounts od
+        LEFT JOIN users u ON od.created_by = u.id
+        WHERE od.order_id = ${orderId}
+        ORDER BY od.occurred_at ASC
+      `
+      setOrderDiscounts(discountsResult || [])
+
+      // Reload order to get updated totals
+      const orderResult = await sql`
+        SELECT 
+          o.id,
+          o.order_number,
+          o.customer_id,
+          o.status,
+          o.subtotal,
+          o.tax_amount,
+          o.discount_amount,
+          o.total_amount,
+          o.currency,
+          o.total_paid,
+          o.balance_due,
+          o.created_at,
+          o.updated_at,
+          o.closed_at,
+          o.cancelled_at,
+          o.agency_id,
+          o.note,
+          c.fullname AS customer_name,
+          a.name AS agency_name,
+          u.name AS created_by_name
+        FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.id
+        LEFT JOIN agencies a ON o.agency_id = a.id
+        LEFT JOIN users u ON o.created_by = u.id
+        WHERE o.id = ${orderId}
+        LIMIT 1
+      `
+      if (orderResult && orderResult.length > 0) {
+        setOrder(orderResult[0])
+      }
+
+      // Reset form
+      setDiscountAmount('')
+      setDiscountReason('')
+      setShowAddDiscount(false)
+    } catch (error) {
+      console.error('Error adding discount:', error)
+      alert(t('orderDetail.errors.addDiscountFailed', 'Failed to add discount. Please try again.'))
+    } finally {
+      setAddingDiscount(false)
+    }
+  }
+
+  const handleRemoveDiscount = async (discountId) => {
+    if (!orderId) return
+    if (!window.confirm(t('orderDetail.confirm.removeDiscount', 'Are you sure you want to remove this discount? This action cannot be undone.'))) {
+      return
+    }
+    try {
+      // Delete the discount
+      await sql`DELETE FROM order_discounts WHERE id = ${discountId}`
+
+      // Reload discounts
+      const discountsResult = await sql`
+        SELECT 
+          od.id,
+          od.amount,
+          od.currency,
+          od.reason,
+          od.note,
+          od.occurred_at,
+          od.created_at,
+          u.name AS created_by_name
+        FROM order_discounts od
+        LEFT JOIN users u ON od.created_by = u.id
+        WHERE od.order_id = ${orderId}
+        ORDER BY od.occurred_at ASC
+      `
+      setOrderDiscounts(discountsResult || [])
+
+      // Reload order to get updated totals
+      const orderResult = await sql`
+        SELECT 
+          o.id,
+          o.order_number,
+          o.customer_id,
+          o.status,
+          o.subtotal,
+          o.tax_amount,
+          o.discount_amount,
+          o.total_amount,
+          o.currency,
+          o.total_paid,
+          o.balance_due,
+          o.created_at,
+          o.updated_at,
+          o.closed_at,
+          o.cancelled_at,
+          o.agency_id,
+          o.note,
+          c.fullname AS customer_name,
+          a.name AS agency_name,
+          u.name AS created_by_name
+        FROM orders o
+        LEFT JOIN customers c ON o.customer_id = c.id
+        LEFT JOIN agencies a ON o.agency_id = a.id
+        LEFT JOIN users u ON o.created_by = u.id
+        WHERE o.id = ${orderId}
+        LIMIT 1
+      `
+      if (orderResult && orderResult.length > 0) {
+        setOrder(orderResult[0])
+      }
+    } catch (err) {
+      console.error('Failed to remove discount:', err)
+      alert(t('orderDetail.error.removeDiscount', 'Unable to remove discount. Please try again.'))
+    }
+  }
+
   const handleCloseOrder = async () => {
     if (!orderId || !order) return
     
@@ -2136,6 +2331,203 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                     </tfoot>
                   </table>
                 </div>
+                </>
+              )}
+            </div>
+
+            {/* Discounts */}
+            <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">
+                  {t('orderDetail.discounts.title', 'Discounts')}
+                </h2>
+                {canModify(user) && (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      e.stopPropagation()
+                      if (order?.status === 'open') {
+                        setShowAddDiscount(!showAddDiscount)
+                      }
+                    }}
+                    disabled={order?.status !== 'open'}
+                    className="inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-semibold shadow-sm transition-colors bg-amber-600 text-white hover:bg-amber-500 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-amber-600"
+                    title={order?.status !== 'open' ? t('orderDetail.discounts.cannotAddClosed', 'Cannot add discounts to a closed order') : ''}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                    </svg>
+                    {t('orderDetail.discounts.add', 'Add Discount')}
+                  </button>
+                )}
+              </div>
+
+              {/* Add Discount Form */}
+              {showAddDiscount && canModify(user) && (
+                <div className="mb-4 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-700">
+                        {t('orderDetail.discountFields.amount', 'Amount *')}
+                      </label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0.01"
+                        value={discountAmount}
+                        onChange={(e) => setDiscountAmount(e.target.value)}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      />
+                    </div>
+                    <div>
+                      <label className="mb-1 block text-xs font-medium text-gray-700">
+                        {t('orderDetail.discountFields.reason', 'Reason')}
+                      </label>
+                      <input
+                        type="text"
+                        value={discountReason}
+                        onChange={(e) => setDiscountReason(e.target.value)}
+                        placeholder={t('orderDetail.discountFields.reasonPlaceholder', 'e.g., Promotional, Loyalty, etc.')}
+                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
+                      />
+                    </div>
+                    <div className="flex items-end gap-2 sm:col-span-2 lg:col-span-2">
+                      <button
+                        type="button"
+                        onClick={handleAddDiscount}
+                        disabled={addingDiscount}
+                        className="flex-1 rounded-lg bg-amber-600 px-3 py-2 text-sm font-semibold text-white hover:bg-amber-500 disabled:opacity-50"
+                      >
+                        {addingDiscount ? t('orderDetail.buttons.addingDiscount', 'Adding...') : t('orderDetail.buttons.add', 'Add')}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          setShowAddDiscount(false)
+                        }}
+                        className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50"
+                      >
+                        {t('orderDetail.buttons.cancel', 'Cancel')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {orderDiscounts.length === 0 ? (
+                <p className="text-gray-500 text-sm">{t('orderDetail.discounts.empty', 'No discounts applied to this order.')}</p>
+              ) : (
+                <>
+                  {/* Mobile Card View */}
+                  <div className="block sm:hidden space-y-3">
+                    {orderDiscounts.map((discount) => (
+                      <div key={discount.id} className="border border-gray-200 rounded-lg p-4 bg-white">
+                        <div className="flex items-start justify-between mb-2">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-amber-700">
+                              -{formatAmount(discount.amount)}
+                            </div>
+                            <div className="text-xs text-gray-500 mt-1">
+                              {formatDateTime(discount.occurred_at)}
+                            </div>
+                          </div>
+                           {canModify(user) && (
+                              <button
+                                onClick={() => {
+                                  if (order.status === 'open') {
+                                    handleRemoveDiscount(discount.id)
+                                  }
+                                }}
+                                disabled={order.status !== 'open'}
+                                className="ml-2 inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                                title={order.status !== 'open' ? t('orderDetail.discounts.cannotRemoveClosed', 'Cannot remove discounts from a closed order') : t('orderDetail.discounts.remove', 'Remove Discount')}
+                              >
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                              </svg>
+                            </button>
+                          )}
+                        </div>
+                        {discount.reason && (
+                          <div className="mt-2 text-sm">
+                            <span className="text-gray-500">{t('orderDetail.discounts.reason', 'Reason')}: </span>
+                            <span className="text-gray-900">{discount.reason}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                  
+                  {/* Desktop Table View */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {t('orderDetail.discounts.date', 'Date')}
+                          </th>
+                          <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {t('orderDetail.discounts.reason', 'Reason')}
+                          </th>
+                          <th className="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                            {t('orderDetail.discounts.amount', 'Amount')}
+                          </th>
+                          {canModify(user) && (
+                            <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">
+                              {t('orderDetail.discounts.actions', 'Actions')}
+                            </th>
+                          )}
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {orderDiscounts.map((discount) => (
+                          <tr key={discount.id} className="hover:bg-gray-50">
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500">
+                              {formatDateTime(discount.occurred_at)}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {discount.reason || '—'}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-amber-700 text-right">
+                              -{formatAmount(discount.amount)}
+                            </td>
+                             {canModify(user) && (
+                                <td className="px-4 py-3 whitespace-nowrap text-center">
+                                  <button
+                                    onClick={() => {
+                                      if (order.status === 'open') {
+                                        handleRemoveDiscount(discount.id)
+                                      }
+                                    }}
+                                    disabled={order.status !== 'open'}
+                                    className="inline-flex items-center justify-center rounded-lg border border-red-300 px-2 py-1 text-xs font-semibold text-red-700 hover:bg-red-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white"
+                                    title={order.status !== 'open' ? t('orderDetail.discounts.cannotRemoveClosed', 'Cannot remove discounts from a closed order') : t('orderDetail.discounts.remove', 'Remove Discount')}
+                                  >
+                                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                  </svg>
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                      <tfoot className="bg-gray-50">
+                        <tr>
+                           <td colSpan={canModify(user) ? 3 : 2} className="px-4 py-3 text-right text-sm font-bold text-gray-900">
+                              {t('orderDetail.discounts.total', 'Total Discount')}:
+                            </td>
+                            <td className="px-4 py-3 text-right text-sm font-bold text-amber-700">
+                              -{formatAmount(orderDiscounts.reduce((sum, d) => sum + Number(d.amount || 0), 0))}
+                            </td>
+                           {canModify(user) && <td></td>}
+                        </tr>
+                      </tfoot>
+                    </table>
+                  </div>
                 </>
               )}
             </div>
