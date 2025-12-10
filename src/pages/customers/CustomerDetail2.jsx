@@ -18,7 +18,7 @@ function CustomerDetail2({
   user = null 
 }) {
   const { t } = useTranslation()
-  const { formatCurrency, formatDate, formatDateTime } = useSettings()
+  const { formatCurrency, formatDate, formatDateTime, formatTime } = useSettings()
   const [customer, setCustomer] = useState(null)
   const [appointments, setAppointments] = useState([])
   const [orders, setOrders] = useState([])
@@ -35,6 +35,8 @@ function CustomerDetail2({
   const [error, setError] = useState(null)
   const [deleting, setDeleting] = useState(false)
   const [closingOrder, setClosingOrder] = useState(false)
+  const [appointmentView, setAppointmentView] = useState('list') // 'list' or 'calendar'
+  const [calendarDate, setCalendarDate] = useState(new Date())
 
   // Load customer data
   useEffect(() => {
@@ -499,6 +501,49 @@ function CustomerDetail2({
   const canCloseOrder = openOrder && Math.abs(paymentDue) <= 0.01
 
   // Helper function to format duration
+  // Calendar helper functions
+  const getMonthDays = (date) => {
+    const year = date.getFullYear()
+    const month = date.getMonth()
+    
+    const firstDay = new Date(year, month, 1)
+    const lastDay = new Date(year, month + 1, 0)
+    const daysInMonth = lastDay.getDate()
+    const startingDayOfWeek = firstDay.getDay()
+    
+    const days = []
+    
+    // Add empty cells for days before month starts
+    for (let i = 0; i < startingDayOfWeek; i++) {
+      days.push(null)
+    }
+    
+    // Add all days of the month
+    for (let day = 1; day <= daysInMonth; day++) {
+      days.push(new Date(year, month, day))
+    }
+    
+    return days
+  }
+
+  const getAppointmentsForDate = (date) => {
+    if (!date) return []
+    const dateStr = date.toDateString()
+    return appointments.filter(apt => {
+      if (!apt.scheduled_start) return false
+      const aptDate = new Date(apt.scheduled_start)
+      return aptDate.toDateString() === dateStr
+    })
+  }
+
+  const navigateCalendarMonth = (direction) => {
+    setCalendarDate(prev => {
+      const newDate = new Date(prev)
+      newDate.setMonth(prev.getMonth() + direction)
+      return newDate
+    })
+  }
+
   const formatDuration = (appointment) => {
     if (appointment.duration_hours) {
       return `${Number(appointment.duration_hours).toFixed(2)} ${t('customerDetail2.appointments.hours', 'hours')}`
@@ -672,24 +717,162 @@ function CustomerDetail2({
                   <h2 className="text-lg font-semibold text-gray-900">
                     {t('customerDetail2.appointments.title', 'Appointments')}
                   </h2>
-                  {canModify(user) && (
-                    <button
-                      onClick={() => onAddAppointment?.(customer)}
-                      disabled={!openOrder}
-                      className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white shadow-sm hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                      title={!openOrder ? t('customerDetail2.actions.noOpenOrder', 'Customer must have an open order to create an appointment') : t('customerDetail2.actions.addAppointment', 'Add Appointment')}
-                    >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                    </button>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {/* View Toggle */}
+                    <div className="inline-flex rounded-lg border border-gray-300 bg-white p-1">
+                      <button
+                        onClick={() => setAppointmentView('list')}
+                        className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                          appointmentView === 'list'
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                        title={t('customerDetail2.appointments.viewList', 'List View')}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => setAppointmentView('calendar')}
+                        className={`px-3 py-1.5 text-xs font-medium rounded transition-colors ${
+                          appointmentView === 'calendar'
+                            ? 'bg-blue-600 text-white'
+                            : 'text-gray-700 hover:bg-gray-50'
+                        }`}
+                        title={t('customerDetail2.appointments.viewCalendar', 'Calendar View')}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                    </div>
+                    {canModify(user) && (
+                      <button
+                        onClick={() => onAddAppointment?.(customer)}
+                        disabled={!openOrder}
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-lg bg-blue-600 text-white shadow-sm hover:bg-blue-500 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        title={!openOrder ? t('customerDetail2.actions.noOpenOrder', 'Customer must have an open order to create an appointment') : t('customerDetail2.actions.addAppointment', 'Add Appointment')}
+                      >
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
                 
                 {loadingAppointments ? (
                   <div className="text-gray-600 text-sm">{t('customerDetail2.appointments.loading', 'Loading...')}</div>
                 ) : appointments.length === 0 ? (
                   <p className="text-gray-500 text-sm">{t('customerDetail2.appointments.empty', 'No appointments found.')}</p>
+                ) : appointmentView === 'calendar' ? (
+                  <div className="space-y-4">
+                    {/* Calendar Navigation */}
+                    <div className="flex items-center justify-between">
+                      <button
+                        onClick={() => navigateCalendarMonth(-1)}
+                        className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+                        aria-label={t('customerDetail2.appointments.prevMonth', 'Previous month')}
+                      >
+                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                        </svg>
+                      </button>
+                      <h3 className="text-base font-semibold text-gray-900">
+                        {calendarDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                      </h3>
+                      <button
+                        onClick={() => navigateCalendarMonth(1)}
+                        className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50"
+                        aria-label={t('customerDetail2.appointments.nextMonth', 'Next month')}
+                      >
+                        <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    </div>
+
+                    {/* Calendar Month View */}
+                    <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
+                      {/* Week day headers */}
+                      <div className="grid grid-cols-7 border-b border-gray-200">
+                        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((day) => (
+                          <div
+                            key={day}
+                            className="p-2 text-center text-xs font-semibold text-gray-700 bg-gray-50 border-r border-gray-200 last:border-r-0"
+                          >
+                            {t(`calendar.weekday.${day.toLowerCase()}`, day)}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Calendar grid */}
+                      <div className="grid grid-cols-7">
+                        {getMonthDays(calendarDate).map((date, dayIndex) => {
+                          const isToday = date && 
+                                         date.toDateString() === new Date().toDateString() &&
+                                         date.getMonth() === new Date().getMonth()
+                          const isOtherMonth = !date || date.getMonth() !== calendarDate.getMonth()
+                          const dayAppointments = getAppointmentsForDate(date)
+                          const statusColors = {
+                            scheduled: 'bg-blue-100 text-blue-800 border-blue-200',
+                            in_progress: 'bg-indigo-100 text-indigo-800 border-indigo-200',
+                            completed: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+                            cancelled: 'bg-rose-100 text-rose-800 border-rose-200',
+                            no_show: 'bg-amber-100 text-amber-800 border-amber-200',
+                            rescheduled: 'bg-purple-100 text-purple-800 border-purple-200'
+                          }
+
+                          return (
+                            <div
+                              key={dayIndex}
+                              className={`min-h-[100px] border-r border-b border-gray-200 p-1.5 ${
+                                isOtherMonth ? 'bg-gray-50' : 'bg-white'
+                              } ${isToday ? 'bg-blue-50' : ''}`}
+                            >
+                              {date && (
+                                <>
+                                  {/* Day number */}
+                                  <div className={`text-xs font-medium mb-1 ${
+                                    isToday ? 'text-blue-600 font-bold' : 
+                                    isOtherMonth ? 'text-gray-400' : 'text-gray-900'
+                                  }`}>
+                                    {date.getDate()}
+                                  </div>
+                                  
+                                  {/* Appointments for this day */}
+                                  <div className="space-y-1">
+                                    {dayAppointments.slice(0, 3).map((apt) => (
+                                      <div
+                                        key={apt.id}
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          onViewAppointment?.(apt)
+                                        }}
+                                        className={`text-xs px-1.5 py-0.5 rounded border font-medium cursor-pointer hover:opacity-80 transition-opacity ${
+                                          statusColors[apt.status] || statusColors.scheduled
+                                        }`}
+                                        title={`${apt.service_name || '—'} - ${apt.scheduled_start ? formatTime(apt.scheduled_start) : '—'}`}
+                                      >
+                                        <div className="truncate">{formatTime(apt.scheduled_start)}</div>
+                                        <div className="truncate font-semibold">{apt.service_name || '—'}</div>
+                                      </div>
+                                    ))}
+                                    {dayAppointments.length > 3 && (
+                                      <div className="text-xs text-gray-500 px-1.5">
+                                        +{dayAppointments.length - 3} {t('customerDetail2.appointments.more', 'more')}
+                                      </div>
+                                    )}
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </div>
                 ) : (
                   <div className="space-y-4">
                     {/* Upcoming Appointments */}
