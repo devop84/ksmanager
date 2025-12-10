@@ -618,6 +618,9 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onViewAppointmen
                             {appointment.status?.replace(/_/g, ' ').toUpperCase() || 'SCHEDULED'}
                           </span>
                         </td>
+                        <td className="px-3 sm:px-4 py-2 sm:py-3 text-sm text-gray-900">
+                          {appointment.order_number || '—'}
+                        </td>
                       </tr>
                     )
                   }
@@ -652,6 +655,9 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onViewAppointmen
                                   </th>
                                   <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                     {t('customerDetail.appointments.status', 'Status')}
+                                  </th>
+                                  <th className="px-3 sm:px-4 py-2 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                    {t('customerDetail.appointments.order', 'Order')}
                                   </th>
                                 </tr>
                               </thead>
@@ -1007,5 +1013,6 @@ function CustomerDetail({ customerId, onEdit, onDelete, onBack, onViewAppointmen
   )
 }
 
-export default CustomerDetail
+// Disabled - replaced with CustomerDetail2
+// export default CustomerDetail
 

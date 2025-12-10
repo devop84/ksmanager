@@ -7,7 +7,8 @@ import Agencies from './pages/agencies/Agencies'
 import Instructors from './pages/instructors/Instructors'
 import Staff from './pages/staff/Staff'
 import CustomerForm from './pages/customers/CustomerForm'
-import CustomerDetail from './pages/customers/CustomerDetail'
+// import CustomerDetail from './pages/customers/CustomerDetail' // Disabled - replaced with CustomerDetail2
+import CustomerDetail2 from './pages/customers/CustomerDetail2'
 import HotelForm from './pages/hotels/HotelForm'
 import HotelDetail from './pages/hotels/HotelDetail'
 import AgencyForm from './pages/agencies/AgencyForm'
@@ -1539,21 +1540,15 @@ function App() {
         )
       case 'customerDetail':
         return (
-          <CustomerDetail
+          <CustomerDetail2
             customerId={customerDetailId}
             onBack={handleCustomerDetailBack}
             onEdit={handleCustomerDetailEdit}
             onDelete={handleCustomerDetailDelete}
             onViewAppointment={(appointment) => handleAppointmentView(appointment, 'customerDetail')}
-            onAddAppointment={(customer) => openAppointmentForm(null, customer)}
-            onAddTransaction={(customer) => {
-              const transaction = {
-                destination_entity_type: 'customer',
-                destination_entity_id: customer.id
-              }
-              openTransactionForm(transaction)
-            }}
-            onAddOrder={(customer) => openOrderForm(null, customer)}
+            onAddAppointment={(customer) => openAppointmentForm(null, customer, 'customerDetail', customerDetailId)}
+            onAddOrder={(customer) => openOrderForm(null, customer, 'customerDetail', customerDetailId)}
+            onAddPayment={(order) => openOrderDetail(order, 'customerDetail', customerDetailId)}
             onViewOrder={(order) => openOrderDetail(order, 'customerDetail', customerDetailId)}
             user={user}
           />

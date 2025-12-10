@@ -107,7 +107,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
 
         setOrder(orderResult[0])
 
-        // Fetch order items with service information for packages
+        // Fetch order items with service information for packages and credit left
         const itemsResult = await sql`
           SELECT 
             oi.id,
@@ -123,11 +123,14 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
               WHEN oi.item_type = 'service_package' THEN s.name
               WHEN oi.item_type = 'service' THEN s2.name
               ELSE NULL
-            END AS service_name
+            END AS service_name,
+            COALESCE(s.duration_unit, s2.duration_unit) as duration_unit,
+            COALESCE(s.id, s2.id) as service_id
           FROM order_items oi
           LEFT JOIN service_packages sp ON oi.item_type = 'service_package' AND oi.item_id = sp.id
           LEFT JOIN services s ON sp.service_id = s.id
           LEFT JOIN services s2 ON oi.item_type = 'service' AND oi.item_id = s2.id
+          LEFT JOIN customer_service_credits csc ON csc.order_item_id = oi.id
           WHERE oi.order_id = ${orderId}
           ORDER BY oi.created_at ASC
         `
@@ -410,7 +413,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
         }
       }
 
-      // Reload order items with service information
+      // Reload order items with service information and credit left
       const itemsResult = await sql`
         SELECT 
           oi.id,
@@ -426,11 +429,44 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
             WHEN oi.item_type = 'service_package' THEN s.name
             WHEN oi.item_type = 'service' THEN s2.name
             ELSE NULL
-          END AS service_name
+          END AS service_name,
+          COALESCE(s.duration_unit, s2.duration_unit) as duration_unit,
+          CASE 
+            WHEN csc.id IS NULL THEN NULL
+            WHEN COALESCE(s.duration_unit, s2.duration_unit) = 'hours' THEN 
+              csc.total_hours - (
+                SELECT COALESCE(SUM(sa.duration_hours), 0)
+                FROM scheduled_appointments sa
+                WHERE sa.credit_id = csc.id
+                  AND sa.order_id = ${orderId}
+                  AND sa.status IN ('scheduled', 'completed')
+                  AND sa.cancelled_at IS NULL
+              )
+            WHEN COALESCE(s.duration_unit, s2.duration_unit) = 'days' THEN 
+              csc.total_days - (
+                SELECT COALESCE(SUM(sa.duration_days), 0)
+                FROM scheduled_appointments sa
+                WHERE sa.credit_id = csc.id
+                  AND sa.order_id = ${orderId}
+                  AND sa.status IN ('scheduled', 'completed')
+                  AND sa.cancelled_at IS NULL
+              )
+            WHEN COALESCE(s.duration_unit, s2.duration_unit) = 'months' THEN 
+              csc.total_months::NUMERIC - (
+                SELECT COALESCE(SUM(sa.duration_months), 0)::NUMERIC
+                FROM scheduled_appointments sa
+                WHERE sa.credit_id = csc.id
+                  AND sa.order_id = ${orderId}
+                  AND sa.status IN ('scheduled', 'completed')
+                  AND sa.cancelled_at IS NULL
+              )
+            ELSE NULL
+          END as credit_left
         FROM order_items oi
         LEFT JOIN service_packages sp ON oi.item_type = 'service_package' AND oi.item_id = sp.id
         LEFT JOIN services s ON sp.service_id = s.id
         LEFT JOIN services s2 ON oi.item_type = 'service' AND oi.item_id = s2.id
+        LEFT JOIN customer_service_credits csc ON csc.order_item_id = oi.id
         WHERE oi.order_id = ${orderId}
         ORDER BY oi.created_at ASC
       `
@@ -718,7 +754,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
     try {
       await sql`DELETE FROM order_items WHERE id = ${itemId}`
       
-      // Reload order items with service information
+      // Reload order items with service information and credit left
       const itemsResult = await sql`
         SELECT 
           oi.id,
@@ -734,11 +770,44 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
             WHEN oi.item_type = 'service_package' THEN s.name
             WHEN oi.item_type = 'service' THEN s2.name
             ELSE NULL
-          END AS service_name
+          END AS service_name,
+          COALESCE(s.duration_unit, s2.duration_unit) as duration_unit,
+          CASE 
+            WHEN csc.id IS NULL THEN NULL
+            WHEN COALESCE(s.duration_unit, s2.duration_unit) = 'hours' THEN 
+              csc.total_hours - (
+                SELECT COALESCE(SUM(sa.duration_hours), 0)
+                FROM scheduled_appointments sa
+                WHERE sa.credit_id = csc.id
+                  AND sa.order_id = ${orderId}
+                  AND sa.status IN ('scheduled', 'completed')
+                  AND sa.cancelled_at IS NULL
+              )
+            WHEN COALESCE(s.duration_unit, s2.duration_unit) = 'days' THEN 
+              csc.total_days - (
+                SELECT COALESCE(SUM(sa.duration_days), 0)
+                FROM scheduled_appointments sa
+                WHERE sa.credit_id = csc.id
+                  AND sa.order_id = ${orderId}
+                  AND sa.status IN ('scheduled', 'completed')
+                  AND sa.cancelled_at IS NULL
+              )
+            WHEN COALESCE(s.duration_unit, s2.duration_unit) = 'months' THEN 
+              csc.total_months::NUMERIC - (
+                SELECT COALESCE(SUM(sa.duration_months), 0)::NUMERIC
+                FROM scheduled_appointments sa
+                WHERE sa.credit_id = csc.id
+                  AND sa.order_id = ${orderId}
+                  AND sa.status IN ('scheduled', 'completed')
+                  AND sa.cancelled_at IS NULL
+              )
+            ELSE NULL
+          END as credit_left
         FROM order_items oi
         LEFT JOIN service_packages sp ON oi.item_type = 'service_package' AND oi.item_id = sp.id
         LEFT JOIN services s ON sp.service_id = s.id
         LEFT JOIN services s2 ON oi.item_type = 'service' AND oi.item_id = s2.id
+        LEFT JOIN customer_service_credits csc ON csc.order_item_id = oi.id
         WHERE oi.order_id = ${orderId}
         ORDER BY oi.created_at ASC
       `
@@ -1206,25 +1275,8 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
       return
     }
     
-    // Check if all service credits are zero
-    try {
-      const creditBalances = await sql`
-        SELECT * FROM get_order_all_service_credits(${orderId})
-      `
-      
-      const nonZeroCredits = creditBalances.filter(c => Math.abs(Number(c.balance || 0)) > 0.01)
-      
-      if (nonZeroCredits.length > 0) {
-        const creditDetails = nonZeroCredits.map(c => 
-          `${c.service_name}: ${Number(c.balance).toFixed(2)} ${c.duration_unit}`
-        ).join('\n')
-        alert(t('orderDetail.error.cannotCloseWithCredits', 'Cannot close order. All service credits must be zero.\n\nNon-zero credits:\n{{credits}}', { credits: creditDetails }))
-        return
-      }
-    } catch (creditErr) {
-      console.error('Failed to check credit balances:', creditErr)
-      // Continue with closing if credit check fails (graceful degradation)
-    }
+    // Note: Orders can now be closed even with positive credits
+    // Credits from closed orders are not counted for new orders
     
     try {
       await sql`
@@ -1451,10 +1503,8 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                     const calculatedBalance = Number(order.total_amount || 0) - Number(order.total_paid || 0) + totalRefunded
                     const hasNonZeroBalance = Math.abs(calculatedBalance) > 0.01
                     
-                    // Check if any service credits are non-zero
-                    const hasNonZeroCredits = serviceCredits.some(c => Math.abs(Number(c.balance || 0)) > 0.01)
-                    
-                    return hasNonZeroBalance || hasNonZeroCredits
+                    // Only check balance, not credits - orders can be closed with positive credits
+                    return hasNonZeroBalance
                   })()}
                   className="inline-flex items-center justify-center rounded-lg border border-emerald-300 px-3 py-2 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white whitespace-nowrap"
                   title={(() => {
@@ -1462,18 +1512,8 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                     const calculatedBalance = Number(order.total_amount || 0) - Number(order.total_paid || 0) + totalRefunded
                     const hasNonZeroBalance = Math.abs(calculatedBalance) > 0.01
                     
-                    // Check if any service credits are non-zero
-                    const nonZeroCredits = serviceCredits.filter(c => Math.abs(Number(c.balance || 0)) > 0.01)
-                    const hasNonZeroCredits = nonZeroCredits.length > 0
-                    
                     if (hasNonZeroBalance) {
                       return t('orderDetail.buttons.closeDisabled', 'Cannot close order. Balance due must be zero. Current balance: {{balance}}', { balance: formatAmount(calculatedBalance) })
-                    }
-                    if (hasNonZeroCredits) {
-                      const creditDetails = nonZeroCredits.map(c => 
-                        `${c.service_name}: ${Number(c.balance).toFixed(2)} ${c.duration_unit}`
-                      ).join(', ')
-                      return t('orderDetail.buttons.closeDisabledCredits', 'Cannot close order. All service credits must be zero. Non-zero: {{credits}}', { credits: creditDetails })
                     }
                     return t('orderDetail.buttons.close', 'Close Order')
                   })()}
@@ -1484,7 +1524,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                   onClick={handleCancelOrder}
                   className="inline-flex items-center justify-center rounded-lg border border-red-300 px-3 py-2 text-sm font-semibold text-red-700 shadow-sm hover:bg-red-50 transition-colors whitespace-nowrap"
                 >
-                  {t('orderDetail.buttons.cancel', 'Cancel')}
+                  {t('orderDetail.buttons.cancel', 'Cancel Order')}
                 </button>
               </div>
             )}
@@ -1683,6 +1723,21 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                             <div className="text-xs text-gray-500 mt-1 capitalize">
                               {item.item_type.replace('_', ' ')}
                             </div>
+                            {(() => {
+                              // Match service credits by service_id to get the balance
+                              const serviceCredit = serviceCredits.find(sc => sc.service_id === item.service_id)
+                              if (serviceCredit && serviceCredit.balance !== null && serviceCredit.balance !== undefined) {
+                                return (
+                                  <div className="text-xs mt-1">
+                                    <span className="text-gray-500">{t('orderDetail.items.credits', 'Credits')}: </span>
+                                    <span className={Number(serviceCredit.balance) < 0 ? 'text-red-600 font-semibold' : Number(serviceCredit.balance) > 0 ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                                      {Number(serviceCredit.balance).toFixed(2)} {serviceCredit.duration_unit || ''}
+                                    </span>
+                                  </div>
+                                )
+                              }
+                              return null
+                            })()}
                           </div>
                             {canModify(user) && (
                               <button
@@ -1730,6 +1785,9 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           {t('orderDetail.items.type', 'Type')}
                         </th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          {t('orderDetail.items.credits', 'Credits')}
+                        </th>
                         <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                           {t('orderDetail.items.quantity', 'Qty')}
                         </th>
@@ -1768,6 +1826,20 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-500 capitalize">
                             {item.item_type.replace('_', ' ')}
                           </td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                            {(() => {
+                              // Match service credits by service_id to get the balance
+                              const serviceCredit = serviceCredits.find(sc => sc.service_id === item.service_id)
+                              if (serviceCredit && serviceCredit.balance !== null && serviceCredit.balance !== undefined) {
+                                return (
+                                  <span className={Number(serviceCredit.balance) < 0 ? 'text-red-600 font-semibold' : Number(serviceCredit.balance) > 0 ? 'text-green-600' : 'text-gray-500'}>
+                                    {Number(serviceCredit.balance).toFixed(2)} {serviceCredit.duration_unit || ''}
+                                  </span>
+                                )
+                              }
+                              return <span className="text-gray-400">—</span>
+                            })()}
+                          </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
                             {item.quantity}
                           </td>
@@ -1801,7 +1873,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                     <tfoot className="bg-gray-50">
                       {order.discount_amount > 0 && (
                       <tr>
-                         <td colSpan={canModify(user) ? 5 : 4} className="px-4 py-3 text-right text-sm font-semibold text-gray-500">
+                         <td colSpan={canModify(user) ? 6 : 5} className="px-4 py-3 text-right text-sm font-semibold text-gray-500">
                             {t('orderDetail.items.discount', 'Discount')}:
                           </td>
                             <td className="px-4 py-3 text-right text-sm font-semibold text-red-600">
@@ -1812,7 +1884,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                       )}
                       {order.tax_amount > 0 && (
                         <tr>
-                           <td colSpan={canModify(user) ? 5 : 4} className="px-4 py-3 text-right text-sm font-semibold text-gray-500">
+                           <td colSpan={canModify(user) ? 6 : 5} className="px-4 py-3 text-right text-sm font-semibold text-gray-500">
                               {t('orderDetail.items.tax', 'Tax')}:
                             </td>
                             <td className="px-4 py-3 text-right text-sm font-semibold text-gray-900">
@@ -1822,7 +1894,7 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                         </tr>
                       )}
                       <tr>
-                         <td colSpan={canModify(user) ? 5 : 4} className="px-4 py-3 text-right text-sm font-bold text-gray-900">
+                         <td colSpan={canModify(user) ? 6 : 5} className="px-4 py-3 text-right text-sm font-bold text-gray-900">
                             {t('orderDetail.items.total', 'Total')}:
                           </td>
                           <td className="px-4 py-3 text-right text-sm font-bold text-gray-900">
@@ -1836,40 +1908,6 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                 </>
               )}
             </div>
-
-             {/* Service Credits */}
-             {serviceCredits.length > 0 && (
-              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">
-                  {t('orderDetail.credits.title', 'Service Credits')}
-                </h2>
-                <div className="space-y-3">
-                  {serviceCredits.map((credit) => (
-                    <div key={credit.service_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
-                      <div className="flex-1">
-                        <div className="text-sm font-medium text-gray-900">
-                          {credit.service_name}
-                        </div>
-                        <div className="text-xs text-gray-500 mt-1">
-                          {t('orderDetail.credits.fromItems', 'From items')}: {Number(credit.credits_from_items || 0).toFixed(2)} {credit.duration_unit} | 
-                          {t('orderDetail.credits.used', 'Used')}: {Number(credit.credits_used_by_appointments || 0).toFixed(2)} {credit.duration_unit}
-                        </div>
-                      </div>
-                      <div className={`text-lg font-bold ${Number(credit.balance || 0) < 0 ? 'text-red-600' : Number(credit.balance || 0) > 0 ? 'text-green-600' : 'text-gray-600'}`}>
-                        {Number(credit.balance || 0).toFixed(2)} {credit.duration_unit}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                {serviceCredits.some(c => Math.abs(Number(c.balance || 0)) > 0.01) && (
-                  <div className="mt-4 p-3 bg-amber-50 border border-amber-200 rounded-lg">
-                    <p className="text-sm text-amber-800">
-                      {t('orderDetail.credits.warning', 'All service credits must be zero before closing the order.')}
-                    </p>
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* Payments */}
             <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -2332,6 +2370,33 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                 </>
               )}
             </div>
+
+            {/* Service Credits */}
+            {serviceCredits.length > 0 && (
+              <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                  {t('orderDetail.credits.title', 'Service Credits')}
+                </h2>
+                <div className="space-y-3">
+                  {serviceCredits.map((credit) => (
+                    <div key={credit.service_id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-900">
+                          {credit.service_name}
+                        </div>
+                        <div className="text-xs text-gray-500 mt-1">
+                          {t('orderDetail.credits.fromItems', 'From items')}: {Number(credit.credits_from_items || 0).toFixed(2)} {credit.duration_unit} | 
+                          {t('orderDetail.credits.used', 'Used')}: {Number(credit.credits_used_by_appointments || 0).toFixed(2)} {credit.duration_unit}
+                        </div>
+                      </div>
+                      <div className={`text-lg font-bold ${Number(credit.balance || 0) < 0 ? 'text-red-600' : Number(credit.balance || 0) > 0 ? 'text-green-600' : 'text-gray-600'}`}>
+                        {Number(credit.balance || 0).toFixed(2)} {credit.duration_unit}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}
