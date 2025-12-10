@@ -356,6 +356,322 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
     })
   }
 
+  /**
+   * Ensure no negative credits in the order for a given service
+   * If negative credits exist, automatically add/update the best service package
+   */
+  const ensureNoNegativeCredits = async (orderId, serviceId, durationHours, durationDays, durationMonths) => {
+    try {
+      // Get service details to determine duration unit
+      const serviceResult = await sql`
+        SELECT id, name, duration_unit
+        FROM services
+        WHERE id = ${serviceId}
+        LIMIT 1
+      `
+      
+      if (!serviceResult || serviceResult.length === 0) {
+        console.warn('Service not found for credit check')
+        return
+      }
+
+      const service = serviceResult[0]
+      
+      // Skip if service has no duration unit
+      if (service.duration_unit === 'none') {
+        return
+      }
+
+      // Get current credit balance for this service in the order
+      const creditsResult = await sql`
+        SELECT * FROM get_order_all_service_credits(${orderId})
+        WHERE service_id = ${serviceId}
+      `
+
+      let currentBalance = 0
+      if (creditsResult && creditsResult.length > 0) {
+        currentBalance = parseFloat(creditsResult[0].balance) || 0
+      }
+
+      // If balance is already positive or zero, no action needed
+      if (currentBalance >= 0) {
+        return
+      }
+
+      // Calculate total duration needed (sum of all appointments for this service in the order)
+      const appointmentsResult = await sql`
+        SELECT 
+          COALESCE(SUM(duration_hours), 0) as total_hours,
+          COALESCE(SUM(duration_days), 0) as total_days,
+          COALESCE(SUM(duration_months), 0)::NUMERIC as total_months
+        FROM scheduled_appointments
+        WHERE order_id = ${orderId}
+          AND service_id = ${serviceId}
+          AND status IN ('scheduled', 'completed')
+          AND cancelled_at IS NULL
+      `
+
+      let totalNeeded = 0
+      if (appointmentsResult && appointmentsResult.length > 0) {
+        const appt = appointmentsResult[0]
+        if (service.duration_unit === 'hours') {
+          totalNeeded = parseFloat(appt.total_hours) || 0
+        } else if (service.duration_unit === 'days') {
+          totalNeeded = parseFloat(appt.total_days) || 0
+        } else if (service.duration_unit === 'months') {
+          totalNeeded = parseFloat(appt.total_months) || 0
+        }
+      }
+
+      // Get all available service packages for this service
+      // Build query based on duration unit - order by duration ASC to find closest match
+      let packagesResult
+      if (service.duration_unit === 'hours') {
+        packagesResult = await sql`
+          SELECT 
+            sp.id,
+            sp.name,
+            sp.price,
+            sp.duration_hours as package_duration
+          FROM service_packages sp
+          WHERE sp.service_id = ${serviceId}
+            AND sp.is_active = true
+            AND sp.duration_hours IS NOT NULL 
+            AND sp.duration_hours > 0
+          ORDER BY package_duration ASC
+        `
+      } else if (service.duration_unit === 'days') {
+        packagesResult = await sql`
+          SELECT 
+            sp.id,
+            sp.name,
+            sp.price,
+            sp.duration_days as package_duration
+          FROM service_packages sp
+          WHERE sp.service_id = ${serviceId}
+            AND sp.is_active = true
+            AND sp.duration_days IS NOT NULL 
+            AND sp.duration_days > 0
+          ORDER BY package_duration ASC
+        `
+      } else if (service.duration_unit === 'months') {
+        packagesResult = await sql`
+          SELECT 
+            sp.id,
+            sp.name,
+            sp.price,
+            sp.duration_months::NUMERIC as package_duration
+          FROM service_packages sp
+          WHERE sp.service_id = ${serviceId}
+            AND sp.is_active = true
+            AND sp.duration_months IS NOT NULL 
+            AND sp.duration_months > 0
+          ORDER BY package_duration ASC
+        `
+      } else {
+        return
+      }
+
+      if (!packagesResult || packagesResult.length === 0) {
+        console.warn('No service packages found for service', serviceId)
+        return
+      }
+
+      // Find the package with duration closest to (but >=) the total needed duration
+      // Example: if 3h total, choose 4h package (not 2h or 10h)
+      let bestPackage = null
+      let bestQuantity = 1
+
+      // Find packages that cover or exceed the needed duration
+      const coveringPackages = packagesResult.filter(pkg => pkg.package_duration >= totalNeeded)
+      
+      if (coveringPackages.length > 0) {
+        // Choose the one with smallest duration that still covers the need (closest match)
+        // This will be the first one in the sorted list that covers it
+        bestPackage = coveringPackages[0]
+        bestQuantity = 1
+      } else {
+        // If no single package covers it, use the largest package and calculate quantity needed
+        const largestPackage = packagesResult[packagesResult.length - 1]
+        bestPackage = largestPackage
+        bestQuantity = Math.ceil(totalNeeded / largestPackage.package_duration)
+      }
+
+      if (!bestPackage) {
+        console.warn('Could not find suitable package')
+        return
+      }
+
+      // Check if order already has items for this service
+      let existingItemsResult
+      if (service.duration_unit === 'hours') {
+        existingItemsResult = await sql`
+          SELECT 
+            oi.id,
+            oi.item_type,
+            oi.item_id,
+            oi.quantity,
+            sp.id as package_id,
+            CASE 
+              WHEN oi.item_type = 'service_package' THEN sp.duration_hours * oi.quantity
+              WHEN oi.item_type = 'service' THEN oi.quantity
+              ELSE 0
+            END as total_duration
+          FROM order_items oi
+          LEFT JOIN service_packages sp ON oi.item_type = 'service_package' AND oi.item_id = sp.id AND sp.service_id = ${serviceId}
+          LEFT JOIN services s ON (oi.item_type = 'service' AND oi.item_id = s.id AND s.id = ${serviceId})
+          WHERE oi.order_id = ${orderId}
+            AND (
+              (oi.item_type = 'service_package' AND sp.id IS NOT NULL)
+              OR (oi.item_type = 'service' AND s.id IS NOT NULL)
+            )
+        `
+      } else if (service.duration_unit === 'days') {
+        existingItemsResult = await sql`
+          SELECT 
+            oi.id,
+            oi.item_type,
+            oi.item_id,
+            oi.quantity,
+            sp.id as package_id,
+            CASE 
+              WHEN oi.item_type = 'service_package' THEN sp.duration_days * oi.quantity
+              WHEN oi.item_type = 'service' THEN oi.quantity
+              ELSE 0
+            END as total_duration
+          FROM order_items oi
+          LEFT JOIN service_packages sp ON oi.item_type = 'service_package' AND oi.item_id = sp.id AND sp.service_id = ${serviceId}
+          LEFT JOIN services s ON (oi.item_type = 'service' AND oi.item_id = s.id AND s.id = ${serviceId})
+          WHERE oi.order_id = ${orderId}
+            AND (
+              (oi.item_type = 'service_package' AND sp.id IS NOT NULL)
+              OR (oi.item_type = 'service' AND s.id IS NOT NULL)
+            )
+        `
+      } else if (service.duration_unit === 'months') {
+        existingItemsResult = await sql`
+          SELECT 
+            oi.id,
+            oi.item_type,
+            oi.item_id,
+            oi.quantity,
+            sp.id as package_id,
+            CASE 
+              WHEN oi.item_type = 'service_package' THEN sp.duration_months * oi.quantity
+              WHEN oi.item_type = 'service' THEN oi.quantity
+              ELSE 0
+            END as total_duration
+          FROM order_items oi
+          LEFT JOIN service_packages sp ON oi.item_type = 'service_package' AND oi.item_id = sp.id AND sp.service_id = ${serviceId}
+          LEFT JOIN services s ON (oi.item_type = 'service' AND oi.item_id = s.id AND s.id = ${serviceId})
+          WHERE oi.order_id = ${orderId}
+            AND (
+              (oi.item_type = 'service_package' AND sp.id IS NOT NULL)
+              OR (oi.item_type = 'service' AND s.id IS NOT NULL)
+            )
+        `
+      } else {
+        existingItemsResult = []
+      }
+
+      // Calculate total duration from existing items
+      let existingTotalDuration = 0
+      const itemsToRemove = []
+
+      if (existingItemsResult && existingItemsResult.length > 0) {
+        for (const item of existingItemsResult) {
+          if (item.item_type === 'service_package' && item.total_duration) {
+            existingTotalDuration += parseFloat(item.total_duration) || 0
+          } else if (item.item_type === 'service') {
+            // Direct service items count as 1 unit per quantity
+            existingTotalDuration += parseFloat(item.quantity) || 0
+          }
+          itemsToRemove.push(item.id)
+        }
+      }
+
+      // If existing items don't cover the needed duration, or if they result in negative credits
+      if (existingTotalDuration < totalNeeded || currentBalance < 0) {
+        // If we have negative credits, remove all old items for this service and replace with best package
+        // This ensures we don't have orphaned credits and appointments can be reassigned to new credits
+        if (currentBalance < 0 && itemsToRemove.length > 0) {
+          // Delete old order items (credits will be deleted via CASCADE, appointments will have credit_id set to NULL)
+          for (const itemId of itemsToRemove) {
+            await sql`DELETE FROM order_items WHERE id = ${itemId}`
+          }
+        }
+
+        // Calculate quantity needed for the best package
+        // If we removed items due to negative credits, we need to cover totalNeeded
+        // Otherwise, calculate additional needed
+        let finalNeeded = totalNeeded
+        if (currentBalance >= 0 && existingTotalDuration > 0) {
+          // We just need to add more to cover the gap
+          finalNeeded = Math.max(0, totalNeeded - existingTotalDuration)
+        }
+        
+        // If we still need more (or replacing), add the best package
+        if (finalNeeded > 0 || currentBalance < 0) {
+          const finalQuantity = Math.ceil((currentBalance < 0 ? totalNeeded : finalNeeded) / bestPackage.package_duration)
+          const packagePrice = parseFloat(bestPackage.price) || 0
+          const packageSubtotal = packagePrice * finalQuantity
+
+          await sql`
+            INSERT INTO order_items (
+              order_id,
+              item_type,
+              item_id,
+              item_name,
+              quantity,
+              unit_price,
+              subtotal
+            )
+            VALUES (
+              ${orderId},
+              'service_package',
+              ${bestPackage.id},
+              ${bestPackage.name},
+              ${finalQuantity},
+              ${packagePrice},
+              ${packageSubtotal}
+            )
+          `
+          
+          // After adding the package, try to reassign orphaned appointments to the new credit
+          // Get the newly created credit
+          const newCreditResult = await sql`
+            SELECT csc.id
+            FROM customer_service_credits csc
+            JOIN order_items oi ON csc.order_item_id = oi.id
+            WHERE oi.order_id = ${orderId}
+              AND oi.item_type = 'service_package'
+              AND oi.item_id = ${bestPackage.id}
+              AND csc.service_id = ${serviceId}
+            ORDER BY csc.created_at DESC
+            LIMIT 1
+          `
+          
+          if (newCreditResult && newCreditResult.length > 0) {
+            const newCreditId = newCreditResult[0].id
+            // Reassign orphaned appointments (those without credit_id) to the new credit
+            await sql`
+              UPDATE scheduled_appointments
+              SET credit_id = ${newCreditId}
+              WHERE order_id = ${orderId}
+                AND service_id = ${serviceId}
+                AND credit_id IS NULL
+                AND status IN ('scheduled', 'completed')
+                AND cancelled_at IS NULL
+            `
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error ensuring no negative credits:', err)
+      // Don't throw - this is a background operation that shouldn't block appointment creation
+    }
+  }
+
   const handleSubmit = async (event) => {
     event.preventDefault()
     
@@ -537,6 +853,11 @@ function AppointmentForm({ appointment, customer, onCancel, onSaved }) {
             throw insertErr
           }
         }
+      }
+
+      // After creating/updating appointment, ensure no negative credits
+      if (orderId && appointmentData.service_id) {
+        await ensureNoNegativeCredits(orderId, appointmentData.service_id, appointmentData.duration_hours, appointmentData.duration_days, appointmentData.duration_months)
       }
 
       onSaved?.()

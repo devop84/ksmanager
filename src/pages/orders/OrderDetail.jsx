@@ -132,7 +132,38 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
               ELSE NULL
             END AS service_name,
             COALESCE(s.duration_unit, s2.duration_unit) as duration_unit,
-            COALESCE(s.id, s2.id) as service_id
+            COALESCE(s.id, s2.id) as service_id,
+            CASE 
+              WHEN csc.id IS NULL THEN NULL
+              WHEN COALESCE(s.duration_unit, s2.duration_unit) = 'hours' THEN 
+                csc.total_hours - (
+                  SELECT COALESCE(SUM(sa.duration_hours), 0)
+                  FROM scheduled_appointments sa
+                  WHERE sa.credit_id = csc.id
+                    AND sa.order_id = ${orderId}
+                    AND sa.status IN ('scheduled', 'completed')
+                    AND sa.cancelled_at IS NULL
+                )
+              WHEN COALESCE(s.duration_unit, s2.duration_unit) = 'days' THEN 
+                csc.total_days - (
+                  SELECT COALESCE(SUM(sa.duration_days), 0)
+                  FROM scheduled_appointments sa
+                  WHERE sa.credit_id = csc.id
+                    AND sa.order_id = ${orderId}
+                    AND sa.status IN ('scheduled', 'completed')
+                    AND sa.cancelled_at IS NULL
+                )
+              WHEN COALESCE(s.duration_unit, s2.duration_unit) = 'months' THEN 
+                csc.total_months::NUMERIC - (
+                  SELECT COALESCE(SUM(sa.duration_months), 0)::NUMERIC
+                  FROM scheduled_appointments sa
+                  WHERE sa.credit_id = csc.id
+                    AND sa.order_id = ${orderId}
+                    AND sa.status IN ('scheduled', 'completed')
+                    AND sa.cancelled_at IS NULL
+                )
+              ELSE NULL
+            END as credit_left
           FROM order_items oi
           LEFT JOIN service_packages sp ON oi.item_type = 'service_package' AND oi.item_id = sp.id
           LEFT JOIN services s ON sp.service_id = s.id
@@ -753,20 +784,28 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
     setItemPrice('')
   }
 
-  const handleItemIdChange = (id) => {
-    setItemId(id)
-    
+  const handleItemIdChange = (value) => {
+    // Value format is now "type-id" (e.g., "service-5" or "service_package-10")
+    // This ensures we can distinguish between services and packages even if they have the same ID
     if (itemType === 'service') {
-      // Check if it's a service or service_package from the combined list
-      const combinedList = getCombinedServicesList()
-      const selectedItem = combinedList.find(item => item.id.toString() === id)
-      if (selectedItem) {
-        setActualItemType(selectedItem.type)
-        setItemPrice(selectedItem.price?.toString() || '')
+      const [type, id] = value.includes('-') ? value.split('-') : ['service', value]
+      setItemId(id)
+      
+      if (type === 'service_package') {
+        // It's a package
+        setActualItemType('service_package')
+        const pkg = servicePackages.find(p => Number(p.id) === Number(id))
+        setItemPrice(pkg?.price?.toString() || '')
+      } else {
+        // It's a service
+        setActualItemType('service')
+        const service = services.find(s => Number(s.id) === Number(id))
+        setItemPrice(service?.base_price?.toString() || '')
       }
     } else if (itemType === 'product') {
+      setItemId(value)
       setActualItemType('product')
-      const product = products.find(p => p.id.toString() === id)
+      const product = products.find(p => Number(p.id) === Number(value))
       setItemPrice(product?.price?.toString() || '')
     }
   }
@@ -1470,6 +1509,32 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
       return
     }
     
+    // Check for negative credits - prevent closing if any service has negative credits
+    try {
+      const creditsResult = await sql`
+        SELECT * FROM get_order_all_service_credits(${orderId})
+      `
+      
+      if (creditsResult && creditsResult.length > 0) {
+        const negativeCredits = creditsResult.filter(credit => {
+          const balance = parseFloat(credit.balance) || 0
+          return balance < -0.01 // Allow small floating point differences
+        })
+        
+        if (negativeCredits.length > 0) {
+          const servicesWithNegativeCredits = negativeCredits.map(credit => 
+            `${credit.service_name || 'Service'} (${credit.balance < 0 ? '-' : ''}${Math.abs(credit.balance).toFixed(2)} ${credit.duration_unit || ''})`
+          ).join(', ')
+          
+          alert(t('orderDetail.error.cannotCloseWithNegativeCredits', 'Cannot close order. There are negative credits for the following services: {{services}}. Please add service packages to cover the appointments.', { services: servicesWithNegativeCredits }))
+          return
+        }
+      }
+    } catch (creditErr) {
+      console.error('Failed to check credits:', creditErr)
+      // Don't block closing if we can't check credits, but log the error
+    }
+    
     // Note: Orders can now be closed even with positive credits
     // Credits from closed orders are not counted for new orders
     
@@ -1698,8 +1763,13 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                     const calculatedBalance = Number(order.total_amount || 0) - Number(order.total_paid || 0) + totalRefunded
                     const hasNonZeroBalance = Math.abs(calculatedBalance) > 0.01
                     
-                    // Only check balance, not credits - orders can be closed with positive credits
-                    return hasNonZeroBalance
+                    // Check for negative credits
+                    const hasNegativeCredits = serviceCredits && serviceCredits.some(credit => {
+                      const balance = parseFloat(credit.balance) || 0
+                      return balance < -0.01
+                    })
+                    
+                    return hasNonZeroBalance || hasNegativeCredits
                   })()}
                   className="inline-flex items-center justify-center rounded-lg border border-emerald-300 px-3 py-2 text-sm font-semibold text-emerald-700 shadow-sm hover:bg-emerald-50 transition-colors disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-white whitespace-nowrap"
                   title={(() => {
@@ -1707,9 +1777,23 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                     const calculatedBalance = Number(order.total_amount || 0) - Number(order.total_paid || 0) + totalRefunded
                     const hasNonZeroBalance = Math.abs(calculatedBalance) > 0.01
                     
+                    // Check for negative credits
+                    const negativeCredits = serviceCredits ? serviceCredits.filter(credit => {
+                      const balance = parseFloat(credit.balance) || 0
+                      return balance < -0.01
+                    }) : []
+                    
                     if (hasNonZeroBalance) {
                       return t('orderDetail.buttons.closeDisabled', 'Cannot close order. Balance due must be zero. Current balance: {{balance}}', { balance: formatAmount(calculatedBalance) })
                     }
+                    
+                    if (negativeCredits.length > 0) {
+                      const servicesList = negativeCredits.map(credit => 
+                        `${credit.service_name || 'Service'} (${Math.abs(credit.balance).toFixed(2)} ${credit.duration_unit || ''})`
+                      ).join(', ')
+                      return t('orderDetail.buttons.closeDisabledNegativeCredits', 'Cannot close order. Negative credits exist for: {{services}}', { services: servicesList })
+                    }
+                    
                     return t('orderDetail.buttons.close', 'Close Order')
                   })()}
                 >
@@ -1824,13 +1908,15 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                         {t('orderDetail.itemFields.item', 'Item')}
                       </label>
                       <select
-                        value={itemId}
+                        value={itemId && itemType === 'service' && actualItemType 
+                          ? `${actualItemType}-${itemId}` 
+                          : itemId || ''}
                         onChange={(e) => handleItemIdChange(e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200"
                       >
                         <option value="">{t('orderDetail.itemFields.selectItem', 'Select...')}</option>
                         {itemType === 'service' && getCombinedServicesList().map((item) => (
-                          <option key={`${item.type}-${item.id}`} value={item.id}>
+                          <option key={`${item.type}-${item.id}`} value={`${item.type}-${item.id}`}>
                             {item.type === 'service_package' ? `  └ ${item.name}` : item.name}
                           </option>
                         ))}
@@ -1918,21 +2004,14 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                             <div className="text-xs text-gray-500 mt-1 capitalize">
                               {item.item_type.replace('_', ' ')}
                             </div>
-                            {(() => {
-                              // Match service credits by service_id to get the balance
-                              const serviceCredit = serviceCredits.find(sc => sc.service_id === item.service_id)
-                              if (serviceCredit && serviceCredit.balance !== null && serviceCredit.balance !== undefined) {
-                                return (
-                                  <div className="text-xs mt-1">
-                                    <span className="text-gray-500">{t('orderDetail.items.credits', 'Credits')}: </span>
-                                    <span className={Number(serviceCredit.balance) < 0 ? 'text-red-600 font-semibold' : Number(serviceCredit.balance) > 0 ? 'text-green-600 font-medium' : 'text-gray-500'}>
-                                      {Number(serviceCredit.balance).toFixed(2)} {serviceCredit.duration_unit || ''}
-                                    </span>
-                                  </div>
-                                )
-                              }
-                              return null
-                            })()}
+                            {item.credit_left !== null && item.credit_left !== undefined ? (
+                              <div className="text-xs mt-1">
+                                <span className="text-gray-500">{t('orderDetail.items.credits', 'Credits')}: </span>
+                                <span className={Number(item.credit_left) < 0 ? 'text-red-600 font-semibold' : Number(item.credit_left) > 0 ? 'text-green-600 font-medium' : 'text-gray-500'}>
+                                  {Number(item.credit_left).toFixed(2)} {item.duration_unit || ''}
+                                </span>
+                              </div>
+                            ) : null}
                           </div>
                             {canModify(user) && (
                               <button
@@ -2022,18 +2101,13 @@ function OrderDetail({ orderId, onBack, onEdit, onDelete, onViewCustomer, user =
                             {item.item_type.replace('_', ' ')}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                            {(() => {
-                              // Match service credits by service_id to get the balance
-                              const serviceCredit = serviceCredits.find(sc => sc.service_id === item.service_id)
-                              if (serviceCredit && serviceCredit.balance !== null && serviceCredit.balance !== undefined) {
-                                return (
-                                  <span className={Number(serviceCredit.balance) < 0 ? 'text-red-600 font-semibold' : Number(serviceCredit.balance) > 0 ? 'text-green-600' : 'text-gray-500'}>
-                                    {Number(serviceCredit.balance).toFixed(2)} {serviceCredit.duration_unit || ''}
-                                  </span>
-                                )
-                              }
-                              return <span className="text-gray-400">—</span>
-                            })()}
+                            {item.credit_left !== null && item.credit_left !== undefined ? (
+                              <span className={Number(item.credit_left) < 0 ? 'text-red-600 font-semibold' : Number(item.credit_left) > 0 ? 'text-green-600' : 'text-gray-500'}>
+                                {Number(item.credit_left).toFixed(2)} {item.duration_unit || ''}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">—</span>
+                            )}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 text-right">
                             {item.quantity}

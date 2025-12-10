@@ -37,6 +37,7 @@ function CustomerDetail2({
   const [closingOrder, setClosingOrder] = useState(false)
   const [appointmentView, setAppointmentView] = useState('list') // 'list' or 'calendar'
   const [calendarDate, setCalendarDate] = useState(new Date())
+  const [showPastAppointments, setShowPastAppointments] = useState(false)
 
   // Load customer data
   useEffect(() => {
@@ -398,6 +399,32 @@ function CustomerDetail2({
       return
     }
     
+    // Check for negative credits - prevent closing if any service has negative credits
+    try {
+      const creditsResult = await sql`
+        SELECT * FROM get_order_all_service_credits(${openOrder.id})
+      `
+      
+      if (creditsResult && creditsResult.length > 0) {
+        const negativeCredits = creditsResult.filter(credit => {
+          const balance = parseFloat(credit.balance) || 0
+          return balance < -0.01 // Allow small floating point differences
+        })
+        
+        if (negativeCredits.length > 0) {
+          const servicesWithNegativeCredits = negativeCredits.map(credit => 
+            `${credit.service_name || 'Service'} (${credit.balance < 0 ? '-' : ''}${Math.abs(credit.balance).toFixed(2)} ${credit.duration_unit || ''})`
+          ).join(', ')
+          
+          alert(t('orderDetail.error.cannotCloseWithNegativeCredits', 'Cannot close order. There are negative credits for the following services: {{services}}. Please add service packages to cover the appointments.', { services: servicesWithNegativeCredits }))
+          return
+        }
+      }
+    } catch (creditErr) {
+      console.error('Failed to check credits:', creditErr)
+      // Don't block closing if we can't check credits, but log the error
+    }
+    
     if (!window.confirm(t('orderDetail.confirm.close', 'Are you sure you want to close this order? This action cannot be undone.'))) {
       return
     }
@@ -553,6 +580,16 @@ function CustomerDetail2({
       return `${appointment.duration_months} ${t('customerDetail2.appointments.months', 'months')}`
     }
     return null
+  }
+
+  // Helper function to format date as "MON 6/13"
+  const formatDateCard = (dateString) => {
+    if (!dateString) return null
+    const date = new Date(dateString)
+    const dayAbbr = date.toLocaleDateString('en-US', { weekday: 'short' }).toUpperCase()
+    const month = date.getMonth() + 1
+    const day = date.getDate()
+    return `${dayAbbr} ${month}/${day}`
   }
 
   return (
@@ -882,27 +919,49 @@ function CustomerDetail2({
                           {t('customerDetail2.appointments.upcoming', 'Upcoming')} ({upcomingAppointments.length})
                         </h3>
                         <div className="space-y-2">
-                          {upcomingAppointments.map((apt) => (
-                            <div
-                              key={apt.id}
-                              onClick={() => onViewAppointment?.(apt)}
-                              className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                            >
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="font-medium text-gray-900">{apt.service_name || '—'}</div>
-                                  <div className="text-sm text-gray-600 mt-1">
-                                    {apt.scheduled_start ? formatDateTime(apt.scheduled_start) : '—'}
-                                    {formatDuration(apt) && ` • ${formatDuration(apt)}`}
-                                    {apt.instructor_name && ` • ${apt.instructor_name}`}
+                          {upcomingAppointments.map((apt) => {
+                            const dateCard = formatDateCard(apt.scheduled_start)
+                            return (
+                              <div
+                                key={apt.id}
+                                onClick={() => onViewAppointment?.(apt)}
+                                className="flex items-center gap-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                              >
+                                {/* Left side - Date card */}
+                                <div className="flex-shrink-0 w-20 text-center">
+                                  {dateCard ? (
+                                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-2">
+                                      <div className="text-xs font-semibold text-blue-900 leading-tight">
+                                        {dateCard.split(' ')[0]}
+                                      </div>
+                                      <div className="text-sm font-bold text-blue-700 mt-0.5">
+                                        {dateCard.split(' ')[1]}
+                                      </div>
+                                    </div>
+                                  ) : (
+                                    <div className="text-xs text-gray-400">—</div>
+                                  )}
+                                </div>
+                                
+                                {/* Right side - Appointment details */}
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="font-medium text-gray-900 truncate">{apt.service_name || '—'}</div>
+                                      <div className="text-sm text-gray-600 mt-1">
+                                        {apt.scheduled_start ? formatTime(apt.scheduled_start) : '—'}
+                                        {formatDuration(apt) && ` • ${formatDuration(apt)}`}
+                                        {apt.instructor_name && ` • ${apt.instructor_name}`}
+                                      </div>
+                                    </div>
+                                    <span className="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold text-blue-700 bg-blue-50 border-blue-100 flex-shrink-0">
+                                      {apt.status?.toUpperCase() || 'SCHEDULED'}
+                                    </span>
                                   </div>
                                 </div>
-                                <span className="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold text-blue-700 bg-blue-50 border-blue-100">
-                                  {apt.status?.toUpperCase() || 'SCHEDULED'}
-                                </span>
                               </div>
-                            </div>
-                          ))}
+                            )
+                          })}
                         </div>
                       </div>
                     )}
@@ -910,37 +969,67 @@ function CustomerDetail2({
                     {/* Past Appointments */}
                     {pastAppointments.length > 0 && (
                       <div>
-                        <h3 className="text-sm font-semibold text-gray-700 mb-3">
+                        <button
+                          onClick={() => setShowPastAppointments(!showPastAppointments)}
+                          className="flex items-center gap-2 text-sm font-semibold text-gray-700 mb-3 hover:text-gray-900 transition-colors"
+                        >
+                          <svg 
+                            className={`w-4 h-4 transition-transform ${showPastAppointments ? 'rotate-90' : ''}`}
+                            fill="none" 
+                            stroke="currentColor" 
+                            viewBox="0 0 24 24"
+                          >
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
                           {t('customerDetail2.appointments.past', 'Past')} ({pastAppointments.length})
-                        </h3>
-                        <div className="space-y-2">
-                          {pastAppointments.slice(0, 5).map((apt) => (
-                            <div
-                              key={apt.id}
-                              onClick={() => onViewAppointment?.(apt)}
-                              className="p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
-                            >
-                              <div className="flex items-start justify-between">
-                                <div className="flex-1">
-                                  <div className="font-medium text-gray-900">{apt.service_name || '—'}</div>
-                                  <div className="text-sm text-gray-600 mt-1">
-                                    {apt.scheduled_start ? formatDateTime(apt.scheduled_start) : '—'}
-                                    {formatDuration(apt) && ` • ${formatDuration(apt)}`}
-                                    {apt.instructor_name && ` • ${apt.instructor_name}`}
+                        </button>
+                        {showPastAppointments && (
+                          <div className="space-y-2">
+                            {pastAppointments.map((apt) => {
+                              const dateCard = formatDateCard(apt.scheduled_start)
+                              return (
+                                <div
+                                  key={apt.id}
+                                  onClick={() => onViewAppointment?.(apt)}
+                                  className="flex items-center gap-4 p-3 border border-gray-200 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors"
+                                >
+                                  {/* Left side - Date card */}
+                                  <div className="flex-shrink-0 w-20 text-center">
+                                    {dateCard ? (
+                                      <div className="bg-gray-50 border border-gray-200 rounded-lg p-2">
+                                        <div className="text-xs font-semibold text-gray-700 leading-tight">
+                                          {dateCard.split(' ')[0]}
+                                        </div>
+                                        <div className="text-sm font-bold text-gray-600 mt-0.5">
+                                          {dateCard.split(' ')[1]}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="text-xs text-gray-400">—</div>
+                                    )}
+                                  </div>
+                                  
+                                  {/* Right side - Appointment details */}
+                                  <div className="flex-1 min-w-0">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <div className="flex-1 min-w-0">
+                                        <div className="font-medium text-gray-900 truncate">{apt.service_name || '—'}</div>
+                                        <div className="text-sm text-gray-600 mt-1">
+                                          {apt.scheduled_start ? formatTime(apt.scheduled_start) : '—'}
+                                          {formatDuration(apt) && ` • ${formatDuration(apt)}`}
+                                          {apt.instructor_name && ` • ${apt.instructor_name}`}
+                                        </div>
+                                      </div>
+                                      <span className="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold text-gray-700 bg-gray-50 border-gray-200 flex-shrink-0">
+                                        {apt.status?.toUpperCase() || 'COMPLETED'}
+                                      </span>
+                                    </div>
                                   </div>
                                 </div>
-                                <span className="inline-flex items-center rounded-full border px-2 py-1 text-xs font-semibold text-gray-700 bg-gray-50 border-gray-200">
-                                  {apt.status?.toUpperCase() || 'COMPLETED'}
-                                </span>
-                              </div>
-                            </div>
-                          ))}
-                          {pastAppointments.length > 5 && (
-                            <div className="text-sm text-gray-500 text-center py-2">
-                              {t('customerDetail2.appointments.morePast', '+ {{count}} more', { count: pastAppointments.length - 5 })}
-                            </div>
-                          )}
-                        </div>
+                              )
+                            })}
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
