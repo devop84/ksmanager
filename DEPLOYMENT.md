@@ -109,3 +109,4 @@ git push origin main
 - SSL certificate is automatically provisioned by Vercel
 - Database migrations must be run manually in Neon dashboard
 
+

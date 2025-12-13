@@ -45,8 +45,17 @@ function ServiceForm({ service, onCancel, onSaved }) {
           ORDER BY name ASC
         `
         setCategories(result || [])
+        console.log('Service categories loaded:', result?.length || 0, 'categories')
       } catch (err) {
         console.error('Failed to load service categories:', err)
+        console.error('Category error details:', {
+          message: err?.message,
+          code: err?.code,
+          detail: err?.detail,
+          hint: err?.hint,
+          severity: err?.severity,
+          stack: err?.stack
+        })
       }
     }
 
@@ -88,6 +97,16 @@ function ServiceForm({ service, onCancel, onSaved }) {
     }
 
     try {
+      console.log('Attempting to save service with data:', {
+        isEditing,
+        name: formData.name,
+        category_id: categoryIdValue,
+        base_price: basePriceValue,
+        currency: formData.currency,
+        duration_unit: formData.duration_unit,
+        is_active: formData.is_active
+      })
+
       if (isEditing) {
         await sql`
           UPDATE services
@@ -101,17 +120,61 @@ function ServiceForm({ service, onCancel, onSaved }) {
               updated_at = CURRENT_TIMESTAMP
           WHERE id = ${service.id}
         `
+        console.log('Service updated successfully')
       } else {
         await sql`
           INSERT INTO services (name, description, category_id, base_price, currency, duration_unit, is_active)
           VALUES (${formData.name}, ${formData.description || null}, ${categoryIdValue}, ${basePriceValue}, ${formData.currency}, ${formData.duration_unit || 'none'}, ${formData.is_active})
         `
+        console.log('Service inserted successfully')
       }
 
       onSaved?.()
     } catch (err) {
       console.error('Failed to save service:', err)
-      setError(t('serviceForm.errors.save', 'Unable to save service. Please try again.'))
+      console.error('Error type:', typeof err)
+      console.error('Error constructor:', err?.constructor?.name)
+      console.error('Full error object:', JSON.stringify(err, Object.getOwnPropertyNames(err), 2))
+      
+      // Log detailed error information
+      const errorDetails = {
+        message: err?.message || 'Unknown error',
+        code: err?.code,
+        detail: err?.detail,
+        hint: err?.hint,
+        severity: err?.severity,
+        constraint: err?.constraint,
+        table: err?.table,
+        column: err?.column,
+        schema: err?.schema,
+        stack: err?.stack
+      }
+      console.error('Error details:', errorDetails)
+      
+      // Build a more informative error message
+      let errorMessage = t('serviceForm.errors.save', 'Unable to save service. Please try again.')
+      
+      // Add specific error information if available
+      if (err?.message) {
+        console.error('Error message:', err.message)
+        // Check for common database errors
+        if (err.message.includes('foreign key') || err.message.includes('violates foreign key constraint')) {
+          errorMessage += ' The selected category may not exist in the database.'
+        } else if (err.message.includes('null value') || err.message.includes('violates not-null constraint')) {
+          errorMessage += ' A required field is missing.'
+        } else if (err.message.includes('duplicate key') || err.message.includes('unique constraint')) {
+          errorMessage += ' A service with this name may already exist.'
+        } else if (err.message.includes('relation') && err.message.includes('does not exist')) {
+          errorMessage += ' Database table may be missing. Please check the database schema.'
+        }
+        
+        // In development, show the actual error message
+        if (import.meta.env.DEV) {
+          errorMessage += ` (${err.message})`
+        }
+      }
+      
+      setError(errorMessage)
     } finally {
       setSaving(false)
     }
