@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useSettings } from '../../context/SettingsContext'
+import { isAdmin } from '../../lib/permissions'
 
 function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClose }) {
   const { t } = useTranslation()
@@ -53,6 +54,8 @@ function Sidebar({ currentPage, onNavigate, onLogout, user, isMobileOpen, onClos
     { key: 'hotels', label: t('nav.hotels', 'Hotels') },
     { key: 'settings', label: t('nav.settings', 'Settings') },
     { key: 'roadmap', label: t('nav.roadmap', 'Roadmap') },
+    // Admin-only items
+    ...(isAdmin(user) ? [{ key: 'monthlyReport', label: t('nav.monthlyReport', 'Monthly Report') }] : []),
   ]
 
   return (

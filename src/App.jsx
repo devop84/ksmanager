@@ -48,6 +48,7 @@ import Settings from './pages/Settings'
 import Landing from './pages/Landing'
 import Roadmap from './pages/Roadmap'
 import Dashboard from './pages/Dashboard'
+import MonthlyReport from './pages/reports/MonthlyReport'
 import { getSession, deleteSession } from './lib/auth.js'
 import { canModify } from './lib/permissions.js'
 import sql from './lib/neon'
@@ -162,7 +163,8 @@ function App() {
       'appointments': 'appointments',
       'calendar': 'calendar',
       'settings': 'settings',
-      'roadmap': 'roadmap'
+      'roadmap': 'roadmap',
+      'monthly-report': 'monthlyReport'
     }
     return pathToPage[path] || 'landing'
   }
@@ -222,7 +224,8 @@ function App() {
       'appointments': '/appointments',
       'calendar': '/calendar',
       'settings': '/settings',
-      'roadmap': '/roadmap'
+      'roadmap': '/roadmap',
+      'monthlyReport': '/monthly-report'
     }
     return pageToPath[basePage] || '/'
   }
@@ -1859,6 +1862,8 @@ function App() {
         return <Landing onNavigate={handleNavigate} isAuthenticated={isAuthenticated} />
       case 'roadmap':
         return <Roadmap />
+      case 'monthlyReport':
+        return <MonthlyReport user={user} />
       default:
         return <Dashboard
           user={user}
