@@ -240,7 +240,7 @@ function MonthlyReport({ user }) {
       <div className="p-4 md:p-6">
         <PageHeader
           title={t('reports.monthlyReport.title', 'Monthly Report')}
-          description={t('reports.monthlyReport.description', 'Overview of activities, sales, incomes, and expenses for the selected month')}
+          description={t('reports.monthlyReport.description', 'Overview of activities, incomes, and expenses for the selected month')}
         />
         <div className="mt-6 text-center text-gray-600">
           {t('common.loading', 'Loading...')}
@@ -254,7 +254,7 @@ function MonthlyReport({ user }) {
       <div className="p-4 md:p-6">
         <PageHeader
           title={t('reports.monthlyReport.title', 'Monthly Report')}
-          description={t('reports.monthlyReport.description', 'Overview of activities, sales, incomes, and expenses for the selected month')}
+          description={t('reports.monthlyReport.description', 'Overview of activities, incomes, and expenses for the selected month')}
         />
         <div className="mt-6 text-center text-red-600">
           {error}
@@ -269,7 +269,7 @@ function MonthlyReport({ user }) {
     <div className="p-4 md:p-6">
       <PageHeader
         title={t('reports.monthlyReport.title', 'Monthly Report')}
-        description={t('reports.monthlyReport.description', 'Overview of activities, sales, incomes, and expenses for the selected month')}
+        description={t('reports.monthlyReport.description', 'Overview of activities, incomes, and expenses for the selected month')}
       />
 
       {/* Month Selector */}
@@ -404,35 +404,6 @@ function MonthlyReport({ user }) {
             <div>
               <p className="text-sm text-gray-600">{t('reports.monthlyReport.customersCreated', 'Customers Created')}</p>
               <p className="text-2xl font-bold text-gray-900 mt-1">{reportData.activities.customersCreated}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Sales Section */}
-      <div className="bg-white rounded-lg shadow mb-6">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
-            {t('reports.monthlyReport.sales', 'Sales')}
-          </h3>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <p className="text-sm text-gray-600">{t('reports.monthlyReport.totalOrders', 'Total Orders')}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{reportData.sales.ordersCount}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">{t('reports.monthlyReport.totalRevenue', 'Total Revenue')}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(reportData.sales.totalRevenue)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">{t('reports.monthlyReport.totalPayments', 'Total Payments')}</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(reportData.sales.totalPayments)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">{t('reports.monthlyReport.averageOrderValue', 'Average Order Value')}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(reportData.sales.averageOrderValue)}</p>
             </div>
           </div>
         </div>
