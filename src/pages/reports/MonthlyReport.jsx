@@ -409,35 +409,6 @@ function MonthlyReport({ user }) {
         </div>
       </div>
 
-      {/* Sales Section */}
-      <div className="bg-white rounded-lg shadow mb-6">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">
-            {t('reports.monthlyReport.sales', 'Sales')}
-          </h3>
-        </div>
-        <div className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <p className="text-sm text-gray-600">{t('reports.monthlyReport.totalOrders', 'Total Orders')}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{reportData.sales.ordersCount}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">{t('reports.monthlyReport.totalRevenue', 'Total Revenue')}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(reportData.sales.totalRevenue)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">{t('reports.monthlyReport.totalPayments', 'Total Payments')}</p>
-              <p className="text-2xl font-bold text-green-600 mt-1">{formatCurrency(reportData.sales.totalPayments)}</p>
-            </div>
-            <div>
-              <p className="text-sm text-gray-600">{t('reports.monthlyReport.averageOrderValue', 'Average Order Value')}</p>
-              <p className="text-2xl font-bold text-gray-900 mt-1">{formatCurrency(reportData.sales.averageOrderValue)}</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Incomes and Expenses Side by Side */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
         {/* Incomes Section */}
