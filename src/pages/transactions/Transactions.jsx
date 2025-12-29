@@ -20,7 +20,7 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const { formatCurrency, formatDateTime } = useSettings()
+  const { formatCurrency, formatDateTime, formatDate, formatTime } = useSettings()
   const { t } = useTranslation()
 
   const entityTypeLabels = useMemo(
@@ -270,7 +270,12 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
     
     switch (key) {
       case 'occurred_at':
-        return formatDateLabel(row.occurred_at)
+        return (
+          <div className="flex flex-col">
+            <span className="font-medium text-gray-900">{formatDate(row.occurred_at)}</span>
+            <span className="text-sm text-gray-500 font-normal">{formatTime(row.occurred_at)}</span>
+          </div>
+        )
       case 'type_label':
         return (
           <span
@@ -374,7 +379,10 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="text-base font-semibold text-gray-900">{transaction.type_label}</p>
-                        <p className="text-xs text-gray-500">{formatDateLabel(transaction.occurred_at)}</p>
+                        <div className="flex flex-col">
+                          <span className="text-xs font-medium text-gray-900">{formatDate(transaction.occurred_at)}</span>
+                          <span className="text-xs text-gray-500 font-normal">{formatTime(transaction.occurred_at)}</span>
+                        </div>
                       </div>
                       <div
                         className={`text-sm font-semibold ${
