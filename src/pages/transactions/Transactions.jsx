@@ -139,7 +139,6 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
       { key: 'payment_method_name', label: t('transactions.table.payment', 'Payment') },
       { key: 'amount', label: t('transactions.table.amount', 'Amount'), align: 'right' },
       { key: 'reference', label: t('transactions.table.reference', 'Reference') },
-      { key: 'note', label: t('transactions.table.note', 'Note') },
     ],
     [t],
   )
@@ -164,7 +163,6 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
       // Search across all columns
       const searchableFields = [
         transaction.reference,
-        transaction.note,
         transaction.type_label,
         transaction.type_code,
         transaction.type_direction,
@@ -218,10 +216,6 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
         case 'reference':
           aValue = (a.reference || '').toLowerCase()
           bValue = (b.reference || '').toLowerCase()
-          break
-        case 'note':
-          aValue = (a.note || '').toLowerCase()
-          bValue = (b.note || '').toLowerCase()
           break
         default:
           aValue = ''
@@ -410,10 +404,6 @@ function Transactions({ refreshKey = 0, onAddTransaction = () => {}, onViewTrans
                       <div>
                         <dt className="text-gray-400 text-xs uppercase">{t('transactions.mobile.reference', 'Reference')}</dt>
                         <dd>{transaction.reference || '—'}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-gray-400 text-xs uppercase">{t('transactions.mobile.note', 'Note')}</dt>
-                        <dd>{transaction.note || '—'}</dd>
                       </div>
                     </div>
                   </>

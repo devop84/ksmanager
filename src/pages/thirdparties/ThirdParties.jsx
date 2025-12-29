@@ -19,8 +19,7 @@ function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdP
       { key: 'name', label: t('thirdParties.table.name') },
       { key: 'category_name', label: t('thirdParties.table.category') },
       { key: 'phone', label: t('thirdParties.table.phone') },
-      { key: 'email', label: t('thirdParties.table.email') },
-      { key: 'note', label: t('thirdParties.table.note') }
+      { key: 'email', label: t('thirdParties.table.email') }
     ],
     [t]
   )
@@ -121,10 +120,6 @@ function ThirdParties({ refreshKey = 0, onAddThirdParty = () => {}, onEditThirdP
                       <div>
                         <dt className="text-gray-400 text-xs uppercase">{t('thirdParties.mobile.email')}</dt>
                         <dd>{tp.email || '—'}</dd>
-                      </div>
-                      <div className="md:col-span-2">
-                        <dt className="text-gray-400 text-xs uppercase">{t('thirdParties.mobile.note')}</dt>
-                        <dd>{tp.note || '—'}</dd>
                       </div>
                     </dl>
                   </>

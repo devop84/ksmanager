@@ -23,11 +23,9 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
       { key: 'fullname', label: t('instructors.table.fullname') },
       { key: 'phone', label: t('instructors.table.phone') },
       { key: 'email', label: t('instructors.table.email') },
-      { key: 'bankdetail', label: t('instructors.table.bankdetail') },
       { key: 'hourlyrate', label: t('instructors.table.hourly') },
       { key: 'commission', label: t('instructors.table.commission') },
-      { key: 'monthlyfix', label: t('instructors.table.monthly') },
-      { key: 'note', label: t('instructors.table.note') }
+      { key: 'monthlyfix', label: t('instructors.table.monthly') }
     ],
     [t]
   )
@@ -163,10 +161,6 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
                         <dd>{instructor.phone || '—'}</dd>
                       </div>
                       <div>
-                        <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.bankdetail')}</dt>
-                        <dd>{instructor.bankdetail || '—'}</dd>
-                      </div>
-                      <div>
                         <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.hourly')}</dt>
                         <dd>{displayCurrency(instructor.hourlyrate)}</dd>
                       </div>
@@ -177,10 +171,6 @@ function Instructors({ onAddInstructor = () => {}, onEditInstructor = () => {}, 
                       <div>
                         <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.monthly')}</dt>
                         <dd>{displayCurrency(instructor.monthlyfix)}</dd>
-                      </div>
-                      <div className="md:col-span-2">
-                        <dt className="text-gray-400 text-xs uppercase">{t('instructors.mobile.note')}</dt>
-                        <dd>{instructor.note || '—'}</dd>
                       </div>
                     </dl>
                   </>

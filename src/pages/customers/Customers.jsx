@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import sql from '../../lib/neon'
 import { canModify } from '../../lib/permissions'
-import { useSettings } from '../../context/SettingsContext'
 import { useDataTable } from '../../hooks/useDataTable'
 import DataTable from '../../components/ui/DataTable'
 import PageHeader from '../../components/layout/PageHeader'
@@ -15,7 +14,6 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [deletingId, setDeletingId] = useState(null)
-  const { formatDate } = useSettings()
   const { t } = useTranslation()
 
   const columns = useMemo(
@@ -23,12 +21,8 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
       { key: 'fullname', label: t('customers.table.fullname', 'Full Name') },
       { key: 'phone', label: t('customers.table.phone', 'Phone') },
       { key: 'email', label: t('customers.table.email', 'Email') },
-      { key: 'doc', label: t('customers.table.document', 'Document') },
       { key: 'country', label: t('customers.table.country', 'Country') },
-      { key: 'birthdate', label: t('customers.table.birthdate', 'Birthdate') },
-      { key: 'hotel_name', label: t('customers.table.hotel', 'Hotel') },
       { key: 'agency_name', label: t('customers.table.agency', 'Agency') },
-      { key: 'note', label: t('customers.table.note', 'Note') },
     ],
     [t],
   )
@@ -100,24 +94,9 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
     }
   }
 
-  const formatBirthdate = (value) => {
-    if (!value) return '—'
-    return formatDate(value, {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    })
-  }
-
   const renderCell = (key, row) => {
     if (!row) return '—'
-    
-    switch (key) {
-      case 'birthdate':
-        return formatBirthdate(row.birthdate)
-      default:
-        return row[key] ?? '—'
-    }
+    return row[key] ?? '—'
   }
 
   return (
@@ -180,32 +159,12 @@ function Customers({ onAddCustomer = () => {}, onEditCustomer = () => {}, onView
                           <dd>{customer.phone || '—'}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">
-                            {t('customers.mobile.document', 'Document')}
-                          </dt>
-                          <dd>{customer.doc || '—'}</dd>
-                        </div>
-                        <div>
                           <dt className="text-gray-400 text-xs uppercase">{t('customers.mobile.country', 'Country')}</dt>
                           <dd>{customer.country || '—'}</dd>
                         </div>
                         <div>
-                          <dt className="text-gray-400 text-xs uppercase">
-                            {t('customers.mobile.birthdate', 'Birthdate')}
-                          </dt>
-                          <dd>{formatBirthdate(customer.birthdate)}</dd>
-                        </div>
-                        <div>
-                          <dt className="text-gray-400 text-xs uppercase">{t('customers.mobile.hotel', 'Hotel')}</dt>
-                          <dd>{customer.hotel_name || '—'}</dd>
-                        </div>
-                        <div>
                           <dt className="text-gray-400 text-xs uppercase">{t('customers.mobile.agency', 'Agency')}</dt>
                           <dd>{customer.agency_name || '—'}</dd>
-                        </div>
-                        <div className="md:col-span-2">
-                          <dt className="text-gray-400 text-xs uppercase">{t('customers.mobile.note', 'Note')}</dt>
-                          <dd>{customer.note || '—'}</dd>
                         </div>
                       </dl>
                   </>

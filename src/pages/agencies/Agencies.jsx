@@ -23,8 +23,7 @@ function Agencies({ onAddAgency = () => {}, onEditAgency = () => {}, onViewAgenc
       { key: 'name', label: t('agencies.table.name') },
       { key: 'phone', label: t('agencies.table.phone') },
       { key: 'email', label: t('agencies.table.email') },
-      { key: 'commission', label: t('agencies.table.commission') },
-      { key: 'note', label: t('agencies.table.note') }
+      { key: 'commission', label: t('agencies.table.commission') }
     ],
     [t]
   )
@@ -151,10 +150,6 @@ function Agencies({ onAddAgency = () => {}, onEditAgency = () => {}, onViewAgenc
                       <div>
                         <dt className="text-gray-400 text-xs uppercase">{t('agencies.mobile.commission')}</dt>
                         <dd>{formatCommission(agency.commission)}</dd>
-                      </div>
-                      <div className="md:col-span-2">
-                        <dt className="text-gray-400 text-xs uppercase">{t('agencies.mobile.note')}</dt>
-                        <dd>{agency.note || '—'}</dd>
                       </div>
                     </dl>
                   </>

@@ -23,11 +23,9 @@ function Staff({ onAddStaff = () => {}, onEditStaff = () => {}, onViewStaff = ()
       { key: 'role', label: t('staff.table.role') },
       { key: 'phone', label: t('staff.table.phone') },
       { key: 'email', label: t('staff.table.email') },
-      { key: 'bankdetail', label: t('staff.table.bankdetail') },
       { key: 'hourlyrate', label: t('staff.table.hourly') },
       { key: 'commission', label: t('staff.table.commission') },
-      { key: 'monthlyfix', label: t('staff.table.monthly') },
-      { key: 'note', label: t('staff.table.note') }
+      { key: 'monthlyfix', label: t('staff.table.monthly') }
     ],
     [t]
   )
@@ -169,10 +167,6 @@ function Staff({ onAddStaff = () => {}, onEditStaff = () => {}, onViewStaff = ()
                         <dd>{member.phone || '—'}</dd>
                       </div>
                       <div>
-                        <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.bankdetail')}</dt>
-                        <dd>{member.bankdetail || '—'}</dd>
-                      </div>
-                      <div>
                         <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.hourly')}</dt>
                         <dd>{displayCurrency(member.hourlyrate)}</dd>
                       </div>
@@ -183,10 +177,6 @@ function Staff({ onAddStaff = () => {}, onEditStaff = () => {}, onViewStaff = ()
                       <div>
                         <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.monthly')}</dt>
                         <dd>{displayCurrency(member.monthlyfix)}</dd>
-                      </div>
-                      <div className="md:col-span-2">
-                        <dt className="text-gray-400 text-xs uppercase">{t('staff.mobile.note')}</dt>
-                        <dd>{member.note || '—'}</dd>
                       </div>
                     </dl>
                   </>

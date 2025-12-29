@@ -21,7 +21,6 @@ function Hotels({ onAddHotel = () => {}, onEditHotel = () => {}, onViewHotel = (
       { key: 'name', label: t('hotels.table.name', 'Name') },
       { key: 'phone', label: t('hotels.table.phone', 'Phone') },
       { key: 'address', label: t('hotels.table.address', 'Address') },
-      { key: 'note', label: t('hotels.table.note', 'Note') },
     ],
     [t],
   )
@@ -133,10 +132,6 @@ function Hotels({ onAddHotel = () => {}, onEditHotel = () => {}, onViewHotel = (
                           {t('hotels.mobile.address', 'Address')}
                         </dt>
                         <dd>{hotel.address || '—'}</dd>
-                      </div>
-                      <div>
-                        <dt className="text-gray-400 text-xs uppercase">{t('hotels.mobile.note', 'Note')}</dt>
-                        <dd>{hotel.note || '—'}</dd>
                       </div>
                     </dl>
                   </>
