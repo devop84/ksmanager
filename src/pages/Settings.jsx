@@ -145,7 +145,10 @@ function Settings({ user = null, onUserFormSaved = () => {}, onUserFormCancel = 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.timezone')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('settings.timezone')}
+              <span className="ml-2 text-xs text-gray-500 font-normal">(Global)</span>
+            </label>
             <select
               value={timezone}
               onChange={(event) => setTimezone(event.target.value)}
@@ -157,6 +160,9 @@ function Settings({ user = null, onUserFormSaved = () => {}, onUserFormCancel = 
                 </option>
               ))}
             </select>
+            <p className="mt-1 text-xs text-gray-500">
+              {t('settings.timezone.description', 'Timezone setting applies to all users. Automatically detected on first setup.')}
+            </p>
           </div>
         </div>
 

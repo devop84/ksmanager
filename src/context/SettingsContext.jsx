@@ -71,16 +71,18 @@ export function SettingsProvider({ children, user = null }) {
           }
         }
         
-        // Load timezone from localStorage (local preference)
-        let timezone = defaultSettings.timezone
-        try {
-          const stored = localStorage.getItem(STORAGE_KEY)
-          if (stored) {
-            const parsed = JSON.parse(stored)
-            timezone = parsed.timezone || defaultSettings.timezone
+        // Load timezone from app_settings (global) or auto-detect
+        let timezone = await getAppSetting('timezone')
+        if (!timezone) {
+          // Auto-detect timezone if not set in database
+          const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
+          timezone = detectedTimezone
+          // Save auto-detected timezone to app_settings (global)
+          try {
+            await setAppSetting('timezone', detectedTimezone)
+          } catch (error) {
+            console.warn('Failed to save auto-detected timezone:', error)
           }
-        } catch (error) {
-          console.warn('Failed to parse stored settings', error)
         }
         
         setSettings({ language, currency, timezone })
@@ -95,19 +97,6 @@ export function SettingsProvider({ children, user = null }) {
     loadSettings()
   }, [currentUser?.id, currentUser?.language])
 
-  // Save timezone to localStorage when it changes
-  useEffect(() => {
-    if (!loading) {
-      try {
-        const stored = localStorage.getItem(STORAGE_KEY)
-        const parsed = stored ? JSON.parse(stored) : {}
-        parsed.timezone = settings.timezone
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed))
-      } catch (error) {
-        console.warn('Failed to save timezone to localStorage', error)
-      }
-    }
-  }, [settings.timezone, loading])
 
   // Update i18n when language changes
   useEffect(() => {
@@ -171,7 +160,15 @@ export function SettingsProvider({ children, user = null }) {
           console.error('Failed to save currency to database:', error)
         }
       },
-      setTimezone: (next) => setSettings((prev) => ({ ...prev, timezone: next })),
+      setTimezone: async (next) => {
+        setSettings((prev) => ({ ...prev, timezone: next }))
+        // Save to app_settings (global)
+        try {
+          await setAppSetting('timezone', next)
+        } catch (error) {
+          console.error('Failed to save timezone to database:', error)
+        }
+      },
       formatCurrency: (value, options) => getNumberFormatter(options).format(Number(value || 0)),
       formatNumber: (value, options) => new Intl.NumberFormat(language, options).format(Number(value || 0)),
       formatDate: (value, options) => {

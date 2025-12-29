@@ -13,10 +13,16 @@ export async function createUser(name, email, password) {
     const result = await sql`
       INSERT INTO users (name, email, password_hash, role)
       VALUES (${name}, ${email}, ${passwordHash}, 'viewonly')
-      RETURNING id, name, email, role, created_at
+      RETURNING id, name, email, role, language, created_at
     `
 
-    return result[0]
+    return {
+      id: result[0].id,
+      name: result[0].name,
+      email: result[0].email,
+      role: result[0].role || 'viewonly',
+      language: result[0].language || 'en-US'
+    }
   } catch (error) {
     if (error.code === '23505') { // Unique violation (email already exists)
       throw new Error('Email already registered')
