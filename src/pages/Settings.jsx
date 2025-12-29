@@ -4,6 +4,8 @@ import { useSettings } from '../context/SettingsContext'
 import { isAdmin } from '../lib/permissions'
 import Users from './users/Users'
 import UserForm from './users/UserForm'
+import TransactionTypes from './settings/TransactionTypes'
+import TransactionTypeForm from './settings/TransactionTypeForm'
 
 const languages = [
   { value: 'en-US', label: 'English (US)' },
@@ -22,6 +24,9 @@ function Settings({ user = null, onUserFormSaved = () => {}, onUserFormCancel = 
   const { t } = useTranslation()
   const [showUserForm, setShowUserForm] = useState(false)
   const [editingUser, setEditingUser] = useState(null)
+  const [showTransactionTypeForm, setShowTransactionTypeForm] = useState(false)
+  const [editingTransactionType, setEditingTransactionType] = useState(null)
+  const [transactionTypesRefreshKey, setTransactionTypesRefreshKey] = useState(0)
 
   const timezoneOptions = useMemo(() => {
     try {
@@ -58,6 +63,28 @@ function Settings({ user = null, onUserFormSaved = () => {}, onUserFormCancel = 
     onUserFormCancel()
   }
 
+  // Handle transaction type form
+  const handleAddTransactionType = () => {
+    setEditingTransactionType(null)
+    setShowTransactionTypeForm(true)
+  }
+
+  const handleEditTransactionType = (typeToEdit) => {
+    setEditingTransactionType(typeToEdit)
+    setShowTransactionTypeForm(true)
+  }
+
+  const handleTransactionTypeFormSaved = () => {
+    setShowTransactionTypeForm(false)
+    setEditingTransactionType(null)
+    setTransactionTypesRefreshKey((prev) => prev + 1)
+  }
+
+  const handleTransactionTypeFormCancel = () => {
+    setShowTransactionTypeForm(false)
+    setEditingTransactionType(null)
+  }
+
   // Show user form if requested via props or internal state
   const currentUserToEdit = userFormUser || editingUser
   const shouldShowUserForm = showUserForm || Boolean(userFormUser)
@@ -65,6 +92,11 @@ function Settings({ user = null, onUserFormSaved = () => {}, onUserFormCancel = 
   // If user form should be shown, render it
   if (shouldShowUserForm) {
     return <UserForm user={currentUserToEdit} onCancel={handleUserFormCancel} onSaved={handleUserFormSaved} />
+  }
+
+  // If transaction type form should be shown, render it
+  if (showTransactionTypeForm) {
+    return <TransactionTypeForm type={editingTransactionType} onCancel={handleTransactionTypeFormCancel} onSaved={handleTransactionTypeFormSaved} />
   }
 
   return (
@@ -144,6 +176,16 @@ function Settings({ user = null, onUserFormSaved = () => {}, onUserFormCancel = 
           onAddUser={handleAddUser}
           onEditUser={handleEditUser}
           refreshKey={usersRefreshKey}
+          user={user}
+        />
+      )}
+
+      {/* Transaction Types Management Section - Admin Only */}
+      {isAdmin(user) && (
+        <TransactionTypes
+          onAddType={handleAddTransactionType}
+          onEditType={handleEditTransactionType}
+          refreshKey={transactionTypesRefreshKey}
           user={user}
         />
       )}

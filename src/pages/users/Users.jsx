@@ -136,18 +136,17 @@ function Users({ onAddUser = () => {}, onEditUser = () => {}, onViewUser = () =>
   }
 
   return (
-    <div className="px-4 py-6 sm:p-6 lg:p-8">
-      <div className="flex flex-col gap-6 bg-white rounded-xl shadow-sm p-4 sm:p-6">
-        <PageHeader
-          title={t('users.title', 'Users')}
-          description={t('users.description', 'Manage user accounts and permissions')}
-          onAdd={onAddUser}
-          addLabel={t('users.add', 'Add User')}
-          user={user}
-          canModifyFn={canModify}
-        />
+    <div className="bg-white rounded-xl p-6 shadow-sm">
+      <PageHeader
+        title={t('users.title', 'Users')}
+        description={t('users.description', 'Manage user accounts and permissions')}
+        onAdd={onAddUser}
+        addLabel={t('users.add', 'Add User')}
+        user={user}
+        canModifyFn={canModify}
+      />
 
-        <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 mt-6">
           <SearchBar
             value={searchTerm}
             onChange={handleSearchChange}
@@ -271,7 +270,6 @@ function Users({ onAddUser = () => {}, onEditUser = () => {}, onViewUser = () =>
               />
             </>
           )}
-        </div>
       </div>
     </div>
   )
