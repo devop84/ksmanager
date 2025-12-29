@@ -92,7 +92,10 @@ function Settings({ user = null, onUserFormSaved = () => {}, onUserFormCancel = 
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.currency')}</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              {t('settings.currency')}
+              <span className="ml-2 text-xs text-gray-500 font-normal">(Global)</span>
+            </label>
             <select
               value={currency}
               onChange={(event) => setCurrency(event.target.value)}
@@ -104,6 +107,9 @@ function Settings({ user = null, onUserFormSaved = () => {}, onUserFormCancel = 
                 </option>
               ))}
             </select>
+            <p className="mt-1 text-xs text-gray-500">
+              {t('settings.currency.description', 'Currency setting applies to all users')}
+            </p>
           </div>
 
           <div>

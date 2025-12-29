@@ -32,7 +32,7 @@ export async function authenticateUser(email, password) {
   try {
     // Find user by email
     const users = await sql`
-      SELECT id, name, email, password_hash, role
+      SELECT id, name, email, password_hash, role, language
       FROM users
       WHERE email = ${email}
       LIMIT 1
@@ -55,7 +55,8 @@ export async function authenticateUser(email, password) {
       id: user.id,
       name: user.name,
       email: user.email,
-      role: user.role || 'viewonly'
+      role: user.role || 'viewonly',
+      language: user.language || 'en-US'
     }
   } catch (error) {
     throw error
@@ -93,7 +94,7 @@ export async function createSession(userId) {
 export async function getSession(sessionToken) {
   try {
     const sessions = await sql`
-      SELECT s.id, s.user_id, s.expires_at, u.id as user_id, u.name, u.email, u.role
+      SELECT s.id, s.user_id, s.expires_at, u.id as user_id, u.name, u.email, u.role, u.language
       FROM sessions s
       INNER JOIN users u ON s.user_id = u.id
       WHERE s.session_token = ${sessionToken}
@@ -114,7 +115,8 @@ export async function getSession(sessionToken) {
         id: session.user_id,
         name: session.name,
         email: session.email,
-        role: session.role || 'viewonly'
+        role: session.role || 'viewonly',
+        language: session.language || 'en-US'
       }
     }
   } catch (error) {
@@ -157,5 +159,53 @@ function generateSessionToken() {
   const array = new Uint8Array(32)
   crypto.getRandomValues(array)
   return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('')
+}
+
+/**
+ * Update user language preference
+ */
+export async function updateUserLanguage(userId, language) {
+  try {
+    await sql`
+      UPDATE users
+      SET language = ${language}, updated_at = CURRENT_TIMESTAMP
+      WHERE id = ${userId}
+    `
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Get app setting (global settings like currency)
+ */
+export async function getAppSetting(key) {
+  try {
+    const result = await sql`
+      SELECT value
+      FROM app_settings
+      WHERE key = ${key}
+      LIMIT 1
+    `
+    return result.length > 0 ? result[0].value : null
+  } catch (error) {
+    throw error
+  }
+}
+
+/**
+ * Set app setting (global settings like currency)
+ */
+export async function setAppSetting(key, value) {
+  try {
+    await sql`
+      INSERT INTO app_settings (key, value, updated_at)
+      VALUES (${key}, ${value}, CURRENT_TIMESTAMP)
+      ON CONFLICT (key) 
+      DO UPDATE SET value = ${value}, updated_at = CURRENT_TIMESTAMP
+    `
+  } catch (error) {
+    throw error
+  }
 }
 
