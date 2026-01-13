@@ -3,27 +3,29 @@ import { neon } from '@neondatabase/serverless'
 const sql = neon(process.env.DATABASE_URL)
 
 export default async function handler(req, res) {
-  // Verify session
   const sessionToken = req.headers.authorization?.replace('Bearer ', '')
-  if (!sessionToken) {
-    return res.status(401).json({ error: 'Unauthorized' })
-  }
 
-  // Check session validity
-  const sessions = await sql`
-    SELECT user_id
-    FROM sessions
-    WHERE session_token = ${sessionToken}
-      AND expires_at > CURRENT_TIMESTAMP
-    LIMIT 1
-  `
+  // For write operations, require a valid session
+  if (req.method === 'POST' || req.method === 'PUT') {
+    if (!sessionToken) {
+      return res.status(401).json({ error: 'Unauthorized' })
+    }
 
-  if (sessions.length === 0) {
-    return res.status(401).json({ error: 'Invalid or expired session' })
+    const sessions = await sql`
+      SELECT user_id
+      FROM sessions
+      WHERE session_token = ${sessionToken}
+        AND expires_at > CURRENT_TIMESTAMP
+      LIMIT 1
+    `
+
+    if (sessions.length === 0) {
+      return res.status(401).json({ error: 'Invalid or expired session' })
+    }
   }
 
   if (req.method === 'GET') {
-    // Get app setting
+    // Public read: allow fetching global settings without a session token
     const { key } = req.query
 
     if (!key) {
