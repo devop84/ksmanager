@@ -1,4 +1,4 @@
-import { neon } from '@neondatabase/serverless'
+import { neon, Pool } from '@neondatabase/serverless'
 
 // Check for DATABASE_URL
 if (!process.env.DATABASE_URL) {
@@ -6,6 +6,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null
+const pool = process.env.DATABASE_URL ? new Pool({ connectionString: process.env.DATABASE_URL }) : null
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
@@ -58,11 +59,16 @@ export default async function handler(req, res) {
       })
     }
 
-    // Execute parameterized query safely using Neon's unsafe method
-    // This is safe because we're using parameterized queries, not string concatenation
-    const result = await sql.unsafe(queryString, params)
+    // Execute parameterized query using Pool.query which supports parameterized queries
+    // The Pool class from @neondatabase/serverless supports $1, $2, etc. placeholders
+    if (!pool) {
+      throw new Error('Database pool not available')
+    }
     
-    return res.status(200).json({ data: result })
+    const result = await pool.query(queryString, params)
+    
+    // Pool.query returns { rows, rowCount, ... } - return just the rows array to match expected format
+    return res.status(200).json({ data: result.rows })
   } catch (error) {
     console.error('Query error:', error)
     return res.status(500).json({ error: 'Internal server error', message: error.message })
