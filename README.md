@@ -25,16 +25,25 @@ npm install
 ```
 
 2. Set up environment variables:
+
+For local development with `vercel dev`, create a `.env` file in the project root:
 ```bash
-cp .env.example .env
+# Create .env file
+touch .env
 ```
 
-3. Add your Neon database connection string to `.env`:
+Add your Neon database connection string to `.env`:
 ```
-VITE_NEON_DATABASE_URL=your_neon_connection_string_here
+DATABASE_URL=your_neon_connection_string_here
 ```
+
+**Important**: 
+- For `vercel dev` (local API routes), use `DATABASE_URL`
+- For Vite-only development, you can also set `VITE_NEON_DATABASE_URL` (though API routes won't work)
 
 You can find your connection string in the Neon dashboard under your project settings.
+
+**Note**: The `.env` file is gitignored and should not be committed to version control.
 
 ### Database Setup
 
@@ -51,12 +60,33 @@ The schema includes:
 
 ### Development
 
-Start the development server:
+**Local Development:**
+
+**Recommended: Full Stack Development**
+
+For full functionality including authentication and database operations:
 ```bash
 npm run dev
 ```
 
-The app will be available at `http://localhost:5173`
+This runs both:
+- **Vite dev server** on `http://localhost:5173` (frontend)
+- **Vercel dev server** on `http://localhost:3000` (API routes)
+
+The frontend automatically proxies API requests to the backend. Access your app at `http://localhost:5173`
+
+**Important**: 
+- Make sure you have a `.env` file with `DATABASE_URL` set before running this command.
+- **Windows Users**: If you get a symlink permission error, run PowerShell as Administrator, or use `npm run dev:api` separately in an elevated terminal.
+
+**Alternative Options:**
+
+If you only want to run one part:
+
+- **Frontend only**: `npm run dev:vite` (API calls will fail)
+- **API only**: `npm run dev:api` (frontend won't be available)
+
+**Note**: For full functionality, always use `npm run dev` which runs both servers together.
 
 ### Building for Production
 

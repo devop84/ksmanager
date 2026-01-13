@@ -1,10 +1,24 @@
 import { neon } from '@neondatabase/serverless'
 
-const sql = neon(process.env.DATABASE_URL)
+// Check for DATABASE_URL
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL environment variable is not set')
+}
+
+const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
+  }
+
+  // Check database connection
+  if (!sql) {
+    console.error('Database connection not available - DATABASE_URL missing')
+    return res.status(500).json({ 
+      error: 'Database configuration error',
+      message: 'DATABASE_URL environment variable is not set'
+    })
   }
 
   try {

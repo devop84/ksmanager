@@ -1,8 +1,22 @@
 import { neon } from '@neondatabase/serverless'
 
-const sql = neon(process.env.DATABASE_URL)
+// Check for DATABASE_URL
+if (!process.env.DATABASE_URL) {
+  console.error('DATABASE_URL environment variable is not set')
+}
+
+const sql = process.env.DATABASE_URL ? neon(process.env.DATABASE_URL) : null
 
 export default async function handler(req, res) {
+  // Check database connection
+  if (!sql) {
+    console.error('Database connection not available - DATABASE_URL missing')
+    return res.status(500).json({ 
+      error: 'Database configuration error',
+      message: 'DATABASE_URL environment variable is not set'
+    })
+  }
+
   const sessionToken = req.headers.authorization?.replace('Bearer ', '')
 
   // For write operations, require a valid session
@@ -11,16 +25,24 @@ export default async function handler(req, res) {
       return res.status(401).json({ error: 'Unauthorized' })
     }
 
-    const sessions = await sql`
-      SELECT user_id
-      FROM sessions
-      WHERE session_token = ${sessionToken}
-        AND expires_at > CURRENT_TIMESTAMP
-      LIMIT 1
-    `
+    try {
+      const sessions = await sql`
+        SELECT user_id
+        FROM sessions
+        WHERE session_token = ${sessionToken}
+          AND expires_at > CURRENT_TIMESTAMP
+        LIMIT 1
+      `
 
-    if (sessions.length === 0) {
-      return res.status(401).json({ error: 'Invalid or expired session' })
+      if (sessions.length === 0) {
+        return res.status(401).json({ error: 'Invalid or expired session' })
+      }
+    } catch (error) {
+      console.error('Session check error:', error)
+      return res.status(500).json({ 
+        error: 'Internal server error',
+        message: error.message 
+      })
     }
   }
 
@@ -42,7 +64,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ value: result.length > 0 ? result[0].value : null })
     } catch (error) {
       console.error('Get app setting error:', error)
-      return res.status(500).json({ error: 'Internal server error' })
+      return res.status(500).json({ 
+        error: 'Internal server error',
+        message: error.message 
+      })
     }
   } else if (req.method === 'POST' || req.method === 'PUT') {
     // Set app setting
@@ -62,7 +87,10 @@ export default async function handler(req, res) {
       return res.status(200).json({ success: true })
     } catch (error) {
       console.error('Set app setting error:', error)
-      return res.status(500).json({ error: 'Internal server error' })
+      return res.status(500).json({ 
+        error: 'Internal server error',
+        message: error.message 
+      })
     }
   } else {
     return res.status(405).json({ error: 'Method not allowed' })

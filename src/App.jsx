@@ -51,7 +51,8 @@ import Dashboard from './pages/Dashboard'
 import MonthlyReport from './pages/reports/MonthlyReport'
 import api from './lib/api.js'
 import { canModify } from './lib/permissions.js'
-import sql from './lib/neon'
+// Use secure DB wrapper (routes through serverless API)
+import sql from './lib/secureDb'
 function App() {
   const { t } = useTranslation()
   const [currentPage, setCurrentPage] = useState('landing')

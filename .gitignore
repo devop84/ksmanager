@@ -32,3 +32,5 @@ dist-ssr
 .gradle
 .android
 
+.vercel
+.env*.local
