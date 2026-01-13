@@ -1,4 +1,9 @@
-import { neon, Pool } from '@neondatabase/serverless'
+import { neon, Pool, neonConfig } from '@neondatabase/serverless'
+import ws from 'ws'
+
+// Configure Neon for serverless environments (Vercel)
+// Vercel's Node.js runtime doesn't have WebSocket, so we use the 'ws' package
+neonConfig.webSocketConstructor = ws
 
 // Check for DATABASE_URL
 if (!process.env.DATABASE_URL) {

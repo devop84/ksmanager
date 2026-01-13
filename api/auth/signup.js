@@ -1,6 +1,10 @@
-import { neon } from '@neondatabase/serverless'
+import { neon, neonConfig } from '@neondatabase/serverless'
+import ws from 'ws'
 import { hashPassword } from '../lib/password.js'
 import crypto from 'node:crypto'
+
+// Configure Neon for serverless environments (Vercel)
+neonConfig.webSocketConstructor = ws
 
 const sql = neon(process.env.DATABASE_URL)
 

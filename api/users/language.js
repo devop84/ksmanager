@@ -1,4 +1,8 @@
-import { neon } from '@neondatabase/serverless'
+import { neon, neonConfig } from '@neondatabase/serverless'
+import ws from 'ws'
+
+// Configure Neon for serverless environments (Vercel)
+neonConfig.webSocketConstructor = ws
 
 const sql = neon(process.env.DATABASE_URL)
 
