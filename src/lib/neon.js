@@ -1,17 +1,27 @@
-import { neon } from '@neondatabase/serverless';
+/**
+ * ⚠️ SECURITY WARNING: This file exposes database credentials to the client!
+ * 
+ * This file has been replaced with a secure API-based approach.
+ * All database operations now go through secure serverless functions.
+ * 
+ * To migrate:
+ * 1. Replace: import sql from './lib/neon.js'
+ * 2. With: import sql from './lib/secureDb.js'
+ * 
+ * The secureDb.js maintains the same API, so your existing code will work.
+ */
 
-// Get the connection string from environment variables
-// Vite only exposes variables with VITE_ prefix to the client
-// For Vercel + Neon integration: Set VITE_NEON_DATABASE_URL in Vercel dashboard
-// For local development: Set VITE_NEON_DATABASE_URL in .env file
-const connectionString = import.meta.env.VITE_NEON_DATABASE_URL;
+// Redirect to secure database wrapper
+import secureSql from './secureDb.js';
 
-if (!connectionString) {
-  console.warn('VITE_NEON_DATABASE_URL is not set. Please add it to your .env file for local development, or configure it in Vercel dashboard for production.');
+// Show warning in development
+if (import.meta.env.DEV) {
+  console.warn(
+    '⚠️ SECURITY: You are using the insecure neon.js file. ' +
+    'Please migrate to secureDb.js to keep database credentials secure. ' +
+    'See README_SECURITY.md for migration instructions.'
+  );
 }
 
-// Create the Neon SQL client
-const sql = neon(connectionString);
-
-export default sql;
+export default secureSql;
 

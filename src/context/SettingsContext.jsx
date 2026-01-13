@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import i18n from '../i18n/config'
-import { getAppSetting, setAppSetting, updateUserLanguage, getSession } from '../lib/auth'
+import api from '../lib/api.js'
 
 const STORAGE_KEY = 'ksmanager_settings'
 
@@ -31,7 +31,7 @@ export function SettingsProvider({ children, user = null }) {
       try {
         const sessionToken = localStorage.getItem('kiteManager_session')
         if (sessionToken) {
-          const session = await getSession(sessionToken)
+          const session = await api.auth.getSession(sessionToken)
           if (session?.user) {
             setCurrentUser(session.user)
           }
@@ -50,8 +50,8 @@ export function SettingsProvider({ children, user = null }) {
       try {
         setLoading(true)
         
-        // Load currency from app_settings (global)
-        const currency = await getAppSetting('currency') || defaultSettings.currency
+        // Load currency from app_settings (global) via API
+        const currency = await api.settings.getAppSetting('currency') || defaultSettings.currency
         
         // Load language from user (per-user) or use default
         let language = defaultSettings.language
@@ -71,15 +71,15 @@ export function SettingsProvider({ children, user = null }) {
           }
         }
         
-        // Load timezone from app_settings (global) or auto-detect
-        let timezone = await getAppSetting('timezone')
+        // Load timezone from app_settings (global) or auto-detect via API
+        let timezone = await api.settings.getAppSetting('timezone')
         if (!timezone) {
           // Auto-detect timezone if not set in database
           const detectedTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC'
           timezone = detectedTimezone
-          // Save auto-detected timezone to app_settings (global)
+          // Save auto-detected timezone to app_settings (global) via API
           try {
-            await setAppSetting('timezone', detectedTimezone)
+            await api.settings.setAppSetting('timezone', detectedTimezone)
           } catch (error) {
             console.warn('Failed to save auto-detected timezone:', error)
           }
@@ -130,10 +130,10 @@ export function SettingsProvider({ children, user = null }) {
       timezone,
       setLanguage: async (next) => {
         setSettings((prev) => ({ ...prev, language: next }))
-        // Save to user database if user is logged in
+        // Save to user database via API if user is logged in
         if (currentUser?.id) {
           try {
-            await updateUserLanguage(currentUser.id, next)
+            await api.users.updateLanguage(next)
             // Update currentUser state to reflect the change
             setCurrentUser((prev) => ({ ...prev, language: next }))
           } catch (error) {
@@ -153,18 +153,18 @@ export function SettingsProvider({ children, user = null }) {
       },
       setCurrency: async (next) => {
         setSettings((prev) => ({ ...prev, currency: next }))
-        // Save to app_settings (global)
+        // Save to app_settings (global) via API
         try {
-          await setAppSetting('currency', next)
+          await api.settings.setAppSetting('currency', next)
         } catch (error) {
           console.error('Failed to save currency to database:', error)
         }
       },
       setTimezone: async (next) => {
         setSettings((prev) => ({ ...prev, timezone: next }))
-        // Save to app_settings (global)
+        // Save to app_settings (global) via API
         try {
-          await setAppSetting('timezone', next)
+          await api.settings.setAppSetting('timezone', next)
         } catch (error) {
           console.error('Failed to save timezone to database:', error)
         }

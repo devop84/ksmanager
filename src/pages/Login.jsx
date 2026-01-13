@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { authenticateUser, createSession } from '../lib/auth.js'
+import api from '../lib/api.js'
 
 function Login({ onLogin, onSwitchToSignup, onNavigate }) {
   const { t } = useTranslation()
@@ -22,22 +22,19 @@ function Login({ onLogin, onSwitchToSignup, onNavigate }) {
         return
       }
 
-      // Authenticate user with database
-      const user = await authenticateUser(email, password)
-      
-      // Create session
-      const session = await createSession(user.id)
+      // Authenticate user via API
+      const result = await api.auth.login(email, password)
       
       // Store session token in localStorage
-      localStorage.setItem('kiteManager_session', session.session_token)
+      localStorage.setItem('kiteManager_session', result.sessionToken)
       
       // Call onLogin with user data and session
       onLogin({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        sessionToken: session.session_token
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        role: result.user.role,
+        sessionToken: result.sessionToken
       })
     } catch (err) {
       setError(err.message || 'Login failed. Please try again.')

@@ -23,3 +23,6 @@ ON CONFLICT (key) DO NOTHING;
 -- Create index on app_settings key for faster lookups
 CREATE INDEX IF NOT EXISTS idx_app_settings_key ON app_settings(key);
 
+
+
+

@@ -232,3 +232,6 @@ function TransactionTypeForm({ type: typeToEdit, onCancel, onSaved }) {
 
 export default TransactionTypeForm
 
+
+
+

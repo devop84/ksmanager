@@ -49,7 +49,7 @@ import Landing from './pages/Landing'
 import Roadmap from './pages/Roadmap'
 import Dashboard from './pages/Dashboard'
 import MonthlyReport from './pages/reports/MonthlyReport'
-import { getSession, deleteSession } from './lib/auth.js'
+import api from './lib/api.js'
 import { canModify } from './lib/permissions.js'
 import sql from './lib/neon'
 function App() {
@@ -381,7 +381,7 @@ function App() {
       try {
         const sessionToken = localStorage.getItem('kiteManager_session')
         if (sessionToken) {
-          const session = await getSession(sessionToken)
+          const session = await api.auth.getSession(sessionToken)
           if (session && session.user) {
             setUser(session.user)
             setIsAuthenticated(true)
@@ -416,7 +416,7 @@ function App() {
     try {
       const sessionToken = localStorage.getItem('kiteManager_session')
       if (sessionToken) {
-        await deleteSession(sessionToken)
+        await api.auth.logout(sessionToken)
       }
     } catch (error) {
       console.error('Logout error:', error)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { createUser, createSession } from '../lib/auth.js'
+import api from '../lib/api.js'
 
 function Signup({ onSignup, onSwitchToLogin }) {
   const [name, setName] = useState('')
@@ -34,22 +34,19 @@ function Signup({ onSignup, onSwitchToLogin }) {
         return
       }
 
-      // Create user in database
-      const user = await createUser(name, email, password)
-      
-      // Create session
-      const session = await createSession(user.id)
+      // Create user via API
+      const result = await api.auth.signup(name, email, password)
       
       // Store session token in localStorage
-      localStorage.setItem('kiteManager_session', session.session_token)
+      localStorage.setItem('kiteManager_session', result.sessionToken)
       
       // Call onSignup with user data and session
       onSignup({
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        sessionToken: session.session_token
+        id: result.user.id,
+        name: result.user.name,
+        email: result.user.email,
+        role: result.user.role,
+        sessionToken: result.sessionToken
       })
     } catch (err) {
       setError(err.message || 'Signup failed. Please try again.')

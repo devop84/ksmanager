@@ -180,9 +180,7 @@ export async function updateUserLanguage(userId, language) {
   } catch (error) {
     throw error
   }
-}
-
-/**
+}/**
  * Get app setting (global settings like currency)
  */
 export async function getAppSetting(key) {
@@ -197,9 +195,7 @@ export async function getAppSetting(key) {
   } catch (error) {
     throw error
   }
-}
-
-/**
+}/**
  * Set app setting (global settings like currency)
  */
 export async function setAppSetting(key, value) {
@@ -214,4 +210,3 @@ export async function setAppSetting(key, value) {
     throw error
   }
 }
-
