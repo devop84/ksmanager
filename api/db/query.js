@@ -3,6 +3,7 @@ import ws from 'ws'
 
 // Configure Neon for serverless environments (Vercel)
 // Vercel's Node.js runtime doesn't have WebSocket, so we use the 'ws' package
+// This configuration is required for database connections to work in production
 neonConfig.webSocketConstructor = ws
 
 // Check for DATABASE_URL
